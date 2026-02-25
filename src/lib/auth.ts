@@ -1,18 +1,18 @@
-import { SignJWT, jwtVerify } from "jose";
+import { SignJWT, jwtVerify, JWTPayload } from "jose";
 import { cookies } from "next/headers";
 
 const SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "fallback-secret-min-32-chars-long!!"
 );
 
-export interface JWTPayload {
+export interface CustomJWTPayload {
   userId: string;
   email: string;
   role: string;
 }
 
-export async function signToken(payload: JWTPayload): Promise<string> {
-  return await new SignJWT(payload)
+export async function signToken(payload: CustomJWTPayload): Promise<string> {
+  return await new SignJWT(payload as unknown as JWTPayload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
@@ -21,16 +21,16 @@ export async function signToken(payload: JWTPayload): Promise<string> {
 
 export async function verifyToken(
   token: string
-): Promise<JWTPayload | null> {
+): Promise<CustomJWTPayload | null> {
   try {
     const { payload } = await jwtVerify(token, SECRET);
-    return payload as unknown as JWTPayload;
+    return payload as unknown as CustomJWTPayload;
   } catch {
     return null;
   }
 }
 
-export async function getSession(): Promise<JWTPayload | null> {
+export async function getSession(): Promise<CustomJWTPayload | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
   if (!token) return null;

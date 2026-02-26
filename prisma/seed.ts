@@ -1,4 +1,4 @@
-import { PrismaClient, Role } from "@prisma/client";
+﻿import { PrismaClient, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -59,7 +59,11 @@ async function main() {
 
   console.log("✅ Admin user created");
 
-  // Products
+  // Products — clear existing before re-seeding
+  await prisma.orderItem.deleteMany({});
+  await prisma.cartItem.deleteMany({});
+  await prisma.product.deleteMany({});
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const products: any[] = [
     // สุนัข (10)
@@ -71,7 +75,7 @@ async function main() {
       categoryId: dogs.id,
       petType: "DOG",
       featured: true,
-      images: ["https://placehold.co/600x400?text=Dog+Leash"],
+      images: ["https://loremflickr.com/600/400/dog,leash?lock=1"],
     },
     {
       name: "ปลอกคอสุนัข LED กันน้ำ",
@@ -81,7 +85,7 @@ async function main() {
       categoryId: dogs.id,
       petType: "DOG",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Dog+Collar+LED"],
+      images: ["https://loremflickr.com/600/400/dog,collar?lock=2"],
     },
     {
       name: "เสื้อผ้าสุนัข ลายตาราง",
@@ -91,7 +95,7 @@ async function main() {
       categoryId: dogs.id,
       petType: "DOG",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Dog+Clothes"],
+      images: ["https://loremflickr.com/600/400/dog,clothes?lock=3"],
     },
     {
       name: "บ้านสุนัข ไม้สน รุ่น Classic",
@@ -101,7 +105,7 @@ async function main() {
       categoryId: dogs.id,
       petType: "DOG",
       featured: true,
-      images: ["https://placehold.co/600x400?text=Dog+House"],
+      images: ["https://loremflickr.com/600/400/dog,kennel?lock=4"],
     },
     {
       name: "แชมพูสุนัข สูตรอ่อนโยน",
@@ -111,7 +115,7 @@ async function main() {
       categoryId: dogs.id,
       petType: "DOG",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Dog+Shampoo"],
+      images: ["https://loremflickr.com/600/400/dog,bath?lock=5"],
     },
     {
       name: "ที่นอนสุนัข Memory Foam",
@@ -121,7 +125,7 @@ async function main() {
       categoryId: dogs.id,
       petType: "DOG",
       featured: true,
-      images: ["https://placehold.co/600x400?text=Dog+Bed"],
+      images: ["https://loremflickr.com/600/400/dog,sleeping?lock=6"],
     },
     {
       name: "กรงสุนัข พับได้ สแตนเลส",
@@ -131,7 +135,7 @@ async function main() {
       categoryId: dogs.id,
       petType: "DOG",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Dog+Crate"],
+      images: ["https://loremflickr.com/600/400/dog,crate?lock=7"],
     },
     {
       name: "ชามอาหารสุนัข สแตนเลส 2 ใบ",
@@ -141,7 +145,7 @@ async function main() {
       categoryId: dogs.id,
       petType: "DOG",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Dog+Bowl"],
+      images: ["https://loremflickr.com/600/400/dog,bowl?lock=8"],
     },
     {
       name: "แปรงหวีขนสุนัข Self-Cleaning",
@@ -151,7 +155,7 @@ async function main() {
       categoryId: dogs.id,
       petType: "DOG",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Dog+Brush"],
+      images: ["https://loremflickr.com/600/400/dog,grooming?lock=9"],
     },
     {
       name: "รองเท้าสุนัข กันลื่น 4 ชิ้น",
@@ -161,7 +165,7 @@ async function main() {
       categoryId: dogs.id,
       petType: "DOG",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Dog+Shoes"],
+      images: ["https://loremflickr.com/600/400/dog,boots?lock=10"],
     },
     // แมว (10)
     {
@@ -172,7 +176,7 @@ async function main() {
       categoryId: cats.id,
       petType: "CAT",
       featured: true,
-      images: ["https://placehold.co/600x400?text=Cat+Condo"],
+      images: ["https://loremflickr.com/600/400/cat,tower?lock=11"],
     },
     {
       name: "ที่ลับเล็บแมว ลำต้นไม้",
@@ -182,7 +186,7 @@ async function main() {
       categoryId: cats.id,
       petType: "CAT",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Cat+Scratcher"],
+      images: ["https://loremflickr.com/600/400/cat,scratching?lock=12"],
     },
     {
       name: "กระบะทรายแมว มีฝาปิด",
@@ -192,7 +196,7 @@ async function main() {
       categoryId: cats.id,
       petType: "CAT",
       featured: true,
-      images: ["https://placehold.co/600x400?text=Cat+Litter+Box"],
+      images: ["https://loremflickr.com/600/400/cat,litter?lock=13"],
     },
     {
       name: "ปลอกคอแมว พร้อมกระดิ่ง",
@@ -202,7 +206,7 @@ async function main() {
       categoryId: cats.id,
       petType: "CAT",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Cat+Collar"],
+      images: ["https://loremflickr.com/600/400/cat,collar?lock=14"],
     },
     {
       name: "แชมพูแมว สูตร Hypoallergenic",
@@ -212,7 +216,7 @@ async function main() {
       categoryId: cats.id,
       petType: "CAT",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Cat+Shampoo"],
+      images: ["https://loremflickr.com/600/400/cat,bath?lock=15"],
     },
     {
       name: "ที่นอนแมว รูปถ้วย Fluffy",
@@ -222,7 +226,7 @@ async function main() {
       categoryId: cats.id,
       petType: "CAT",
       featured: true,
-      images: ["https://placehold.co/600x400?text=Cat+Bed"],
+      images: ["https://loremflickr.com/600/400/cat,sleeping?lock=16"],
     },
     {
       name: "กระเป๋าเดินทางแมว Airline Approved",
@@ -232,7 +236,7 @@ async function main() {
       categoryId: cats.id,
       petType: "CAT",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Cat+Carrier"],
+      images: ["https://loremflickr.com/600/400/cat,carrier?lock=17"],
     },
     {
       name: "น้ำหอมแมว กลิ่น Lavender",
@@ -242,7 +246,7 @@ async function main() {
       categoryId: cats.id,
       petType: "CAT",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Cat+Perfume"],
+      images: ["https://loremflickr.com/600/400/cat,grooming?lock=18"],
     },
     {
       name: "สายจูงแมว + เสื้อกั๊ก",
@@ -252,7 +256,7 @@ async function main() {
       categoryId: cats.id,
       petType: "CAT",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Cat+Harness"],
+      images: ["https://loremflickr.com/600/400/cat,harness?lock=19"],
     },
     {
       name: "น้ำพุแมว กรองน้ำ อัตโนมัติ",
@@ -262,7 +266,7 @@ async function main() {
       categoryId: cats.id,
       petType: "CAT",
       featured: true,
-      images: ["https://placehold.co/600x400?text=Cat+Fountain"],
+      images: ["https://loremflickr.com/600/400/cat,fountain?lock=20"],
     },
     // อาหาร (10)
     {
@@ -273,7 +277,7 @@ async function main() {
       categoryId: food.id,
       petType: "DOG",
       featured: true,
-      images: ["https://placehold.co/600x400?text=Dog+Food+Royal+Canin"],
+      images: ["https://loremflickr.com/600/400/dog,food?lock=21"],
     },
     {
       name: "อาหารแมว Whiskas ปลาทู 1.2kg",
@@ -283,7 +287,7 @@ async function main() {
       categoryId: food.id,
       petType: "CAT",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Cat+Food+Whiskas"],
+      images: ["https://loremflickr.com/600/400/cat,food?lock=22"],
     },
     {
       name: "อาหารเปียกสุนัข Pedigree รสเนื้อ 12 ซอง",
@@ -293,7 +297,7 @@ async function main() {
       categoryId: food.id,
       petType: "DOG",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Dog+Wet+Food"],
+      images: ["https://loremflickr.com/600/400/dog,meal?lock=23"],
     },
     {
       name: "ขนมสุนัข Milk Bone กระดูก",
@@ -303,7 +307,7 @@ async function main() {
       categoryId: food.id,
       petType: "DOG",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Dog+Treat"],
+      images: ["https://loremflickr.com/600/400/dog,treat?lock=24"],
     },
     {
       name: "อาหารนกแก้ว ผสมเมล็ดธัญพืช 1kg",
@@ -313,7 +317,7 @@ async function main() {
       categoryId: food.id,
       petType: "BIRD",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Bird+Food"],
+      images: ["https://loremflickr.com/600/400/parrot,seeds?lock=25"],
     },
     {
       name: "อาหารแมว Pro Plan Sterilised 3kg",
@@ -323,7 +327,7 @@ async function main() {
       categoryId: food.id,
       petType: "CAT",
       featured: true,
-      images: ["https://placehold.co/600x400?text=Cat+Food+Pro+Plan"],
+      images: ["https://loremflickr.com/600/400/cat,kibble?lock=26"],
     },
     {
       name: "ขนมแมว Temptations รสไก่",
@@ -333,7 +337,7 @@ async function main() {
       categoryId: food.id,
       petType: "CAT",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Cat+Treat"],
+      images: ["https://loremflickr.com/600/400/cat,treat?lock=27"],
     },
     {
       name: "อาหารปลาทอง เม็ดลอยน้ำ 200g",
@@ -343,7 +347,7 @@ async function main() {
       categoryId: food.id,
       petType: "FISH",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Fish+Food"],
+      images: ["https://loremflickr.com/600/400/goldfish,aquarium?lock=28"],
     },
     {
       name: "อาหารกระต่าย Timothy Hay 500g",
@@ -353,7 +357,7 @@ async function main() {
       categoryId: food.id,
       petType: "RABBIT",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Rabbit+Food"],
+      images: ["https://loremflickr.com/600/400/rabbit,hay?lock=29"],
     },
     {
       name: "วิตามินรวมสุนัข Beaphar Multivitamin",
@@ -363,7 +367,7 @@ async function main() {
       categoryId: food.id,
       petType: "DOG",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Dog+Vitamins"],
+      images: ["https://loremflickr.com/600/400/dog,vitamins?lock=30"],
     },
     // ของเล่น (10)
     {
@@ -374,7 +378,7 @@ async function main() {
       categoryId: toys.id,
       petType: "DOG",
       featured: true,
-      images: ["https://placehold.co/600x400?text=Kong+Ball"],
+      images: ["https://loremflickr.com/600/400/dog,ball?lock=31"],
     },
     {
       name: "ไม้ตกแมว ขนนก",
@@ -384,7 +388,7 @@ async function main() {
       categoryId: toys.id,
       petType: "CAT",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Cat+Feather+Wand"],
+      images: ["https://loremflickr.com/600/400/cat,feather?lock=32"],
     },
     {
       name: "ของเล่นสุนัข เชือกถัก",
@@ -394,7 +398,7 @@ async function main() {
       categoryId: toys.id,
       petType: "DOG",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Dog+Rope+Toy"],
+      images: ["https://loremflickr.com/600/400/dog,rope?lock=33"],
     },
     {
       name: "ลูกบอลไฟฟ้าแมว หมุนอัตโนมัติ",
@@ -404,7 +408,7 @@ async function main() {
       categoryId: toys.id,
       petType: "CAT",
       featured: true,
-      images: ["https://placehold.co/600x400?text=Cat+Electric+Ball"],
+      images: ["https://loremflickr.com/600/400/cat,playing?lock=34"],
     },
     {
       name: "ของเล่นนกแก้ว บล็อกไม้สี",
@@ -414,7 +418,7 @@ async function main() {
       categoryId: toys.id,
       petType: "BIRD",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Bird+Toy"],
+      images: ["https://loremflickr.com/600/400/parrot,colorful?lock=35"],
     },
     {
       name: "กระดานฝึกสมองสุนัข Puzzle",
@@ -424,7 +428,7 @@ async function main() {
       categoryId: toys.id,
       petType: "DOG",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Dog+Puzzle"],
+      images: ["https://loremflickr.com/600/400/dog,puzzle?lock=36"],
     },
     {
       name: "หนูยางแมวบรรจุ Catnip",
@@ -434,7 +438,7 @@ async function main() {
       categoryId: toys.id,
       petType: "CAT",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Catnip+Mouse"],
+      images: ["https://loremflickr.com/600/400/cat,mouse?lock=37"],
     },
     {
       name: "ลูกบอลสุนัข มีเสียงดัง",
@@ -444,7 +448,7 @@ async function main() {
       categoryId: toys.id,
       petType: "DOG",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Squeaky+Ball"],
+      images: ["https://loremflickr.com/600/400/dog,squeaky?lock=38"],
     },
     {
       name: "แผ่นขุดหาอาหารสุนัข Snuffle Mat",
@@ -454,7 +458,7 @@ async function main() {
       categoryId: toys.id,
       petType: "DOG",
       featured: true,
-      images: ["https://placehold.co/600x400?text=Snuffle+Mat"],
+      images: ["https://loremflickr.com/600/400/dog,sniff?lock=39"],
     },
     {
       name: "อุโมงค์แมว พับได้",
@@ -464,7 +468,7 @@ async function main() {
       categoryId: toys.id,
       petType: "CAT",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Cat+Tunnel"],
+      images: ["https://loremflickr.com/600/400/cat,tunnel?lock=40"],
     },
     // อุปกรณ์ (10)
     {
@@ -475,7 +479,7 @@ async function main() {
       categoryId: accessories.id,
       petType: null,
       featured: true,
-      images: ["https://placehold.co/600x400?text=Auto+Feeder"],
+      images: ["https://loremflickr.com/600/400/pet,feeder?lock=41"],
     },
     {
       name: "GPS Tracker สำหรับสัตว์เลี้ยง",
@@ -485,7 +489,7 @@ async function main() {
       categoryId: accessories.id,
       petType: null,
       featured: true,
-      images: ["https://placehold.co/600x400?text=GPS+Tracker"],
+      images: ["https://loremflickr.com/600/400/pet,tracker?lock=42"],
     },
     {
       name: "ไดร์เป่าขนสุนัข 2200W",
@@ -495,7 +499,7 @@ async function main() {
       categoryId: accessories.id,
       petType: "DOG",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Dog+Dryer"],
+      images: ["https://loremflickr.com/600/400/dog,salon?lock=43"],
     },
     {
       name: "ตาชั่งดิจิทัล สัตว์เลี้ยง",
@@ -505,7 +509,7 @@ async function main() {
       categoryId: accessories.id,
       petType: null,
       featured: false,
-      images: ["https://placehold.co/600x400?text=Pet+Scale"],
+      images: ["https://loremflickr.com/600/400/pet,scale?lock=44"],
     },
     {
       name: "ที่ตัดเล็บสัตว์เลี้ยง Guillotine",
@@ -515,7 +519,7 @@ async function main() {
       categoryId: accessories.id,
       petType: null,
       featured: false,
-      images: ["https://placehold.co/600x400?text=Nail+Clipper"],
+      images: ["https://loremflickr.com/600/400/pet,nail?lock=45"],
     },
     {
       name: "กรงนกแก้ว สแตนเลส ขนาดใหญ่",
@@ -525,7 +529,7 @@ async function main() {
       categoryId: accessories.id,
       petType: "BIRD",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Bird+Cage"],
+      images: ["https://loremflickr.com/600/400/parrot,cage?lock=46"],
     },
     {
       name: "ตู้ปลา SET พร้อมใช้ 60cm",
@@ -535,7 +539,7 @@ async function main() {
       categoryId: accessories.id,
       petType: "FISH",
       featured: true,
-      images: ["https://placehold.co/600x400?text=Fish+Tank"],
+      images: ["https://loremflickr.com/600/400/aquarium,fish?lock=47"],
     },
     {
       name: "แปรงสีฟันสุนัข พร้อมยาสีฟัน",
@@ -545,7 +549,7 @@ async function main() {
       categoryId: accessories.id,
       petType: "DOG",
       featured: false,
-      images: ["https://placehold.co/600x400?text=Dog+Toothbrush"],
+      images: ["https://loremflickr.com/600/400/dog,dental?lock=48"],
     },
     {
       name: "เสื่อกันน้ำ สำหรับรถยนต์",
@@ -555,7 +559,7 @@ async function main() {
       categoryId: accessories.id,
       petType: null,
       featured: false,
-      images: ["https://placehold.co/600x400?text=Car+Seat+Cover"],
+      images: ["https://loremflickr.com/600/400/dog,car?lock=49"],
     },
     {
       name: "กระเป๋าเป้สะพายหลัง ใส่สัตว์เลี้ยง",
@@ -565,7 +569,7 @@ async function main() {
       categoryId: accessories.id,
       petType: null,
       featured: false,
-      images: ["https://placehold.co/600x400?text=Pet+Backpack"],
+      images: ["https://loremflickr.com/600/400/pet,backpack?lock=50"],
     },
   ];
 

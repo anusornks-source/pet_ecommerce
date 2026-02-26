@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, use } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 import { formatPrice, PET_TYPE_LABEL } from "@/lib/utils";
 import type { Product, Review } from "@/types";
 import toast from "react-hot-toast";
@@ -15,6 +16,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const router = useRouter();
   const { user } = useAuth();
   const { addToCart } = useCart();
+  const { isWishlisted, toggle: toggleWishlist } = useWishlist();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -190,7 +192,18 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 </span>
               )}
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-stone-800">{product.name}</h1>
+            <div className="flex items-start justify-between gap-3">
+              <h1 className="text-2xl md:text-3xl font-bold text-stone-800">{product.name}</h1>
+              {user && (
+                <button
+                  onClick={() => toggleWishlist(product.id)}
+                  className="shrink-0 w-10 h-10 rounded-full border border-stone-200 flex items-center justify-center text-xl hover:scale-110 transition-transform"
+                  title={isWishlisted(product.id) ? "ลบออกจาก Wishlist" : "เพิ่มใน Wishlist"}
+                >
+                  {isWishlisted(product.id) ? "❤️" : "🤍"}
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="flex items-baseline gap-3">

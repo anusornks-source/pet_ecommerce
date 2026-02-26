@@ -86,6 +86,14 @@ export interface Review {
   user: Pick<User, "id" | "name" | "avatar">;
 }
 
+export interface WishlistItem {
+  id: string;
+  userId: string;
+  productId: string;
+  createdAt: string;
+  product: Product;
+}
+
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;

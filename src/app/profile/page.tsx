@@ -121,6 +121,11 @@ export default function ProfilePage() {
           <h3 className="font-semibold text-stone-800">ประวัติคำสั่งซื้อ</h3>
           <p className="text-sm text-stone-400">ดูรายการสั่งซื้อทั้งหมด</p>
         </Link>
+        <Link href="/profile/wishlist" className="card p-5 hover:bg-orange-50 hover:border-orange-200 border-2 border-transparent transition-all">
+          <div className="text-3xl mb-2">❤️</div>
+          <h3 className="font-semibold text-stone-800">รายการโปรด</h3>
+          <p className="text-sm text-stone-400">สินค้าที่คุณบันทึกไว้</p>
+        </Link>
         <Link href="/cart" className="card p-5 hover:bg-orange-50 hover:border-orange-200 border-2 border-transparent transition-all">
           <div className="text-3xl mb-2">🛒</div>
           <h3 className="font-semibold text-stone-800">ตะกร้าสินค้า</h3>

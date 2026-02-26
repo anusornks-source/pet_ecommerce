@@ -20,9 +20,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  cart    Cart?
-  orders  Order[]
-  reviews Review[]
+  cart      Cart?
+  orders    Order[]
+  reviews   Review[]
+  wishlists Wishlist[]
 
   @@map("users")
 }
@@ -54,8 +55,22 @@ model Product {
   cartItems  CartItem[]
   orderItems OrderItem[]
   reviews    Review[]
+  wishlists  Wishlist[]
 
   @@map("products")
+}
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@map("wishlists")
 }
 
 model Review {

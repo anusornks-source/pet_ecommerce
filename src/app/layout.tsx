@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
+import { WishlistProvider } from "@/context/WishlistContext";
 
 export const metadata: Metadata = {
   title: "PetShop - ร้านสัตว์เลี้ยงออนไลน์",
@@ -21,6 +22,7 @@ export default function RootLayout({
       <body className="antialiased">
         <AuthProvider>
           <CartProvider>
+            <WishlistProvider>
             <Navbar />
             <main className="min-h-screen">{children}</main>
             <Footer />
@@ -40,6 +42,7 @@ export default function RootLayout({
                 },
               }}
             />
+            </WishlistProvider>
           </CartProvider>
         </AuthProvider>
       </body>

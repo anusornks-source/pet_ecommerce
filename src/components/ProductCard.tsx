@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 import { formatPrice, PET_TYPE_LABEL } from "@/lib/utils";
 import type { Product } from "@/types";
 import toast from "react-hot-toast";
@@ -18,6 +19,7 @@ export default function ProductCard({ product }: Props) {
   const router = useRouter();
   const { user } = useAuth();
   const { addToCart, loading } = useCart();
+  const { isWishlisted, toggle: toggleWishlist } = useWishlist();
   const [adding, setAdding] = useState(false);
 
   const handleAddToCart = async (e: React.MouseEvent) => {
@@ -61,6 +63,14 @@ export default function ProductCard({ product }: Props) {
             <span className="absolute top-2 left-2 badge bg-orange-500 text-white">
               ⭐ แนะนำ
             </span>
+          )}
+          {user && (
+            <button
+              onClick={(e) => { e.preventDefault(); toggleWishlist(product.id); }}
+              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 transition-transform"
+            >
+              {isWishlisted(product.id) ? "❤️" : "🤍"}
+            </button>
           )}
           {product.stock === 0 && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center">

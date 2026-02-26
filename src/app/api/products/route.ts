@@ -11,6 +11,9 @@ export async function GET(request: NextRequest) {
   const limit = parseInt(searchParams.get("limit") || "12");
   const skip = (page - 1) * limit;
 
+  const minPrice = searchParams.get("minPrice");
+  const maxPrice = searchParams.get("maxPrice");
+
   const where: Record<string, unknown> = {};
 
   if (category) {
@@ -27,6 +30,12 @@ export async function GET(request: NextRequest) {
   }
   if (featured === "true") {
     where.featured = true;
+  }
+  if (minPrice || maxPrice) {
+    where.price = {
+      ...(minPrice ? { gte: parseFloat(minPrice) } : {}),
+      ...(maxPrice ? { lte: parseFloat(maxPrice) } : {}),
+    };
   }
 
   const [products, total] = await Promise.all([

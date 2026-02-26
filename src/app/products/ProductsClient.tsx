@@ -19,6 +19,10 @@ export default function ProductsClient() {
   const petType = searchParams.get("petType") || "";
   const search = searchParams.get("search") || "";
   const featured = searchParams.get("featured") || "";
+  const minPrice = searchParams.get("minPrice") || "";
+  const maxPrice = searchParams.get("maxPrice") || "";
+
+  const [priceRange, setPriceRange] = useState<[string, string]>([minPrice, maxPrice]);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -27,6 +31,8 @@ export default function ProductsClient() {
     if (petType) params.set("petType", petType);
     if (search) params.set("search", search);
     if (featured) params.set("featured", featured);
+    if (minPrice) params.set("minPrice", minPrice);
+    if (maxPrice) params.set("maxPrice", maxPrice);
     params.set("page", String(page));
     params.set("limit", "12");
 
@@ -37,7 +43,7 @@ export default function ProductsClient() {
       setTotal(data.pagination.total);
     }
     setLoading(false);
-  }, [category, petType, search, featured, page]);
+  }, [category, petType, search, featured, minPrice, maxPrice, page]);
 
   useEffect(() => {
     fetch("/api/categories")
@@ -60,6 +66,7 @@ export default function ProductsClient() {
 
   const clearFilters = () => {
     setPage(1);
+    setPriceRange(["", ""]);
     router.push("/products");
   };
 
@@ -71,7 +78,18 @@ export default function ProductsClient() {
     { value: "RABBIT", label: "🐰 กระต่าย" },
   ];
 
-  const hasFilters = category || petType || search || featured;
+  const applyPriceFilter = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (priceRange[0]) params.set("minPrice", priceRange[0]);
+    else params.delete("minPrice");
+    if (priceRange[1]) params.set("maxPrice", priceRange[1]);
+    else params.delete("maxPrice");
+    params.delete("page");
+    setPage(1);
+    router.push(`/products?${params}`);
+  };
+
+  const hasFilters = category || petType || search || featured || minPrice || maxPrice;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -136,6 +154,45 @@ export default function ProductsClient() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Price Range */}
+            <div className="mb-5">
+              <label className="text-sm font-medium text-stone-600 block mb-2">ช่วงราคา (บาท)</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="ต่ำสุด"
+                  value={priceRange[0]}
+                  onChange={(e) => setPriceRange([e.target.value, priceRange[1]])}
+                  onKeyDown={(e) => e.key === "Enter" && applyPriceFilter()}
+                  className="input text-sm w-full"
+                  style={{ padding: "0.5rem 0.75rem" }}
+                />
+                <span className="text-stone-400 shrink-0">—</span>
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="สูงสุด"
+                  value={priceRange[1]}
+                  onChange={(e) => setPriceRange([priceRange[0], e.target.value])}
+                  onKeyDown={(e) => e.key === "Enter" && applyPriceFilter()}
+                  className="input text-sm w-full"
+                  style={{ padding: "0.5rem 0.75rem" }}
+                />
+              </div>
+              <button
+                onClick={applyPriceFilter}
+                className="mt-2 w-full text-sm py-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
+              >
+                กรองราคา
+              </button>
+              {(minPrice || maxPrice) && (
+                <p className="mt-1 text-xs text-stone-400 text-center">
+                  {minPrice ? `฿${Number(minPrice).toLocaleString()}` : "0"} — {maxPrice ? `฿${Number(maxPrice).toLocaleString()}` : "∞"}
+                </p>
+              )}
             </div>
 
             {/* Pet Type */}

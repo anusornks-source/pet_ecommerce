@@ -255,6 +255,16 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 </div>
               </div>
 
+              <button
+                onClick={() => {
+                  const msg = `แนะนำสินค้าที่คล้ายกับ "${product.name}" ในหมวด ${product.category.name}`;
+                  window.dispatchEvent(new CustomEvent("open-chat", { detail: { message: msg } }));
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-orange-200 text-orange-600 hover:bg-orange-50 transition-colors text-sm font-medium"
+              >
+                ✨ ถาม AI หาสินค้าที่คล้ายกัน
+              </button>
+
               <div className="flex gap-3">
                 <button
                   onClick={handleAddToCart}

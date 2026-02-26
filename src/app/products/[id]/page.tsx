@@ -120,10 +120,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
-  const validImages = product.images?.filter((img) => img && img.trim() !== "");
-  const images = validImages?.length
-    ? validImages
-    : [`https://placehold.co/600x400/fff7ed/f97316?text=${encodeURIComponent(product.name)}`];
+  const placeholder = `https://placehold.co/600x400/fff7ed/f97316?text=${encodeURIComponent(product.name)}`;
+  const validImages = (product.images ?? []).filter(
+    (img): img is string => typeof img === "string" && img.trim() !== ""
+  );
+  const images = validImages.length > 0 ? validImages : [placeholder];
+  const safeIndex = selectedImage < images.length ? selectedImage : 0;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -145,7 +147,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         <div className="space-y-3">
           <div className="relative h-80 md:h-96 rounded-3xl overflow-hidden bg-orange-50">
             <Image
-              src={images[selectedImage]}
+              src={images[safeIndex]}
               alt={product.name}
               fill
               className="object-cover"

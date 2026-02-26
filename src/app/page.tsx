@@ -8,7 +8,6 @@ async function getFeaturedProducts() {
   const products = await prisma.product.findMany({
     where: { featured: true },
     include: { category: true },
-    take: 6,
     orderBy: { createdAt: "desc" },
   });
   return products as unknown as Product[];

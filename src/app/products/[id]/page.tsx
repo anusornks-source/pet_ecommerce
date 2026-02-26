@@ -120,8 +120,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
-  const images = product.images?.length
-    ? product.images
+  const validImages = product.images?.filter((img) => img && img.trim() !== "");
+  const images = validImages?.length
+    ? validImages
     : [`https://placehold.co/600x400/fff7ed/f97316?text=${encodeURIComponent(product.name)}`];
 
   return (

@@ -39,7 +39,7 @@ async function searchProducts(params: {
     };
   }
   if (params.petType) {
-    where.petType = { equals: params.petType, mode: "insensitive" };
+    where.petType = params.petType.toUpperCase();
   }
   if (params.minPrice !== undefined || params.maxPrice !== undefined) {
     where.price = {

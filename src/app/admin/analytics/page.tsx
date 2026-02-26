@@ -183,8 +183,8 @@ export default function AnalyticsPage() {
             <XAxis dataKey="date" tickFormatter={formatShortDate} tick={{ fontSize: 11, fill: "#a8a29e" }} />
             <YAxis tickFormatter={(v) => `฿${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11, fill: "#a8a29e" }} width={48} />
             <Tooltip
-              formatter={(val: number) => [formatCurrency(val), "รายได้"]}
-              labelFormatter={(label) => `วันที่ ${new Date(label).toLocaleDateString("th-TH")}`}
+              formatter={(val) => [formatCurrency((val as number) ?? 0), "รายได้"]}
+              labelFormatter={(label) => `วันที่ ${new Date(label as string).toLocaleDateString("th-TH")}`}
             />
             <Area type="monotone" dataKey="revenue" stroke="#f97316" strokeWidth={2} fill="url(#revenueGrad)" />
           </AreaChart>
@@ -201,8 +201,8 @@ export default function AnalyticsPage() {
               <XAxis dataKey="date" tickFormatter={formatShortDate} tick={{ fontSize: 11, fill: "#a8a29e" }} />
               <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#a8a29e" }} width={32} />
               <Tooltip
-                formatter={(val: number) => [val, "ออเดอร์"]}
-                labelFormatter={(label) => `วันที่ ${new Date(label).toLocaleDateString("th-TH")}`}
+                formatter={(val) => [(val as number) ?? 0, "ออเดอร์"]}
+                labelFormatter={(label) => `วันที่ ${new Date(label as string).toLocaleDateString("th-TH")}`}
               />
               <Bar dataKey="orders" fill="#60a5fa" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -223,8 +223,8 @@ export default function AnalyticsPage() {
               <XAxis dataKey="date" tickFormatter={formatShortDate} tick={{ fontSize: 11, fill: "#a8a29e" }} />
               <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#a8a29e" }} width={32} />
               <Tooltip
-                formatter={(val: number) => [val, "ผู้ใช้ใหม่"]}
-                labelFormatter={(label) => `วันที่ ${new Date(label).toLocaleDateString("th-TH")}`}
+                formatter={(val) => [(val as number) ?? 0, "ผู้ใช้ใหม่"]}
+                labelFormatter={(label) => `วันที่ ${new Date(label as string).toLocaleDateString("th-TH")}`}
               />
               <Area type="monotone" dataKey="count" stroke="#8b5cf6" strokeWidth={2} fill="url(#userGrad)" />
             </AreaChart>
@@ -256,9 +256,9 @@ export default function AnalyticsPage() {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(val: number, _name: string, props) => [
+                  formatter={(val, name) => [
                     `${val} ออเดอร์`,
-                    STATUS_LABELS[props.payload.status] ?? props.payload.status,
+                    STATUS_LABELS[name as string] ?? name,
                   ]}
                 />
                 <Legend
@@ -291,9 +291,9 @@ export default function AnalyticsPage() {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(val: number, _name: string, props) => [
+                  formatter={(val, name) => [
                     `${val} รายการ`,
-                    PAYMENT_LABELS[props.payload.method] ?? props.payload.method,
+                    PAYMENT_LABELS[name as string] ?? name,
                   ]}
                 />
                 <Legend
@@ -321,7 +321,7 @@ export default function AnalyticsPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" horizontal={false} />
                 <XAxis type="number" tickFormatter={(v) => `฿${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11, fill: "#a8a29e" }} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: "#57534e" }} width={80} />
-                <Tooltip formatter={(val: number) => [formatCurrency(val), "รายได้"]} />
+                <Tooltip formatter={(val) => [formatCurrency((val as number) ?? 0), "รายได้"]} />
                 <Bar dataKey="revenue" fill="#f97316" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>

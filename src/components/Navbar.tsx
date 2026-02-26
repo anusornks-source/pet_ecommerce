@@ -100,6 +100,15 @@ export default function Navbar() {
                     >
                       <span>📦</span> ประวัติคำสั่งซื้อ
                     </Link>
+                    {user.role === "ADMIN" && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setDropOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 text-sm text-orange-600 hover:bg-orange-50 transition-colors font-medium"
+                      >
+                        <span>⚙️</span> Admin CMS
+                      </Link>
+                    )}
                     <hr className="my-1 border-stone-100" />
                     <button
                       onClick={() => { setDropOpen(false); handleLogout(); }}

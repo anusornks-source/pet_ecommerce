@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -15,7 +16,7 @@ model User {
   phone     String?
   address   String?
   avatar    String?
-  role      String   @default("USER")
+  role      Role     @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -41,9 +42,9 @@ model Product {
   description String
   price       Float
   stock       Int      @default(0)
-  images      String?
+  images      String[]
   categoryId  String
-  petType     String?  @default("OTHER")
+  petType     PetType?
   featured    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -83,7 +84,7 @@ model CartItem {
 model Order {
   id          String      @id @default(cuid())
   userId      String
-  status      String      @default("PENDING")
+  status      OrderStatus @default(PENDING)
   total       Float
   address     String
   phone       String
@@ -114,8 +115,8 @@ model OrderItem {
 model Payment {
   id        String        @id @default(cuid())
   orderId   String        @unique
-  method    String
-  status    String        @default("PENDING")
+  method    PaymentMethod
+  status    PaymentStatus @default(PENDING)
   amount    Float
   ref       String?
   paidAt    DateTime?
@@ -126,4 +127,39 @@ model Payment {
   @@map("payments")
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PetType {
+  DOG
+  CAT
+  BIRD
+  FISH
+  RABBIT
+  OTHER
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPING
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  BANK_TRANSFER
+  PROMPTPAY
+  COD
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
 

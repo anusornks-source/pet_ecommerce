@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
 
   const minPrice = searchParams.get("minPrice");
   const maxPrice = searchParams.get("maxPrice");
+  const sort = searchParams.get("sort") || "newest";
 
   const where: Record<string, unknown> = {};
 
@@ -38,11 +39,18 @@ export async function GET(request: NextRequest) {
     };
   }
 
+  const orderBy =
+    sort === "price_asc" ? { price: "asc" as const } :
+    sort === "price_desc" ? { price: "desc" as const } :
+    sort === "name_asc" ? { name: "asc" as const } :
+    sort === "oldest" ? { createdAt: "asc" as const } :
+    { createdAt: "desc" as const };
+
   const [products, total] = await Promise.all([
     prisma.product.findMany({
       where,
       include: { category: true },
-      orderBy: { createdAt: "desc" },
+      orderBy,
       skip,
       take: limit,
     }),

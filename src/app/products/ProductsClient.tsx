@@ -21,6 +21,7 @@ export default function ProductsClient() {
   const featured = searchParams.get("featured") || "";
   const minPrice = searchParams.get("minPrice") || "";
   const maxPrice = searchParams.get("maxPrice") || "";
+  const sort = searchParams.get("sort") || "newest";
 
   const [priceRange, setPriceRange] = useState<[string, string]>([minPrice, maxPrice]);
 
@@ -33,6 +34,7 @@ export default function ProductsClient() {
     if (featured) params.set("featured", featured);
     if (minPrice) params.set("minPrice", minPrice);
     if (maxPrice) params.set("maxPrice", maxPrice);
+    if (sort !== "newest") params.set("sort", sort);
     params.set("page", String(page));
     params.set("limit", "12");
 
@@ -43,7 +45,7 @@ export default function ProductsClient() {
       setTotal(data.pagination.total);
     }
     setLoading(false);
-  }, [category, petType, search, featured, minPrice, maxPrice, page]);
+  }, [category, petType, search, featured, minPrice, maxPrice, sort, page]);
 
   useEffect(() => {
     fetch("/api/categories")
@@ -89,7 +91,7 @@ export default function ProductsClient() {
     router.push(`/products?${params}`);
   };
 
-  const hasFilters = category || petType || search || featured || minPrice || maxPrice;
+  const hasFilters = category || petType || search || featured || minPrice || maxPrice || sort !== "newest";
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -225,6 +227,22 @@ export default function ProductsClient() {
 
         {/* Products Grid */}
         <div className="flex-1">
+          {/* Sort Bar */}
+          <div className="flex items-center justify-end mb-4 gap-2">
+            <span className="text-sm text-stone-500">เรียงโดย</span>
+            <select
+              value={sort}
+              onChange={(e) => setFilter("sort", e.target.value === "newest" ? "" : e.target.value)}
+              className="input text-sm"
+              style={{ padding: "0.4rem 0.75rem", width: "auto" }}
+            >
+              <option value="newest">ใหม่ล่าสุด</option>
+              <option value="oldest">เก่าสุด</option>
+              <option value="price_asc">ราคา: ต่ำ → สูง</option>
+              <option value="price_desc">ราคา: สูง → ต่ำ</option>
+              <option value="name_asc">ชื่อ ก → ฮ</option>
+            </select>
+          </div>
           {loading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
               {Array.from({ length: 6 }).map((_, i) => (

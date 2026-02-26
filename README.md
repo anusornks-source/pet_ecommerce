@@ -57,6 +57,39 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
+## Production Deployment
+
+### 1. Database Setup (Neon PostgreSQL)
+
+1. สร้างบัญชีที่ [Neon](https://neon.tech)
+2. สร้าง Project ใหม่
+3. คัดลอก Connection String จากแท็บ "Connection Details"
+4. อัปเดตไฟล์ `.env`:
+
+```env
+DATABASE_URL="postgresql://username:password@host/database?sslmode=require"
+DIRECT_URL="postgresql://username:password@host/database?sslmode=require"
+JWT_SECRET="your-super-secret-jwt-key-change-in-production"
+NEXT_PUBLIC_APP_URL="https://yourdomain.com"
+```
+
+### 2. Deploy to Vercel
+
+1. Push code to GitHub
+2. เชื่อมต่อกับ Vercel
+3. เพิ่ม Environment Variables ใน Vercel Dashboard
+4. Deploy
+
+### 3. Database Migration
+
+```bash
+# สำหรับ Production
+npm run db:push
+npm run db:seed
+```
+
+**⚠️ สำคัญ:** ตรวจสอบว่า Neon database ไม่ได้ปิดตัวเอง (Resume ถ้าจำเป็น)
+
 ## Demo Accounts
 
 | Role  | Email                | Password   |

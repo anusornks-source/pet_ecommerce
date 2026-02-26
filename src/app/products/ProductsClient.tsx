@@ -169,7 +169,7 @@ export default function ProductsClient() {
         {/* Products Grid */}
         <div className="flex-1">
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 gap-5">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="card animate-pulse">
                   <div className="h-52 bg-stone-100" />
@@ -183,7 +183,7 @@ export default function ProductsClient() {
             </div>
           ) : products.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 gap-5">
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}

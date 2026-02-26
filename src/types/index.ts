@@ -76,6 +76,16 @@ export interface Order {
   payment?: Payment | null;
 }
 
+export interface Review {
+  id: string;
+  productId: string;
+  userId: string;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+  user: Pick<User, "id" | "name" | "avatar">;
+}
+
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;

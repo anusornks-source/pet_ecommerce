@@ -39,7 +39,11 @@ export default function ProductCard({ product }: Props) {
     }
   };
 
-  const image = product.images?.[0] || `https://placehold.co/400x300/fff7ed/f97316?text=${encodeURIComponent(product.name)}`;
+  const firstImage = product.images?.find((img) => {
+    if (typeof img !== "string" || !img.trim()) return false;
+    try { new URL(img); return true; } catch { return false; }
+  });
+  const image = firstImage || `https://placehold.co/400x300/fff7ed/f97316?text=${encodeURIComponent(product.name)}`;
 
   return (
     <Link href={`/products/${product.id}`}>

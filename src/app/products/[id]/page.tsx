@@ -121,9 +121,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   }
 
   const placeholder = `https://placehold.co/600x400/fff7ed/f97316?text=${encodeURIComponent(product.name)}`;
-  const validImages = (product.images ?? []).filter(
-    (img): img is string => typeof img === "string" && img.trim() !== ""
-  );
+  const validImages = (product.images ?? []).filter((img): img is string => {
+    if (typeof img !== "string" || !img.trim()) return false;
+    try { new URL(img); return true; } catch { return false; }
+  });
   const images = validImages.length > 0 ? validImages : [placeholder];
   const safeIndex = selectedImage < images.length ? selectedImage : 0;
 

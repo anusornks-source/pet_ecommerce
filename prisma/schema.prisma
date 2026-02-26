@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
@@ -15,7 +15,7 @@ model User {
   phone     String?
   address   String?
   avatar    String?
-  role      Role     @default(USER)
+  role      String   @default("USER")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -23,11 +23,6 @@ model User {
   orders Order[]
 
   @@map("users")
-}
-
-enum Role {
-  USER
-  ADMIN
 }
 
 model Category {
@@ -46,9 +41,9 @@ model Product {
   description String
   price       Float
   stock       Int      @default(0)
-  images      String[]
+  images      String?
   categoryId  String
-  petType     PetType?
+  petType     String?  @default("OTHER")
   featured    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -58,15 +53,6 @@ model Product {
   orderItems OrderItem[]
 
   @@map("products")
-}
-
-enum PetType {
-  DOG
-  CAT
-  BIRD
-  FISH
-  RABBIT
-  OTHER
 }
 
 model Cart {
@@ -97,7 +83,7 @@ model CartItem {
 model Order {
   id          String      @id @default(cuid())
   userId      String
-  status      OrderStatus @default(PENDING)
+  status      String      @default("PENDING")
   total       Float
   address     String
   phone       String
@@ -110,14 +96,6 @@ model Order {
   payment Payment?
 
   @@map("orders")
-}
-
-enum OrderStatus {
-  PENDING
-  CONFIRMED
-  SHIPPING
-  DELIVERED
-  CANCELLED
 }
 
 model OrderItem {
@@ -136,8 +114,8 @@ model OrderItem {
 model Payment {
   id        String        @id @default(cuid())
   orderId   String        @unique
-  method    PaymentMethod
-  status    PaymentStatus @default(PENDING)
+  method    String
+  status    String        @default("PENDING")
   amount    Float
   ref       String?
   paidAt    DateTime?
@@ -148,16 +126,4 @@ model Payment {
   @@map("payments")
 }
 
-enum PaymentMethod {
-  CREDIT_CARD
-  BANK_TRANSFER
-  PROMPTPAY
-  COD
-}
 
-enum PaymentStatus {
-  PENDING
-  PAID
-  FAILED
-  REFUNDED
-}

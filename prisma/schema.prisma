@@ -195,6 +195,21 @@ enum PaymentStatus {
   REFUNDED
 }
 
+model Article {
+  id         String   @id @default(cuid())
+  title      String
+  slug       String   @unique
+  excerpt    String?
+  content    String
+  coverImage String?
+  published  Boolean  @default(false)
+  tags       String[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("articles")
+}
+
 model Store {
   id        String   @id @default(cuid())
   name      String

@@ -25,6 +25,7 @@ export default function Navbar() {
     { href: "/", label: "หน้าแรก" },
     { href: "/products", label: "สินค้า" },
     { href: "/stores", label: "สาขา" },
+    { href: "/articles", label: "บทความ" },
   ];
 
   return (

@@ -149,28 +149,68 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {/* Images */}
         <div className="space-y-3">
-          <div className="relative h-80 md:h-96 rounded-3xl overflow-hidden bg-orange-50">
+          <div className="relative h-80 md:h-115 rounded-3xl overflow-hidden bg-orange-50 group">
             <Image
               src={images[safeIndex]}
               alt={product.name}
               fill
-              className="object-cover"
+              className="object-cover transition-opacity duration-200"
               sizes="(max-width: 768px) 100vw, 50vw"
+              priority
             />
             {product.featured && (
-              <span className="absolute top-4 left-4 bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+              <span className="absolute top-4 left-4 bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-medium z-10">
                 ⭐ สินค้าแนะนำ
               </span>
             )}
+            {/* Prev / Next arrows */}
+            {images.length > 1 && (
+              <>
+                <button
+                  onClick={() => setSelectedImage((safeIndex - 1 + images.length) % images.length)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  aria-label="รูปก่อนหน้า"
+                >
+                  <svg className="w-4 h-4 text-stone-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setSelectedImage((safeIndex + 1) % images.length)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  aria-label="รูปถัดไป"
+                >
+                  <svg className="w-4 h-4 text-stone-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                {/* Dot indicators */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                  {images.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedImage(idx)}
+                      className={`h-2 rounded-full transition-all duration-200 ${
+                        idx === safeIndex ? "bg-white w-5" : "bg-white/60 w-2"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
+
+          {/* Thumbnails */}
           {images.length > 1 && (
             <div className="flex gap-2 overflow-x-auto pb-1">
               {images.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedImage(idx)}
-                  className={`relative w-20 h-20 rounded-xl overflow-hidden shrink-0 border-2 transition-colors ${
-                    selectedImage === idx ? "border-orange-500" : "border-stone-100"
+                  className={`relative w-20 h-20 rounded-xl overflow-hidden shrink-0 border-2 transition-all ${
+                    safeIndex === idx
+                      ? "border-orange-500 scale-105 shadow-md"
+                      : "border-stone-100 hover:border-stone-300"
                   }`}
                 >
                   <Image src={img} alt="" fill className="object-cover" sizes="80px" />

@@ -10,6 +10,7 @@ import { useWishlist } from "@/context/WishlistContext";
 import { formatPrice, PET_TYPE_LABEL } from "@/lib/utils";
 import type { Product, Review } from "@/types";
 import toast from "react-hot-toast";
+import ShareButtons from "@/components/ShareButtons";
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -304,6 +305,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 <p className="text-xs text-stone-600">{f.label}</p>
               </div>
             ))}
+          </div>
+
+          {/* Share */}
+          <div className="pt-4 border-t border-stone-100">
+            <ShareButtons url={`/products/${product.id}`} title={product.name} />
           </div>
         </div>
       </div>

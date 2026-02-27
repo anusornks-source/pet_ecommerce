@@ -4,6 +4,8 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { prisma } from "@/lib/prisma";
+import ShareButtons from "@/components/ShareButtons";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,26 @@ async function getArticle(slug: string) {
   return prisma.article.findUnique({
     where: { slug, published: true },
   });
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const article = await getArticle(slug);
+  if (!article) return {};
+  return {
+    title: article.title,
+    description: article.excerpt ?? undefined,
+    openGraph: {
+      title: article.title,
+      description: article.excerpt ?? undefined,
+      images: article.coverImage ? [{ url: article.coverImage }] : [],
+      type: "article",
+    },
+  };
 }
 
 export default async function ArticleDetailPage({
@@ -80,6 +102,15 @@ export default async function ArticleDetailPage({
           {article.excerpt}
         </p>
       )}
+
+      {/* Share */}
+      <div className="mb-8">
+        <ShareButtons
+          url={`/articles/${article.slug}`}
+          title={article.title}
+          image={article.coverImage ?? undefined}
+        />
+      </div>
 
       {/* Content */}
       <article className="prose prose-stone prose-headings:font-bold prose-a:text-orange-500 prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl max-w-none">

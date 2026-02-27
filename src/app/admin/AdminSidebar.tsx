@@ -10,6 +10,7 @@ const navItems = [
   { href: "/admin/categories", label: "หมวดหมู่", icon: "🏷️" },
   { href: "/admin/orders", label: "คำสั่งซื้อ", icon: "🛒" },
   { href: "/admin/users", label: "ผู้ใช้งาน", icon: "👥" },
+  { href: "/admin/stores", label: "สาขา", icon: "📍" },
 ];
 
 export default function AdminSidebar() {

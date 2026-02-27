@@ -195,3 +195,19 @@ enum PaymentStatus {
   REFUNDED
 }
 
+model Store {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  phone     String
+  openHours String
+  image     String?
+  remark    String?
+  lat       Float
+  lng       Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("stores")
+}
+

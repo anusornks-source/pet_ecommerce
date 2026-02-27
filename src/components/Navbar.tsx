@@ -24,6 +24,7 @@ export default function Navbar() {
   const navLinks = [
     { href: "/", label: "หน้าแรก" },
     { href: "/products", label: "สินค้า" },
+    { href: "/stores", label: "สาขา" },
   ];
 
   return (

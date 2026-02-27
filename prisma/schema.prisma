@@ -195,6 +195,16 @@ enum PaymentStatus {
   REFUNDED
 }
 
+model SiteSettings {
+  id         String   @id @default("default")
+  storeName  String   @default("PetShop")
+  logoUrl    String?
+  adminEmail String?
+  updatedAt  DateTime @updatedAt
+
+  @@map("site_settings")
+}
+
 model Article {
   id         String   @id @default(cuid())
   title      String

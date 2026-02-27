@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendOrderNotification } from "@/lib/email";
 
 // GET user orders
 export async function GET() {
@@ -110,6 +111,36 @@ export async function POST(request: NextRequest) {
 
     return newOrder;
   });
+
+  // Send email notification (fire-and-forget — don't block order response)
+  try {
+    const [settings, user] = await Promise.all([
+      prisma.siteSettings.findUnique({ where: { id: "default" } }),
+      prisma.user.findUnique({ where: { id: session.userId }, select: { name: true, email: true } }),
+    ]);
+
+    if (settings?.adminEmail && user) {
+      sendOrderNotification({
+        orderId: order.id,
+        customerName: user.name,
+        customerEmail: user.email,
+        phone,
+        address,
+        note,
+        paymentMethod,
+        total,
+        items: order.items.map((item) => ({
+          name: item.product.name,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        storeName: settings.storeName,
+        adminEmail: settings.adminEmail,
+      }).catch(() => {}); // ignore email errors silently
+    }
+  } catch {
+    // ignore — never block the order
+  }
 
   return NextResponse.json({ success: true, data: order }, { status: 201 });
 }

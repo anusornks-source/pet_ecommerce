@@ -7,26 +7,32 @@ import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import ChatAssistant from "@/components/ChatAssistant";
+import { getSettings } from "@/lib/settings";
 
-export const metadata: Metadata = {
-  title: "PetShop - ร้านสัตว์เลี้ยงออนไลน์",
-  description: "ช้อปสัตว์เลี้ยง อาหาร และของเล่น คุณภาพสูง ราคาถูก จัดส่งทั่วประเทศ",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSettings();
+  return {
+    title: `${settings.storeName} - ร้านสัตว์เลี้ยงออนไลน์`,
+    description: "ช้อปสัตว์เลี้ยง อาหาร และของเล่น คุณภาพสูง ราคาถูก จัดส่งทั่วประเทศ",
+  };
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const settings = await getSettings();
+
   return (
     <html lang="th">
       <body className="antialiased">
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
-            <Navbar />
+            <Navbar storeName={settings.storeName} logoUrl={settings.logoUrl ?? undefined} />
             <main className="min-h-screen">{children}</main>
-            <Footer />
+            <Footer storeName={settings.storeName} logoUrl={settings.logoUrl ?? undefined} />
             <ChatAssistant />
             <Toaster
               position="top-right"

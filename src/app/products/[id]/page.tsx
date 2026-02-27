@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { formatPrice, PET_TYPE_LABEL } from "@/lib/utils";
-import type { Product, Review } from "@/types";
+import type { Product, ProductVariant, Review } from "@/types";
 import toast from "react-hot-toast";
 import ShareButtons from "@/components/ShareButtons";
 
@@ -24,6 +24,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewRating, setReviewRating] = useState(5);
@@ -79,16 +80,25 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
+  const hasVariants = (product?.variants?.length ?? 0) > 0;
+  const displayPrice = selectedVariant?.price ?? product?.price ?? 0;
+  const displayStock = selectedVariant?.stock ?? product?.stock ?? 0;
+
   const handleAddToCart = async () => {
     if (!user) {
       toast.error("กรุณาเข้าสู่ระบบก่อน");
       router.push("/login");
       return;
     }
-    if (!product || product.stock === 0) return;
+    if (!product) return;
+    if (hasVariants && !selectedVariant) {
+      toast.error("กรุณาเลือก Variant ก่อน");
+      return;
+    }
+    if (displayStock === 0) return;
     setAdding(true);
     try {
-      await addToCart(product.id, quantity);
+      await addToCart(product.id, quantity, selectedVariant?.id ?? null);
       toast.success(`เพิ่ม "${product.name}" ในตะกร้าแล้ว! 🛒`);
     } catch {
       toast.error("เกิดข้อผิดพลาด");
@@ -248,16 +258,16 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           <div className="flex items-baseline gap-3">
-            <span className="text-3xl font-bold text-orange-500">{formatPrice(product.price)}</span>
+            <span className="text-3xl font-bold text-orange-500">{formatPrice(displayPrice)}</span>
           </div>
 
           {/* Stock */}
           <div className="flex items-center gap-2">
-            {product.stock > 0 ? (
+            {displayStock > 0 ? (
               <>
                 <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />
                 <span className="text-sm text-green-600 font-medium">
-                  มีสินค้า {product.stock <= 5 ? `(เหลือ ${product.stock} ชิ้น)` : ""}
+                  มีสินค้า {displayStock <= 5 ? `(เหลือ ${displayStock} ชิ้น)` : ""}
                 </span>
               </>
             ) : (
@@ -268,6 +278,45 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             )}
           </div>
 
+          {/* Variant selector */}
+          {hasVariants && (
+            <div>
+              <label className="text-sm font-medium text-stone-700 block mb-2">
+                เลือก Variant {!selectedVariant && <span className="text-red-400">*</span>}
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {product.variants!.map((v) => {
+                  const label = [v.size, v.color].filter(Boolean).join(" / ") || `Variant`;
+                  const isSelected = selectedVariant?.id === v.id;
+                  const isOut = v.stock === 0;
+                  return (
+                    <button
+                      key={v.id}
+                      onClick={() => setSelectedVariant(isSelected ? null : v)}
+                      disabled={isOut}
+                      className={`px-3 py-1.5 rounded-xl border-2 text-sm font-medium transition-all ${
+                        isSelected
+                          ? "border-orange-500 bg-orange-50 text-orange-600"
+                          : isOut
+                          ? "border-stone-100 text-stone-300 cursor-not-allowed line-through"
+                          : "border-stone-200 text-stone-700 hover:border-orange-300 hover:bg-orange-50"
+                      }`}
+                    >
+                      {label}
+                      {isOut && " (หมด)"}
+                    </button>
+                  );
+                })}
+              </div>
+              {selectedVariant && (
+                <p className="text-xs text-stone-400 mt-1.5">
+                  {formatPrice(selectedVariant.price)} • เหลือ {selectedVariant.stock} ชิ้น
+                  {selectedVariant.sku && ` • SKU: ${selectedVariant.sku}`}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Description */}
           <div>
             <h3 className="font-semibold text-stone-800 mb-2">รายละเอียด</h3>
@@ -275,7 +324,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           {/* Quantity + Add to cart */}
-          {product.stock > 0 && (
+          {displayStock > 0 && (
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-stone-600 block mb-2">จำนวน</label>
@@ -288,7 +337,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   </button>
                   <span className="w-12 text-center font-bold text-stone-800 text-lg">{quantity}</span>
                   <button
-                    onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                    onClick={() => setQuantity(Math.min(displayStock, quantity + 1))}
                     className="w-10 h-10 rounded-xl border border-stone-200 flex items-center justify-center text-stone-600 hover:bg-orange-50 hover:border-orange-300 transition-colors text-lg font-bold"
                   >
                     +
@@ -309,7 +358,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               <div className="flex gap-3">
                 <button
                   onClick={handleAddToCart}
-                  disabled={adding}
+                  disabled={adding || (hasVariants && !selectedVariant)}
                   className="flex-1 btn-primary py-4 text-base flex items-center justify-center gap-2"
                 >
                   {adding ? (

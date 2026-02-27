@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
     categoryId,
     petType,
     featured,
+    variants = [],
   } = body;
 
   if (!name || !description || price == null || stock == null || !categoryId) {
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  type VariantInput = { size?: string; color?: string; price: string; stock: string; sku?: string };
   const product = await prisma.product.create({
     data: {
       name,
@@ -60,8 +62,19 @@ export async function POST(request: NextRequest) {
       categoryId,
       petType: petType || null,
       featured: !!featured,
+      ...(variants.length > 0 && {
+        variants: {
+          create: variants.map((v: VariantInput) => ({
+            size: v.size || null,
+            color: v.color || null,
+            price: parseFloat(v.price) || 0,
+            stock: parseInt(v.stock) || 0,
+            sku: v.sku || null,
+          })),
+        },
+      }),
     },
-    include: { category: true },
+    include: { category: true, variants: true },
   });
 
   return NextResponse.json({ success: true, data: product }, { status: 201 });

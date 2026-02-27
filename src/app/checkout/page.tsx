@@ -23,6 +23,9 @@ export default function CheckoutPage() {
   });
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<"info" | "payment" | "confirm">("info");
+  const [couponInput, setCouponInput] = useState("");
+  const [couponApplied, setCouponApplied] = useState<{ code: string; discount: number } | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
 
   if (!user) {
     return (
@@ -45,9 +48,10 @@ export default function CheckoutPage() {
     );
   }
 
-  const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const subtotal = items.reduce((sum, item) => sum + (item.variant?.price ?? item.product.price) * item.quantity, 0);
   const shipping = subtotal > 500 ? 0 : 50;
-  const total = subtotal + shipping;
+  const discount = couponApplied?.discount ?? 0;
+  const total = subtotal + shipping - discount;
 
   const paymentMethods: PaymentMethod[] = ["PROMPTPAY", "CREDIT_CARD", "BANK_TRANSFER", "COD"];
   const pmIcons: Record<PaymentMethod, string> = {
@@ -55,6 +59,26 @@ export default function CheckoutPage() {
     CREDIT_CARD: "💳",
     BANK_TRANSFER: "🏦",
     COD: "💵",
+  };
+
+  const applyCoupon = async () => {
+    if (!couponInput.trim()) return;
+    setCouponLoading(true);
+    try {
+      const res = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponInput.trim(), subtotal }),
+      });
+      const data = await res.json();
+      if (!data.success) { toast.error(data.error); return; }
+      setCouponApplied({ code: data.data.code, discount: data.data.discount });
+      toast.success(`ใช้โค้ด ${data.data.code} สำเร็จ! ลด ${formatPrice(data.data.discount)}`);
+    } catch {
+      toast.error("เกิดข้อผิดพลาด");
+    } finally {
+      setCouponLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -72,6 +96,7 @@ export default function CheckoutPage() {
           phone: form.phone,
           note: form.note,
           paymentMethod: form.paymentMethod,
+          couponCode: couponApplied?.code ?? null,
         }),
       });
       const data = await res.json();
@@ -269,14 +294,50 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-stone-700 truncate">{item.product.name}</p>
+                    {item.variant && (
+                      <p className="text-xs text-stone-400">
+                        {[item.variant.size, item.variant.color].filter(Boolean).join(" / ")}
+                      </p>
+                    )}
                     <p className="text-stone-400">x{item.quantity}</p>
                   </div>
                   <span className="font-semibold text-orange-500 shrink-0">
-                    {formatPrice(item.product.price * item.quantity)}
+                    {formatPrice((item.variant?.price ?? item.product.price) * item.quantity)}
                   </span>
                 </div>
               ))}
             </div>
+            {/* Coupon input */}
+            <div className="border-t border-stone-100 pt-3 mb-1">
+              {couponApplied ? (
+                <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-3 py-2 text-sm">
+                  <span className="text-green-700 font-medium">🎟️ {couponApplied.code}</span>
+                  <button
+                    onClick={() => { setCouponApplied(null); setCouponInput(""); }}
+                    className="text-stone-400 hover:text-red-400 text-xs ml-2"
+                  >ยกเลิก</button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    className="input text-sm flex-1 py-2"
+                    placeholder="โค้ดส่วนลด"
+                    value={couponInput}
+                    onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => e.key === "Enter" && applyCoupon()}
+                  />
+                  <button
+                    onClick={applyCoupon}
+                    disabled={couponLoading || !couponInput.trim()}
+                    className="btn-primary px-3 py-2 text-sm shrink-0"
+                  >
+                    {couponLoading ? "..." : "ใช้"}
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-2 text-sm border-t border-stone-100 pt-3">
               <div className="flex justify-between text-stone-500">
                 <span>ราคาสินค้า</span><span>{formatPrice(subtotal)}</span>
@@ -285,6 +346,12 @@ export default function CheckoutPage() {
                 <span>ค่าจัดส่ง</span>
                 <span className={shipping === 0 ? "text-green-500" : ""}>{shipping === 0 ? "ฟรี" : formatPrice(shipping)}</span>
               </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>ส่วนลด</span>
+                  <span>-{formatPrice(discount)}</span>
+                </div>
+              )}
               <div className="flex justify-between font-bold text-base pt-2 border-t border-stone-100">
                 <span>รวม</span>
                 <span className="text-orange-500">{formatPrice(total)}</span>

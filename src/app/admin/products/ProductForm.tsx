@@ -10,6 +10,15 @@ interface Category {
   name: string;
 }
 
+interface VariantRow {
+  id?: string;
+  size: string;
+  color: string;
+  price: string;
+  stock: string;
+  sku: string;
+}
+
 interface ProductFormProps {
   productId?: string;
   initialData?: {
@@ -21,6 +30,7 @@ interface ProductFormProps {
     categoryId: string;
     petType: string;
     featured: boolean;
+    variants?: VariantRow[];
   };
 }
 
@@ -53,6 +63,13 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
     featured: false,
     ...initialData,
   });
+
+  const [variants, setVariants] = useState<VariantRow[]>(initialData?.variants ?? []);
+  const emptyVariant = (): VariantRow => ({ size: "", color: "", price: "", stock: "", sku: "" });
+  const addVariant = () => setVariants((v) => [...v, emptyVariant()]);
+  const removeVariant = (idx: number) => setVariants((v) => v.filter((_, i) => i !== idx));
+  const updateVariant = (idx: number, key: keyof VariantRow, value: string) =>
+    setVariants((v) => v.map((row, i) => (i === idx ? { ...row, [key]: value } : row)));
 
   useEffect(() => {
     fetch("/api/admin/categories")
@@ -108,6 +125,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
       stock: parseInt(form.stock),
       images: imageList,
       petType: form.petType || null,
+      variants,
     };
 
     const url = productId
@@ -275,6 +293,49 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
             className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none"
           />
         </div>
+      </div>
+
+      {/* Variants */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium text-stone-700">
+            Variants (ขนาด / สี) — <span className="text-stone-400 font-normal">ถ้าไม่มี variants ราคา/สต็อกจะใช้จากด้านบน</span>
+          </label>
+          <button
+            type="button"
+            onClick={addVariant}
+            className="text-xs text-orange-500 border border-orange-300 rounded-lg px-2.5 py-1 hover:bg-orange-50 transition-colors"
+          >
+            + เพิ่ม Variant
+          </button>
+        </div>
+
+        {variants.length > 0 && (
+          <div className="space-y-2">
+            {/* Header */}
+            <div className="grid grid-cols-[80px_80px_90px_70px_90px_32px] gap-2 text-xs text-stone-400 px-1">
+              <span>ขนาด</span><span>สี</span><span>ราคา (฿)</span><span>สต็อก</span><span>SKU</span><span />
+            </div>
+            {variants.map((v, idx) => (
+              <div key={idx} className="grid grid-cols-[80px_80px_90px_70px_90px_32px] gap-2 items-center">
+                <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
+                  placeholder="S/M/L" value={v.size} onChange={(e) => updateVariant(idx, "size", e.target.value)} />
+                <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
+                  placeholder="สี" value={v.color} onChange={(e) => updateVariant(idx, "color", e.target.value)} />
+                <input type="number" min="0" step="0.01" className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
+                  placeholder="0.00" value={v.price} onChange={(e) => updateVariant(idx, "price", e.target.value)} />
+                <input type="number" min="0" className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
+                  placeholder="0" value={v.stock} onChange={(e) => updateVariant(idx, "stock", e.target.value)} />
+                <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
+                  placeholder="SKU-001" value={v.sku} onChange={(e) => updateVariant(idx, "sku", e.target.value)} />
+                <button type="button" onClick={() => removeVariant(idx)}
+                  className="w-7 h-7 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 flex items-center justify-center text-xs transition-colors">
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-3">

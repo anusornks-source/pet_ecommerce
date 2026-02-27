@@ -14,7 +14,7 @@ export async function GET(
     where: { id },
     include: {
       user: { select: { name: true, email: true, phone: true } },
-      items: { include: { product: true } },
+      items: { include: { product: true, variant: true } },
       payment: true,
     },
   });
@@ -38,15 +38,9 @@ export async function PUT(
 
   const { id } = await params;
   const body = await request.json();
-  const { status } = body;
+  const { status, note } = body;
 
-  const validStatuses = [
-    "PENDING",
-    "CONFIRMED",
-    "SHIPPING",
-    "DELIVERED",
-    "CANCELLED",
-  ];
+  const validStatuses = ["PENDING", "CONFIRMED", "SHIPPING", "DELIVERED", "CANCELLED"];
   if (!validStatuses.includes(status)) {
     return NextResponse.json(
       { success: false, error: "สถานะไม่ถูกต้อง" },
@@ -54,9 +48,17 @@ export async function PUT(
     );
   }
 
+  // Get current order to build statusHistory
+  const current = await prisma.order.findUnique({ where: { id }, select: { statusHistory: true } });
+  const history = (Array.isArray(current?.statusHistory) ? current.statusHistory : []) as Array<{
+    status: string; timestamp: string; note?: string;
+  }>;
+
+  history.push({ status, timestamp: new Date().toISOString(), ...(note ? { note } : {}) });
+
   const order = await prisma.order.update({
     where: { id },
-    data: { status },
+    data: { status, statusHistory: history },
   });
 
   return NextResponse.json({ success: true, data: order });

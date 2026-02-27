@@ -12,7 +12,7 @@ export async function GET(
   const { id } = await params;
   const product = await prisma.product.findUnique({
     where: { id },
-    include: { category: true },
+    include: { category: true, variants: { orderBy: { createdAt: "asc" } } },
   });
 
   if (!product) {
@@ -43,7 +43,27 @@ export async function PUT(
     categoryId,
     petType,
     featured,
+    variants,
   } = body;
+
+  type VariantInput = { id?: string; size?: string; color?: string; price: string; stock: string; sku?: string };
+
+  // Handle variants: replace all existing variants with the new set
+  if (variants !== undefined) {
+    await prisma.productVariant.deleteMany({ where: { productId: id } });
+    if (variants.length > 0) {
+      await prisma.productVariant.createMany({
+        data: variants.map((v: VariantInput) => ({
+          productId: id,
+          size: v.size || null,
+          color: v.color || null,
+          price: parseFloat(v.price) || 0,
+          stock: parseInt(v.stock) || 0,
+          sku: v.sku || null,
+        })),
+      });
+    }
+  }
 
   const product = await prisma.product.update({
     where: { id },
@@ -59,7 +79,7 @@ export async function PUT(
       ...(petType !== undefined && { petType: petType || null }),
       ...(featured !== undefined && { featured: !!featured }),
     },
-    include: { category: true },
+    include: { category: true, variants: { orderBy: { createdAt: "asc" } } },
   });
 
   return NextResponse.json({ success: true, data: product });

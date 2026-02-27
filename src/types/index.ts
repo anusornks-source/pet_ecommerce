@@ -16,6 +16,16 @@ export interface Category {
   icon?: string | null;
 }
 
+export interface ProductVariant {
+  id: string;
+  productId: string;
+  size?: string | null;
+  color?: string | null;
+  price: number;
+  stock: number;
+  sku?: string | null;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -28,14 +38,17 @@ export interface Product {
   petType?: string | null;
   featured: boolean;
   createdAt: string;
+  variants?: ProductVariant[];
 }
 
 export interface CartItem {
   id: string;
   cartId: string;
   productId: string;
+  variantId?: string | null;
   quantity: number;
   product: Product;
+  variant?: ProductVariant | null;
 }
 
 export interface Cart {

@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const { address, phone, note, paymentMethod } = await request.json();
+  const { address, phone, note, paymentMethod, couponCode } = await request.json();
 
   if (!address || !phone || !paymentMethod) {
     return NextResponse.json(
@@ -38,10 +38,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Get cart
+  // Get cart with variants
   const cart = await prisma.cart.findUnique({
     where: { userId: session.userId },
-    include: { items: { include: { product: true } } },
+    include: { items: { include: { product: true, variant: true } } },
   });
 
   if (!cart || cart.items.length === 0) {
@@ -51,9 +51,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Check stock
+  // Check stock (use variant stock if applicable)
   for (const item of cart.items) {
-    if (item.product.stock < item.quantity) {
+    const availableStock = item.variant ? item.variant.stock : item.product.stock;
+    if (availableStock < item.quantity) {
       return NextResponse.json(
         { success: false, error: `สินค้า "${item.product.name}" มีไม่เพียงพอ` },
         { status: 400 }
@@ -61,10 +62,29 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const total = cart.items.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
+  const subtotal = cart.items.reduce(
+    (sum, item) => sum + (item.variant?.price ?? item.product.price) * item.quantity,
     0
   );
+  const shipping = subtotal > 500 ? 0 : 50;
+
+  // Validate coupon if provided
+  let discount = 0;
+  let coupon = null;
+  if (couponCode) {
+    coupon = await prisma.coupon.findUnique({ where: { code: couponCode.toUpperCase() } });
+    if (coupon && coupon.active) {
+      if ((!coupon.expiresAt || coupon.expiresAt > new Date()) &&
+          (coupon.maxUses === null || coupon.usedCount < coupon.maxUses) &&
+          (coupon.minOrder === null || subtotal >= coupon.minOrder)) {
+        discount = coupon.type === "PERCENT"
+          ? Math.round((subtotal * coupon.value) / 100)
+          : Math.min(coupon.value, subtotal);
+      }
+    }
+  }
+
+  const total = subtotal + shipping - discount;
 
   // Create order + payment in transaction
   const order = await prisma.$transaction(async (tx) => {
@@ -75,11 +95,14 @@ export async function POST(request: NextRequest) {
         phone,
         note,
         total,
+        discount,
+        couponCode: coupon ? coupon.code : null,
         items: {
           create: cart.items.map((item) => ({
             productId: item.productId,
+            variantId: item.variantId ?? null,
             quantity: item.quantity,
-            price: item.product.price,
+            price: item.variant?.price ?? item.product.price,
           })),
         },
       },
@@ -94,15 +117,30 @@ export async function POST(request: NextRequest) {
         orderId: newOrder.id,
         method: paymentMethod,
         amount: total,
-        status: paymentMethod === "COD" ? "PENDING" : "PENDING",
+        status: "PENDING",
       },
     });
 
-    // Update stock
+    // Update stock (variant or product)
     for (const item of cart.items) {
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { stock: { decrement: item.quantity } },
+      if (item.variantId) {
+        await tx.productVariant.update({
+          where: { id: item.variantId },
+          data: { stock: { decrement: item.quantity } },
+        });
+      } else {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: item.quantity } },
+        });
+      }
+    }
+
+    // Increment coupon usedCount
+    if (coupon) {
+      await tx.coupon.update({
+        where: { id: coupon.id },
+        data: { usedCount: { increment: 1 } },
       });
     }
 
@@ -128,7 +166,7 @@ export async function POST(request: NextRequest) {
         address,
         note,
         paymentMethod,
-        total,
+        total: order.total,
         items: order.items.map((item) => ({
           name: item.product.name,
           quantity: item.quantity,

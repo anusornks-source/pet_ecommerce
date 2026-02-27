@@ -8,7 +8,7 @@ interface CartContextType {
   cart: Cart | null;
   cartCount: number;
   loading: boolean;
-  addToCart: (productId: string, quantity?: number) => Promise<void>;
+  addToCart: (productId: string, quantity?: number, variantId?: string | null) => Promise<void>;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -41,13 +41,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const cartCount = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
 
-  const addToCart = async (productId: string, quantity = 1) => {
+  const addToCart = async (productId: string, quantity = 1, variantId?: string | null) => {
     setLoading(true);
     try {
       const res = await fetch("/api/cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, quantity }),
+        body: JSON.stringify({ productId, quantity, variantId: variantId ?? null }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);

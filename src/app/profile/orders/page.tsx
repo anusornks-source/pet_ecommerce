@@ -86,7 +86,16 @@ export default function OrderHistoryPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-bold text-orange-500">{formatPrice(order.total)}</span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="font-bold text-orange-500">{formatPrice(order.total)}</span>
+                    <Link
+                      href={`/orders/${order.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-xs text-blue-500 hover:underline"
+                    >
+                      ติดตามสินค้า →
+                    </Link>
+                  </div>
                   <svg
                     className={`w-5 h-5 text-stone-400 transition-transform ${expanded === order.id ? "rotate-180" : ""}`}
                     fill="none" viewBox="0 0 24 24" stroke="currentColor"

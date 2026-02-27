@@ -10,6 +10,7 @@ const navItems = [
   { href: "/admin/categories", label: "หมวดหมู่", icon: "🏷️" },
   { href: "/admin/orders", label: "คำสั่งซื้อ", icon: "🛒" },
   { href: "/admin/users", label: "ผู้ใช้งาน", icon: "👥" },
+  { href: "/admin/coupons", label: "คูปอง", icon: "🎟️" },
   { href: "/admin/stores", label: "สาขา", icon: "📍" },
   { href: "/admin/articles", label: "บทความ", icon: "📝" },
   { href: "/admin/settings", label: "ตั้งค่าร้าน", icon: "⚙️" },

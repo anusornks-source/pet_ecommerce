@@ -4,6 +4,15 @@ import { useEffect, useState } from "react";
 import { use } from "react";
 import ProductForm from "../ProductForm";
 
+interface ProductVariant {
+  id: string;
+  size: string | null;
+  color: string | null;
+  price: number;
+  stock: number;
+  sku: string | null;
+}
+
 interface Product {
   id: string;
   name: string;
@@ -14,6 +23,7 @@ interface Product {
   categoryId: string;
   petType: string | null;
   featured: boolean;
+  variants: ProductVariant[];
 }
 
 export default function EditProductPage({
@@ -66,6 +76,14 @@ export default function EditProductPage({
             categoryId: product.categoryId,
             petType: product.petType || "",
             featured: product.featured,
+            variants: product.variants.map((v) => ({
+              id: v.id,
+              size: v.size ?? "",
+              color: v.color ?? "",
+              price: v.price.toString(),
+              stock: v.stock.toString(),
+              sku: v.sku ?? "",
+            })),
           }}
         />
       </div>

@@ -13,7 +13,10 @@ export async function GET() {
     where: { userId: session.userId },
     include: {
       items: {
-        include: { product: { include: { category: true } } },
+        include: {
+          product: { include: { category: true } },
+          variant: true,
+        },
         orderBy: { id: "asc" },
       },
     },
@@ -29,18 +32,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const { productId, quantity = 1 } = await request.json();
+  const { productId, quantity = 1, variantId = null } = await request.json();
 
   if (!productId) {
     return NextResponse.json({ success: false, error: "productId is required" }, { status: 400 });
   }
 
-  const product = await prisma.product.findUnique({ where: { id: productId } });
-  if (!product) {
-    return NextResponse.json({ success: false, error: "ไม่พบสินค้า" }, { status: 404 });
-  }
-  if (product.stock < quantity) {
-    return NextResponse.json({ success: false, error: "สินค้าไม่เพียงพอ" }, { status: 400 });
+  // Validate stock — use variant stock if provided, otherwise product stock
+  if (variantId) {
+    const variant = await prisma.productVariant.findUnique({ where: { id: variantId } });
+    if (!variant) return NextResponse.json({ success: false, error: "ไม่พบ variant" }, { status: 404 });
+    if (variant.stock < quantity) return NextResponse.json({ success: false, error: "สินค้าไม่เพียงพอ" }, { status: 400 });
+  } else {
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!product) return NextResponse.json({ success: false, error: "ไม่พบสินค้า" }, { status: 404 });
+    if (product.stock < quantity) return NextResponse.json({ success: false, error: "สินค้าไม่เพียงพอ" }, { status: 400 });
   }
 
   // Get or create cart
@@ -50,9 +56,9 @@ export async function POST(request: NextRequest) {
     update: {},
   });
 
-  // Upsert cart item
-  const existing = await prisma.cartItem.findUnique({
-    where: { cartId_productId: { cartId: cart.id, productId } },
+  // Find existing item (handle null variantId: use findFirst to avoid null != null issue in composite unique)
+  const existing = await prisma.cartItem.findFirst({
+    where: { cartId: cart.id, productId, variantId: variantId ?? null },
   });
 
   if (existing) {
@@ -62,14 +68,19 @@ export async function POST(request: NextRequest) {
     });
   } else {
     await prisma.cartItem.create({
-      data: { cartId: cart.id, productId, quantity },
+      data: { cartId: cart.id, productId, variantId: variantId ?? null, quantity },
     });
   }
 
   const updatedCart = await prisma.cart.findUnique({
     where: { id: cart.id },
     include: {
-      items: { include: { product: { include: { category: true } } } },
+      items: {
+        include: {
+          product: { include: { category: true } },
+          variant: true,
+        },
+      },
     },
   });
 

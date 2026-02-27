@@ -22,6 +22,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!user.password) {
+      const providerLabel = user.provider === "line" ? "LINE" : user.provider === "facebook" ? "Facebook" : "Social";
+      return NextResponse.json(
+        { success: false, error: `บัญชีนี้ใช้ ${providerLabel} login กรุณาเข้าสู่ระบบด้วย ${providerLabel}` },
+        { status: 401 }
+      );
+    }
+
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
       return NextResponse.json(

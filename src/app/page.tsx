@@ -15,6 +15,15 @@ async function getFeaturedProducts() {
   return products as unknown as Product[];
 }
 
+async function getHighlightProducts() {
+  const products = await prisma.product.findMany({
+    where: { highlight: true },
+    include: { category: true },
+    orderBy: { highlightOrder: "asc" },
+  });
+  return products as unknown as Product[];
+}
+
 async function getCategories() {
   return prisma.category.findMany({
     include: { _count: { select: { products: true } } },
@@ -22,8 +31,9 @@ async function getCategories() {
 }
 
 export default async function HomePage() {
-  const [featuredProducts, categories] = await Promise.all([
+  const [featuredProducts, highlightProducts, categories] = await Promise.all([
     getFeaturedProducts(),
+    getHighlightProducts(),
     getCategories(),
   ]);
 
@@ -131,6 +141,69 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Highlight Shelf */}
+      {highlightProducts.length > 0 && (
+        <section className="py-12 bg-gradient-to-br from-orange-500 via-amber-500 to-orange-400">
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <span className="inline-flex items-center gap-1.5 bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full mb-2">
+                  ✨ คัดสรรพิเศษ
+                </span>
+                <h2 className="text-2xl font-bold text-white">สินค้ายอดนิยม</h2>
+              </div>
+              <Link
+                href="/products?highlight=true"
+                className="text-white/80 hover:text-white text-sm font-medium transition-colors"
+              >
+                ดูทั้งหมด →
+              </Link>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
+              {highlightProducts.map((product) => {
+                const img = product.images?.find((i: string) => {
+                  try { new URL(i); return true; } catch { return false; }
+                });
+                const image = img || `https://placehold.co/400x300/fff7ed/f97316?text=${encodeURIComponent(product.name)}`;
+                return (
+                  <Link
+                    key={product.id}
+                    href={`/products/${product.id}`}
+                    className="group shrink-0 w-44 snap-start"
+                  >
+                    <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                      <div className="relative h-44 overflow-hidden bg-orange-50">
+                        <Image
+                          src={image}
+                          alt={product.name}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          sizes="176px"
+                        />
+                        <span className="absolute top-2 left-2 bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          ✨ แนะนำ
+                        </span>
+                      </div>
+                      <div className="p-3">
+                        <p className="text-xs text-stone-500 mb-0.5">
+                          {product.category.icon} {product.category.name}
+                        </p>
+                        <p className="text-sm font-semibold text-stone-800 line-clamp-2 group-hover:text-orange-500 transition-colors">
+                          {product.name}
+                        </p>
+                        <p className="text-base font-bold text-orange-500 mt-1.5">
+                          {new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", minimumFractionDigits: 0 }).format(product.price)}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Featured Products */}
       <section className="max-w-6xl mx-auto px-4 py-12">

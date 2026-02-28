@@ -50,8 +50,10 @@ model Product {
   images      String[]
   categoryId  String
   petType     PetType?
-  featured    Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  featured        Boolean  @default(false)
+  highlight       Boolean  @default(false)
+  highlightOrder  Int?
+  createdAt       DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   category   Category         @relation(fields: [categoryId], references: [id])

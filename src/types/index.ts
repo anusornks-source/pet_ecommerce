@@ -37,6 +37,8 @@ export interface Product {
   category: Category;
   petType?: string | null;
   featured: boolean;
+  highlight: boolean;
+  highlightOrder?: number | null;
   createdAt: string;
   variants?: ProductVariant[];
 }

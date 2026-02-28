@@ -161,7 +161,7 @@ export default async function HomePage() {
               </Link>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {highlightProducts.slice(0, 5).map((product) => {
+              {highlightProducts.map((product) => {
                 const img = product.images?.find((i: string) => {
                   try { new URL(i); return true; } catch { return false; }
                 });

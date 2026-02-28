@@ -160,7 +160,7 @@ export default async function HomePage() {
                 ดูทั้งหมด →
               </Link>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {highlightProducts.map((product) => {
                 const img = product.images?.find((i: string) => {
                   try { new URL(i); return true; } catch { return false; }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { formatPrice } from "@/lib/utils";
@@ -22,7 +22,14 @@ export default function AdminHighlightPage() {
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
 
-  const highlighted = products.filter((p) => p.highlight).sort((a, b) => (a.highlightOrder ?? 999) - (b.highlightOrder ?? 999));
+  // Drag state
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const highlighted = products
+    .filter((p) => p.highlight)
+    .sort((a, b) => (a.highlightOrder ?? 999) - (b.highlightOrder ?? 999));
   const available = products.filter((p) => !p.highlight);
 
   const fetchProducts = useCallback(async () => {
@@ -41,9 +48,78 @@ export default function AdminHighlightPage() {
     return () => clearTimeout(t);
   }, [fetchProducts]);
 
+  const saveOrder = useCallback(async (ids: string[]) => {
+    await fetch("/api/admin/highlight", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "reorder", ids }),
+    });
+  }, []);
+
+  const applyReorder = useCallback(
+    (fromId: string, toId: string) => {
+      if (fromId === toId) return;
+      setProducts((prev) => {
+        const list = prev
+          .filter((p) => p.highlight)
+          .sort((a, b) => (a.highlightOrder ?? 999) - (b.highlightOrder ?? 999));
+
+        const fromIdx = list.findIndex((p) => p.id === fromId);
+        const toIdx = list.findIndex((p) => p.id === toId);
+        if (fromIdx === -1 || toIdx === -1) return prev;
+
+        const newList = [...list];
+        const [moved] = newList.splice(fromIdx, 1);
+        newList.splice(toIdx, 0, moved);
+
+        const ids = newList.map((p) => p.id);
+        const orderMap = new Map(ids.map((id, i) => [id, i + 1]));
+
+        // Debounce API save
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(() => saveOrder(ids), 500);
+
+        return prev.map((p) => ({
+          ...p,
+          highlightOrder: orderMap.has(p.id) ? (orderMap.get(p.id) ?? p.highlightOrder) : p.highlightOrder,
+        }));
+      });
+    },
+    [saveOrder]
+  );
+
+  // Drag handlers
+  const onDragStart = (e: React.DragEvent, id: string) => {
+    setDragId(id);
+    e.dataTransfer.effectAllowed = "move";
+    // Needed for Firefox
+    e.dataTransfer.setData("text/plain", id);
+  };
+
+  const onDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (id !== dragOverId) setDragOverId(id);
+  };
+
+  const onDrop = (e: React.DragEvent, toId: string) => {
+    e.preventDefault();
+    if (dragId && dragId !== toId) {
+      applyReorder(dragId, toId);
+    }
+    setDragId(null);
+    setDragOverId(null);
+  };
+
+  const onDragEnd = () => {
+    setDragId(null);
+    setDragOverId(null);
+  };
+
   const toggle = async (productId: string) => {
     setToggling(productId);
     try {
+      const product = products.find((p) => p.id === productId);
       const res = await fetch("/api/admin/highlight", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -52,7 +128,6 @@ export default function AdminHighlightPage() {
       const json = await res.json();
       if (json.success) {
         await fetchProducts();
-        const product = products.find((p) => p.id === productId);
         toast.success(product?.highlight ? "นำออกจาก Shelf แล้ว" : "เพิ่มเข้า Shelf แล้ว ✨");
       } else {
         toast.error("เกิดข้อผิดพลาด");
@@ -62,34 +137,19 @@ export default function AdminHighlightPage() {
     }
   };
 
-  const move = async (id: string, direction: "up" | "down") => {
+  const move = (id: string, direction: "up" | "down") => {
     const list = [...highlighted];
     const idx = list.findIndex((p) => p.id === id);
     if (direction === "up" && idx === 0) return;
     if (direction === "down" && idx === list.length - 1) return;
-
     const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    [list[idx], list[swapIdx]] = [list[swapIdx], list[idx]];
-
-    // Optimistic update
-    const ids = list.map((p) => p.id);
-    setProducts((prev) => {
-      const map = new Map(list.map((p, i) => [p.id, i + 1]));
-      return prev.map((p) => ({ ...p, highlightOrder: map.has(p.id) ? (map.get(p.id) ?? p.highlightOrder) : p.highlightOrder }));
-    });
-
-    await fetch("/api/admin/highlight", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "reorder", ids }),
-    });
+    applyReorder(id, list[swapIdx].id);
   };
 
   const getImage = (images: string[]) => {
-    const valid = images?.find((img) => {
+    return images?.find((img) => {
       try { new URL(img); return true; } catch { return false; }
-    });
-    return valid || null;
+    }) || null;
   };
 
   return (
@@ -100,14 +160,16 @@ export default function AdminHighlightPage() {
         <p className="text-stone-500 mt-1 text-sm">เลือกสินค้าที่ต้องการแสดงบน Highlight Shelf หน้าแรก และจัดลำดับการแสดงผล</p>
       </div>
 
-      {/* Shelf Preview */}
+      {/* Shelf List */}
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-stone-700">
             สินค้าใน Shelf
-            <span className="ml-2 bg-orange-100 text-orange-600 text-xs font-bold px-2 py-0.5 rounded-full">{highlighted.length}</span>
+            <span className="ml-2 bg-orange-100 text-orange-600 text-xs font-bold px-2 py-0.5 rounded-full">
+              {highlighted.length}
+            </span>
           </h2>
-          <p className="text-xs text-stone-400">ลากหรือกดลูกศรเพื่อจัดลำดับ</p>
+          <p className="text-xs text-stone-400">ลากที่ ⠿ หรือกดลูกศรเพื่อจัดลำดับ</p>
         </div>
 
         {highlighted.length === 0 ? (
@@ -120,34 +182,53 @@ export default function AdminHighlightPage() {
             <div className="space-y-2">
               {highlighted.map((p, idx) => {
                 const img = getImage(p.images);
+                const isDragging = dragId === p.id;
+                const isDragOver = dragOverId === p.id && dragId !== p.id;
+
                 return (
                   <div
                     key={p.id}
-                    className="bg-white rounded-xl px-4 py-3 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow"
+                    draggable
+                    onDragStart={(e) => onDragStart(e, p.id)}
+                    onDragOver={(e) => onDragOver(e, p.id)}
+                    onDrop={(e) => onDrop(e, p.id)}
+                    onDragEnd={onDragEnd}
+                    className={`bg-white rounded-xl px-3 py-3 flex items-center gap-3 shadow-sm transition-all duration-150 select-none
+                      ${isDragging ? "opacity-40 shadow-none scale-95" : "hover:shadow-md"}
+                      ${isDragOver ? "border-2 border-orange-400 bg-orange-50" : "border-2 border-transparent"}
+                    `}
                   >
+                    {/* Drag handle */}
+                    <span
+                      className="text-stone-300 hover:text-stone-500 cursor-grab active:cursor-grabbing text-lg leading-none shrink-0 px-0.5"
+                      title="ลากเพื่อจัดลำดับ"
+                    >
+                      ⠿
+                    </span>
+
                     {/* Order badge */}
                     <span className="w-7 h-7 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center shrink-0">
                       {idx + 1}
                     </span>
 
                     {/* Image */}
-                    <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-orange-50 shrink-0">
+                    <div className="relative w-11 h-11 rounded-lg overflow-hidden bg-orange-50 shrink-0">
                       {img ? (
                         <Image src={img} alt={p.name} fill className="object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xl">📦</div>
+                        <div className="w-full h-full flex items-center justify-center text-lg">📦</div>
                       )}
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-stone-800 truncate">{p.name}</p>
+                      <p className="font-semibold text-stone-800 truncate text-sm">{p.name}</p>
                       <p className="text-xs text-stone-500">
                         {p.category.icon} {p.category.name} · {formatPrice(p.price)} · คงเหลือ {p.stock}
                       </p>
                     </div>
 
-                    {/* Move buttons */}
+                    {/* Arrow buttons */}
                     <div className="flex gap-1 shrink-0">
                       <button
                         onClick={() => move(p.id, "up")}
@@ -167,7 +248,7 @@ export default function AdminHighlightPage() {
                       </button>
                     </div>
 
-                    {/* Remove button */}
+                    {/* Remove */}
                     <button
                       onClick={() => toggle(p.id)}
                       disabled={toggling === p.id}

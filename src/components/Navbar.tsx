@@ -30,7 +30,7 @@ export default function Navbar({ storeName = "PetShop", logoUrl }: NavbarProps) 
   const navLinks = [
     { href: "/", label: "หน้าแรก" },
     { href: "/products", label: "สินค้า" },
-    { href: "/advisor", label: "🐾 AI Advisor" },
+    { href: "/advisor", label: "🐾 ที่ปรึกษา AI" },
     { href: "/stores", label: "สาขา" },
     { href: "/articles", label: "บทความ" },
   ];

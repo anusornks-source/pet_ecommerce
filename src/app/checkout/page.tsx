@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { formatPrice, PAYMENT_METHOD_LABEL } from "@/lib/utils";
 import toast from "react-hot-toast";
+import type { Address } from "@/types";
 
 // Load Stripe form lazily — avoids bundle bloat when not used
 const StripeCardForm = dynamic(() => import("@/components/StripeCardForm"), { ssr: false });
@@ -39,11 +40,24 @@ export default function CheckoutPage() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [settings, setSettings] = useState<ShopSettings>({});
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/settings")
       .then((r) => r.json())
       .then((d) => { if (d.success) setSettings(d.data); });
+    fetch("/api/addresses")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && d.data.length > 0) {
+          setSavedAddresses(d.data);
+          // Pre-select default address
+          const def = d.data.find((a: Address) => a.isDefault) ?? d.data[0];
+          setSelectedAddressId(def.id);
+          setForm((f) => ({ ...f, address: def.address, phone: def.phone }));
+        }
+      });
   }, []);
 
   if (!user) {
@@ -183,6 +197,57 @@ export default function CheckoutPage() {
           {step === "info" && (
             <div className="card p-6 space-y-5">
               <h2 className="font-bold text-stone-800 text-lg">ข้อมูลการจัดส่ง</h2>
+
+              {/* Saved address picker */}
+              {savedAddresses.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-stone-700">ที่อยู่ที่บันทึกไว้</label>
+                    <Link href="/profile/addresses" className="text-xs text-orange-500 hover:text-orange-600">จัดการที่อยู่ →</Link>
+                  </div>
+                  <div className="space-y-2 max-h-52 overflow-y-auto pr-0.5">
+                    {savedAddresses.map((addr) => (
+                      <button
+                        key={addr.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedAddressId(addr.id);
+                          setForm((f) => ({ ...f, phone: addr.phone, address: addr.address }));
+                        }}
+                        className={`w-full text-left p-3 rounded-xl border-2 transition-all ${
+                          selectedAddressId === addr.id
+                            ? "border-orange-500 bg-orange-50"
+                            : "border-stone-200 hover:border-orange-300"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-xs font-semibold bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full">{addr.label}</span>
+                          {addr.isDefault && <span className="text-xs text-orange-500 font-medium">⭐ ที่อยู่หลัก</span>}
+                        </div>
+                        <p className="text-sm font-medium text-stone-800">{addr.name} · {addr.phone}</p>
+                        <p className="text-xs text-stone-500 mt-0.5 line-clamp-1">{addr.address}</p>
+                      </button>
+                    ))}
+                    {/* Manual entry option */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedAddressId(null);
+                        setForm((f) => ({ ...f, phone: "", address: "" }));
+                      }}
+                      className={`w-full text-left p-3 rounded-xl border-2 transition-all ${
+                        selectedAddressId === null
+                          ? "border-orange-500 bg-orange-50"
+                          : "border-stone-200 hover:border-orange-300"
+                      }`}
+                    >
+                      <p className="text-sm font-medium text-stone-700">+ กรอกที่อยู่ใหม่</p>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Manual fields — always shown, pre-filled when address selected */}
               <div>
                 <label className="block text-sm font-medium text-stone-700 mb-1.5">ชื่อผู้รับ</label>
                 <input type="text" value={user.name} disabled style={{ width: "100%", padding: "0.75rem 1rem", border: "1px solid #e7e5e4", borderRadius: "0.75rem", background: "#fafaf9", color: "#78716c" }} readOnly />

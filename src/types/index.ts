@@ -109,6 +109,18 @@ export interface WishlistItem {
   product: Product;
 }
 
+export interface Address {
+  id: string;
+  userId: string;
+  label: string;
+  name: string;
+  phone: string;
+  address: string;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;

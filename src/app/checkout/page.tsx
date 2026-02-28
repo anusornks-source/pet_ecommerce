@@ -1,14 +1,25 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { formatPrice, PAYMENT_METHOD_LABEL } from "@/lib/utils";
 import toast from "react-hot-toast";
 
+// Load Stripe form lazily — avoids bundle bloat when not used
+const StripeCardForm = dynamic(() => import("@/components/StripeCardForm"), { ssr: false });
+
 type PaymentMethod = "CREDIT_CARD" | "BANK_TRANSFER" | "PROMPTPAY" | "COD";
+
+interface ShopSettings {
+  promptpayId?: string;
+  bankName?: string;
+  bankAccount?: string;
+  bankAccountName?: string;
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -22,10 +33,18 @@ export default function CheckoutPage() {
     paymentMethod: "PROMPTPAY" as PaymentMethod,
   });
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<"info" | "payment" | "confirm">("info");
+  const [step, setStep] = useState<"info" | "payment" | "confirm" | "stripe">("info");
   const [couponInput, setCouponInput] = useState("");
   const [couponApplied, setCouponApplied] = useState<{ code: string; discount: number } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
+  const [settings, setSettings] = useState<ShopSettings>({});
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/settings")
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setSettings(d.data); });
+  }, []);
 
   if (!user) {
     return (
@@ -81,11 +100,7 @@ export default function CheckoutPage() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!form.address.trim() || !form.phone.trim()) {
-      toast.error("กรุณากรอกที่อยู่และเบอร์โทรศัพท์");
-      return;
-    }
+  const createOrder = async (): Promise<string | null> => {
     setLoading(true);
     try {
       const res = await fetch("/api/orders", {
@@ -101,12 +116,31 @@ export default function CheckoutPage() {
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
-      toast.success("สั่งซื้อสำเร็จ! 🎉");
-      router.push(`/checkout/success?orderId=${data.data.id}`);
+      return data.data.id as string;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
+      return null;
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!form.address.trim() || !form.phone.trim()) {
+      toast.error("กรุณากรอกที่อยู่และเบอร์โทรศัพท์");
+      return;
+    }
+
+    if (form.paymentMethod === "CREDIT_CARD") {
+      const orderId = await createOrder();
+      if (!orderId) return;
+      setCreatedOrderId(orderId);
+      setStep("stripe");
+    } else {
+      const orderId = await createOrder();
+      if (!orderId) return;
+      toast.success("สั่งซื้อสำเร็จ! 🎉");
+      router.push(`/checkout/success?orderId=${orderId}`);
     }
   };
 
@@ -115,6 +149,9 @@ export default function CheckoutPage() {
     { key: "payment", label: "ชำระเงิน" },
     { key: "confirm", label: "ยืนยัน" },
   ];
+  const visibleSteps = step === "stripe"
+    ? [...steps, { key: "stripe", label: "กรอกบัตร" }]
+    : steps;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -122,14 +159,10 @@ export default function CheckoutPage() {
 
       {/* Stepper */}
       <div className="flex items-center gap-2 mb-8">
-        {steps.map((s, idx) => (
+        {visibleSteps.map((s, idx) => (
           <div key={s.key} className="flex items-center gap-2">
             <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              step === s.key
-                ? "bg-orange-500 text-white"
-                : steps.indexOf({ key: step, label: "" }) > idx || step !== s.key
-                ? "bg-stone-100 text-stone-400"
-                : "bg-stone-100 text-stone-400"
+              step === s.key ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-400"
             }`}>
               <span className={`w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold ${
                 step === s.key ? "bg-white text-orange-500" : "bg-stone-200 text-stone-500"
@@ -138,14 +171,15 @@ export default function CheckoutPage() {
               </span>
               <span className="hidden sm:block">{s.label}</span>
             </div>
-            {idx < steps.length - 1 && <div className="w-8 h-0.5 bg-stone-200" />}
+            {idx < visibleSteps.length - 1 && <div className="w-8 h-0.5 bg-stone-200" />}
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Form */}
         <div className="lg:col-span-2 space-y-5">
+
+          {/* Step 1 */}
           {step === "info" && (
             <div className="card p-6 space-y-5">
               <h2 className="font-bold text-stone-800 text-lg">ข้อมูลการจัดส่ง</h2>
@@ -155,46 +189,23 @@ export default function CheckoutPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-stone-700 mb-1.5">เบอร์โทรศัพท์ *</label>
-                <input
-                  type="tel"
-                  className="input"
-                  placeholder="081-234-5678"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  required
-                />
+                <input type="tel" className="input" placeholder="081-234-5678" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-stone-700 mb-1.5">ที่อยู่จัดส่ง *</label>
-                <textarea
-                  className="input resize-none"
-                  rows={3}
-                  placeholder="บ้านเลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์"
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  required
-                />
+                <textarea className="input resize-none" rows={3} placeholder="บ้านเลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-stone-700 mb-1.5">หมายเหตุ (ถ้ามี)</label>
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="ระบุหมายเหตุพิเศษ เช่น ฝากไว้กับรปภ."
-                  value={form.note}
-                  onChange={(e) => setForm({ ...form, note: e.target.value })}
-                />
+                <input type="text" className="input" placeholder="ระบุหมายเหตุพิเศษ เช่น ฝากไว้กับรปภ." value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
               </div>
-              <button
-                onClick={() => setStep("payment")}
-                disabled={!form.address || !form.phone}
-                className="w-full btn-primary py-3"
-              >
+              <button onClick={() => setStep("payment")} disabled={!form.address || !form.phone} className="w-full btn-primary py-3">
                 ถัดไป: เลือกวิธีชำระเงิน →
               </button>
             </div>
           )}
 
+          {/* Step 2 */}
           {step === "payment" && (
             <div className="card p-6 space-y-5">
               <h2 className="font-bold text-stone-800 text-lg">วิธีชำระเงิน</h2>
@@ -204,29 +215,45 @@ export default function CheckoutPage() {
                     key={pm}
                     onClick={() => setForm({ ...form, paymentMethod: pm })}
                     className={`p-4 rounded-2xl border-2 text-left transition-all ${
-                      form.paymentMethod === pm
-                        ? "border-orange-500 bg-orange-50"
-                        : "border-stone-200 hover:border-orange-300"
+                      form.paymentMethod === pm ? "border-orange-500 bg-orange-50" : "border-stone-200 hover:border-orange-300"
                     }`}
                   >
                     <div className="text-2xl mb-1">{pmIcons[pm]}</div>
                     <div className="font-medium text-stone-800 text-sm">{PAYMENT_METHOD_LABEL[pm]}</div>
+                    {pm === "CREDIT_CARD" && <div className="text-xs text-stone-400 mt-0.5">Visa, Mastercard, JCB</div>}
                   </button>
                 ))}
               </div>
 
-              {/* Payment detail */}
               {form.paymentMethod === "PROMPTPAY" && (
                 <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-sm text-green-700">
-                  <p className="font-medium mb-1">พร้อมเพย์ หมายเลข 081-234-5678</p>
-                  <p>โอนแล้วส่งหลักฐานมาที่ Line: @petshop</p>
+                  <p className="font-semibold mb-1">📱 พร้อมเพย์</p>
+                  {settings.promptpayId
+                    ? <p>หมายเลข: <strong>{settings.promptpayId}</strong> — QR Code พร้อมยอดเงินจะแสดงหลังสั่งซื้อ</p>
+                    : <p className="text-stone-400">QR Code จะแสดงหลังสั่งซื้อ</p>
+                  }
                 </div>
               )}
+
               {form.paymentMethod === "BANK_TRANSFER" && (
                 <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-sm text-blue-700">
-                  <p className="font-medium mb-1">ธนาคารกสิกรไทย</p>
-                  <p>เลขที่บัญชี: 123-4-56789-0</p>
-                  <p>ชื่อบัญชี: บริษัท เพ็ทช็อป จำกัด</p>
+                  <p className="font-semibold mb-1">🏦 โอนเงินผ่านธนาคาร</p>
+                  {settings.bankName || settings.bankAccount ? (
+                    <>
+                      {settings.bankName && <p>{settings.bankName}</p>}
+                      {settings.bankAccount && <p>เลขที่บัญชี: <strong>{settings.bankAccount}</strong></p>}
+                      {settings.bankAccountName && <p>ชื่อบัญชี: {settings.bankAccountName}</p>}
+                    </>
+                  ) : (
+                    <p className="text-stone-400">ยังไม่ได้ตั้งค่าบัญชีธนาคาร</p>
+                  )}
+                </div>
+              )}
+
+              {form.paymentMethod === "CREDIT_CARD" && (
+                <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4 text-sm text-purple-700">
+                  <p className="font-semibold mb-1">💳 ชำระด้วยบัตรเครดิต/เดบิต</p>
+                  <p>คุณจะกรอกข้อมูลบัตรในขั้นตอนถัดไปอย่างปลอดภัยผ่าน Stripe</p>
                 </div>
               )}
 
@@ -239,6 +266,7 @@ export default function CheckoutPage() {
             </div>
           )}
 
+          {/* Step 3 */}
           {step === "confirm" && (
             <div className="card p-6 space-y-5">
               <h2 className="font-bold text-stone-800 text-lg">ยืนยันคำสั่งซื้อ</h2>
@@ -264,20 +292,32 @@ export default function CheckoutPage() {
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setStep("payment")} className="btn-outline py-3 px-6">← ย้อนกลับ</button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  className="flex-1 btn-primary py-3 flex items-center justify-center gap-2"
-                >
+                <button onClick={handleSubmit} disabled={loading} className="flex-1 btn-primary py-3 flex items-center justify-center gap-2">
                   {loading ? (
                     <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                  ) : "🎉"}
-                  ยืนยันสั่งซื้อ
+                  ) : form.paymentMethod === "CREDIT_CARD" ? "💳" : "🎉"}
+                  {form.paymentMethod === "CREDIT_CARD" ? "ไปกรอกข้อมูลบัตร →" : "ยืนยันสั่งซื้อ"}
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Step 4: Stripe */}
+          {step === "stripe" && createdOrderId && (
+            <div className="card p-6 space-y-5">
+              <h2 className="font-bold text-stone-800 text-lg">💳 กรอกข้อมูลบัตร</h2>
+              <p className="text-sm text-stone-500">ชำระเงินอย่างปลอดภัยผ่าน Stripe — ข้อมูลบัตรเข้ารหัส TLS และไม่ถูกจัดเก็บ</p>
+              <StripeCardForm
+                orderId={createdOrderId}
+                total={total}
+                onSuccess={() => {
+                  toast.success("ชำระเงินสำเร็จ! 🎉");
+                  router.push(`/checkout/success?orderId=${createdOrderId}`);
+                }}
+              />
             </div>
           )}
         </div>
@@ -295,9 +335,7 @@ export default function CheckoutPage() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-stone-700 truncate">{item.product.name}</p>
                     {item.variant && (
-                      <p className="text-xs text-stone-400">
-                        {[item.variant.size, item.variant.color].filter(Boolean).join(" / ")}
-                      </p>
+                      <p className="text-xs text-stone-400">{[item.variant.size, item.variant.color].filter(Boolean).join(" / ")}</p>
                     )}
                     <p className="text-stone-400">x{item.quantity}</p>
                   </div>
@@ -307,50 +345,29 @@ export default function CheckoutPage() {
                 </div>
               ))}
             </div>
-            {/* Coupon input */}
+
             <div className="border-t border-stone-100 pt-3 mb-1">
               {couponApplied ? (
                 <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-3 py-2 text-sm">
                   <span className="text-green-700 font-medium">🎟️ {couponApplied.code}</span>
-                  <button
-                    onClick={() => { setCouponApplied(null); setCouponInput(""); }}
-                    className="text-stone-400 hover:text-red-400 text-xs ml-2"
-                  >ยกเลิก</button>
+                  <button onClick={() => { setCouponApplied(null); setCouponInput(""); }} className="text-stone-400 hover:text-red-400 text-xs ml-2">ยกเลิก</button>
                 </div>
               ) : (
                 <div className="flex gap-2">
-                  <input
-                    type="text"
-                    className="input text-sm flex-1 py-2"
-                    placeholder="โค้ดส่วนลด"
-                    value={couponInput}
-                    onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                    onKeyDown={(e) => e.key === "Enter" && applyCoupon()}
-                  />
-                  <button
-                    onClick={applyCoupon}
-                    disabled={couponLoading || !couponInput.trim()}
-                    className="btn-primary px-3 py-2 text-sm shrink-0"
-                  >
-                    {couponLoading ? "..." : "ใช้"}
-                  </button>
+                  <input type="text" className="input text-sm flex-1 py-2" placeholder="โค้ดส่วนลด" value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} onKeyDown={(e) => e.key === "Enter" && applyCoupon()} />
+                  <button onClick={applyCoupon} disabled={couponLoading || !couponInput.trim()} className="btn-primary px-3 py-2 text-sm shrink-0">{couponLoading ? "..." : "ใช้"}</button>
                 </div>
               )}
             </div>
 
             <div className="space-y-2 text-sm border-t border-stone-100 pt-3">
-              <div className="flex justify-between text-stone-500">
-                <span>ราคาสินค้า</span><span>{formatPrice(subtotal)}</span>
-              </div>
+              <div className="flex justify-between text-stone-500"><span>ราคาสินค้า</span><span>{formatPrice(subtotal)}</span></div>
               <div className="flex justify-between text-stone-500">
                 <span>ค่าจัดส่ง</span>
                 <span className={shipping === 0 ? "text-green-500" : ""}>{shipping === 0 ? "ฟรี" : formatPrice(shipping)}</span>
               </div>
               {discount > 0 && (
-                <div className="flex justify-between text-green-600">
-                  <span>ส่วนลด</span>
-                  <span>-{formatPrice(discount)}</span>
-                </div>
+                <div className="flex justify-between text-green-600"><span>ส่วนลด</span><span>-{formatPrice(discount)}</span></div>
               )}
               <div className="flex justify-between font-bold text-base pt-2 border-t border-stone-100">
                 <span>รวม</span>

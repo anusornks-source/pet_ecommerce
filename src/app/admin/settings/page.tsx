@@ -14,6 +14,10 @@ export default function AdminSettingsPage() {
     storeName: "",
     logoUrl: "",
     adminEmail: "",
+    promptpayId: "",
+    bankName: "",
+    bankAccount: "",
+    bankAccountName: "",
   });
 
   useEffect(() => {
@@ -25,6 +29,10 @@ export default function AdminSettingsPage() {
             storeName: d.data.storeName ?? "",
             logoUrl: d.data.logoUrl ?? "",
             adminEmail: d.data.adminEmail ?? "",
+            promptpayId: d.data.promptpayId ?? "",
+            bankName: d.data.bankName ?? "",
+            bankAccount: d.data.bankAccount ?? "",
+            bankAccountName: d.data.bankAccountName ?? "",
           });
         }
       })
@@ -67,8 +75,7 @@ export default function AdminSettingsPage() {
     try { new URL(url); return true; } catch { return false; }
   };
 
-  const inputCls =
-    "w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200";
+  const inputCls = "w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200";
 
   if (loading) {
     return <div className="p-12 text-center text-stone-400">กำลังโหลด...</div>;
@@ -78,7 +85,7 @@ export default function AdminSettingsPage() {
     <div className="max-w-2xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-stone-800">ตั้งค่าร้าน</h1>
-        <p className="text-sm text-stone-500 mt-0.5">ชื่อร้าน, โลโก้, และการแจ้งเตือนอีเมล</p>
+        <p className="text-sm text-stone-500 mt-0.5">ชื่อร้าน, โลโก้, การแจ้งเตือน และช่องทางชำระเงิน</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -95,10 +102,8 @@ export default function AdminSettingsPage() {
               placeholder="PetShop"
               className={inputCls}
             />
-            <p className="text-xs text-stone-400 mt-1">แสดงใน Navbar, Footer และ title ของเวบ</p>
           </div>
 
-          {/* Logo */}
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-1.5">โลโก้ร้าน</label>
             <div className="flex gap-3 items-start">
@@ -122,9 +127,7 @@ export default function AdminSettingsPage() {
                   <p className="text-sm text-stone-500">🖼️ คลิกเพื่ออัปโหลด logo</p>
                 )}
               </div>
-
-              {/* Preview */}
-              <div className="w-16 h-16 rounded-xl border-2 border-stone-200 bg-stone-50 flex items-center justify-center shrink-0 overflow-hidden">
+              <div className="relative w-16 h-16 rounded-xl border-2 border-stone-200 bg-stone-50 flex items-center justify-center shrink-0 overflow-hidden">
                 {form.logoUrl && isValidUrl(form.logoUrl) ? (
                   <Image src={form.logoUrl} alt="Logo" fill className="object-contain p-1" sizes="64px" />
                 ) : (
@@ -138,7 +141,6 @@ export default function AdminSettingsPage() {
               placeholder="หรือวาง URL โลโก้โดยตรง"
               className={`${inputCls} mt-2`}
             />
-            <p className="text-xs text-stone-400 mt-1">ถ้าไม่ใส่จะแสดง 🐾 แทน</p>
           </div>
         </div>
 
@@ -147,7 +149,7 @@ export default function AdminSettingsPage() {
           <h2 className="text-base font-semibold text-stone-700">📧 การแจ้งเตือนอีเมล</h2>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1.5">อีเมลรับแจ้งเตือนคำสั่งซื้อ</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1.5">อีเมลรับแจ้งเตือน (Admin)</label>
             <input
               type="email"
               value={form.adminEmail}
@@ -155,19 +157,78 @@ export default function AdminSettingsPage() {
               placeholder="admin@yourshop.com"
               className={inputCls}
             />
-            <p className="text-xs text-stone-400 mt-1">จะได้รับอีเมลทุกครั้งที่มี order ใหม่เข้ามา</p>
+            <p className="text-xs text-stone-400 mt-1">รับแจ้งทุก order ใหม่ — ลูกค้าจะได้รับ email ยืนยัน order อัตโนมัติด้วย</p>
           </div>
 
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-            <p className="text-sm font-medium text-amber-700 mb-2">⚙️ ต้องตั้งค่า SMTP ใน .env ด้วย</p>
+            <p className="text-sm font-medium text-amber-700 mb-2">⚙️ ต้องตั้งค่า SMTP ใน .env</p>
             <pre className="text-xs text-amber-600 font-mono leading-relaxed">{`EMAIL_HOST="smtp.gmail.com"
 EMAIL_PORT="587"
 EMAIL_USER="your@gmail.com"
 EMAIL_PASS="app-password"
 EMAIL_FROM="Shop Name <your@gmail.com>"`}</pre>
-            <p className="text-xs text-amber-600 mt-2">
-              Gmail: เปิด 2FA → Google Account → Security → App Passwords
-            </p>
+          </div>
+        </div>
+
+        {/* PromptPay */}
+        <div className="bg-white rounded-2xl border border-stone-100 p-6 space-y-5">
+          <h2 className="text-base font-semibold text-stone-700">📱 พร้อมเพย์ (PromptPay QR)</h2>
+
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1.5">หมายเลขพร้อมเพย์</label>
+            <input
+              value={form.promptpayId}
+              onChange={(e) => setForm((f) => ({ ...f, promptpayId: e.target.value }))}
+              placeholder="0812345678 หรือ เลขบัตรประชาชน 13 หลัก"
+              className={inputCls}
+            />
+            <p className="text-xs text-stone-400 mt-1">ระบบจะ generate QR Code ให้ลูกค้าสแกนชำระเงินอัตโนมัติพร้อมยอดที่ถูกต้อง</p>
+          </div>
+        </div>
+
+        {/* Bank Transfer */}
+        <div className="bg-white rounded-2xl border border-stone-100 p-6 space-y-4">
+          <h2 className="text-base font-semibold text-stone-700">🏦 โอนเงินผ่านธนาคาร</h2>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">ชื่อธนาคาร</label>
+              <input
+                value={form.bankName}
+                onChange={(e) => setForm((f) => ({ ...f, bankName: e.target.value }))}
+                placeholder="ธนาคารกสิกรไทย"
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">เลขที่บัญชี</label>
+              <input
+                value={form.bankAccount}
+                onChange={(e) => setForm((f) => ({ ...f, bankAccount: e.target.value }))}
+                placeholder="123-4-56789-0"
+                className={inputCls}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1.5">ชื่อบัญชี</label>
+            <input
+              value={form.bankAccountName}
+              onChange={(e) => setForm((f) => ({ ...f, bankAccountName: e.target.value }))}
+              placeholder="บริษัท เพ็ทช็อป จำกัด"
+              className={inputCls}
+            />
+          </div>
+        </div>
+
+        {/* Stripe */}
+        <div className="bg-white rounded-2xl border border-stone-100 p-6">
+          <h2 className="text-base font-semibold text-stone-700 mb-4">💳 Stripe (บัตรเครดิต/เดบิต)</h2>
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <p className="text-sm font-medium text-blue-700 mb-2">⚙️ ตั้งค่า Stripe ใน .env</p>
+            <pre className="text-xs text-blue-600 font-mono leading-relaxed">{`STRIPE_SECRET_KEY="sk_live_..."
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_live_..."`}</pre>
+            <p className="text-xs text-blue-600 mt-2">สร้าง API keys ได้ที่ dashboard.stripe.com → Developers → API keys</p>
           </div>
         </div>
 

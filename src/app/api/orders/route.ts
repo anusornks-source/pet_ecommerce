@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { sendOrderNotification } from "@/lib/email";
+import { sendOrderNotification, sendCustomerOrderConfirmation } from "@/lib/email";
 
 // GET user orders
 export async function GET() {
@@ -157,8 +157,8 @@ export async function POST(request: NextRequest) {
       prisma.user.findUnique({ where: { id: session.userId }, select: { name: true, email: true } }),
     ]);
 
-    if (settings?.adminEmail && user) {
-      sendOrderNotification({
+    if (user) {
+      const emailData = {
         orderId: order.id,
         customerName: user.name,
         customerEmail: user.email,
@@ -172,9 +172,17 @@ export async function POST(request: NextRequest) {
           quantity: item.quantity,
           price: item.price,
         })),
-        storeName: settings.storeName,
-        adminEmail: settings.adminEmail,
-      }).catch(() => {}); // ignore email errors silently
+        storeName: settings?.storeName ?? "PetShop",
+        adminEmail: settings?.adminEmail ?? "",
+      };
+
+      // Send admin notification
+      if (settings?.adminEmail) {
+        sendOrderNotification(emailData).catch(() => {});
+      }
+
+      // Send customer confirmation
+      sendCustomerOrderConfirmation(emailData).catch(() => {});
     }
   } catch {
     // ignore — never block the order

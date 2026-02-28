@@ -125,3 +125,94 @@ export async function sendOrderNotification(data: OrderEmailData) {
     html,
   });
 }
+
+export async function sendCustomerOrderConfirmation(data: OrderEmailData) {
+  const transporter = createTransporter();
+  if (!transporter) return;
+
+  const itemsHtml = data.items
+    .map(
+      (item) => `
+      <tr>
+        <td style="padding:8px 12px;border-bottom:1px solid #f5f5f4">${item.name}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #f5f5f4;text-align:center">${item.quantity}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #f5f5f4;text-align:right">${formatPrice(item.price)}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #f5f5f4;text-align:right">${formatPrice(item.price * item.quantity)}</td>
+      </tr>`
+    )
+    .join("");
+
+  const html = `
+<!DOCTYPE html>
+<html lang="th">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:sans-serif;background:#f5f5f4;color:#1c1917">
+  <div style="max-width:600px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.08)">
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#f97316,#f59e0b);padding:24px 32px">
+      <h1 style="margin:0;color:#fff;font-size:20px">🎉 ขอบคุณที่สั่งซื้อ!</h1>
+      <p style="margin:4px 0 0;color:rgba(255,255,255,0.85);font-size:14px">${data.storeName}</p>
+    </div>
+
+    <!-- Greeting -->
+    <div style="padding:20px 32px 0">
+      <p style="margin:0;font-size:15px;color:#1c1917">สวัสดีคุณ <strong>${data.customerName}</strong> 👋</p>
+      <p style="margin:8px 0 0;font-size:14px;color:#78716c">เราได้รับคำสั่งซื้อของคุณเรียบร้อยแล้ว และจะดำเนินการจัดส่งโดยเร็วที่สุดนะคะ</p>
+    </div>
+
+    <!-- Order ID -->
+    <div style="padding:16px 32px;margin-top:16px;background:#fff7ed;border-top:1px solid #fed7aa;border-bottom:1px solid #fed7aa">
+      <p style="margin:0;font-size:13px;color:#9a3412">หมายเลขคำสั่งซื้อของคุณ</p>
+      <p style="margin:4px 0 0;font-size:20px;font-weight:700;color:#ea580c;font-family:monospace">#${data.orderId.slice(-8).toUpperCase()}</p>
+    </div>
+
+    <div style="padding:24px 32px">
+      <!-- Shipping info -->
+      <h2 style="margin:0 0 12px;font-size:15px;color:#78716c;text-transform:uppercase;letter-spacing:.5px">ข้อมูลการจัดส่ง</h2>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+        <tr><td style="padding:4px 0;font-size:14px;color:#78716c;width:120px">เบอร์โทร</td><td style="padding:4px 0;font-size:14px">${data.phone}</td></tr>
+        <tr><td style="padding:4px 0;font-size:14px;color:#78716c">ที่อยู่</td><td style="padding:4px 0;font-size:14px">${data.address}</td></tr>
+        <tr><td style="padding:4px 0;font-size:14px;color:#78716c">การชำระเงิน</td><td style="padding:4px 0;font-size:14px">${PAYMENT_LABEL[data.paymentMethod] ?? data.paymentMethod}</td></tr>
+        ${data.note ? `<tr><td style="padding:4px 0;font-size:14px;color:#78716c">หมายเหตุ</td><td style="padding:4px 0;font-size:14px">${data.note}</td></tr>` : ""}
+      </table>
+
+      <!-- Items -->
+      <h2 style="margin:0 0 12px;font-size:15px;color:#78716c;text-transform:uppercase;letter-spacing:.5px">รายการสินค้า</h2>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+        <thead>
+          <tr style="background:#f5f5f4">
+            <th style="padding:8px 12px;text-align:left;font-size:13px;color:#78716c">สินค้า</th>
+            <th style="padding:8px 12px;text-align:center;font-size:13px;color:#78716c">จำนวน</th>
+            <th style="padding:8px 12px;text-align:right;font-size:13px;color:#78716c">ราคา/ชิ้น</th>
+            <th style="padding:8px 12px;text-align:right;font-size:13px;color:#78716c">รวม</th>
+          </tr>
+        </thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+
+      <!-- Total -->
+      <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:16px;text-align:right">
+        <span style="font-size:14px;color:#78716c">ยอดรวมทั้งสิ้น</span>
+        <span style="font-size:22px;font-weight:700;color:#ea580c;margin-left:12px">${formatPrice(data.total)}</span>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:16px 32px;background:#f5f5f4;text-align:center">
+      <p style="margin:0;font-size:13px;color:#44403c">ขอบคุณที่ไว้วางใจ <strong>${data.storeName}</strong> ค่ะ 🐾</p>
+      <p style="margin:4px 0 0;font-size:12px;color:#a8a29e">อีเมลนี้ส่งโดยอัตโนมัติ กรุณาอย่าตอบกลับ</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const from = process.env.EMAIL_FROM ?? process.env.EMAIL_USER;
+
+  await transporter.sendMail({
+    from,
+    to: data.customerEmail,
+    subject: `[${data.storeName}] ยืนยันคำสั่งซื้อ #${data.orderId.slice(-8).toUpperCase()} — ${formatPrice(data.total)}`,
+    html,
+  });
+}

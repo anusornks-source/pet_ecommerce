@@ -231,11 +231,15 @@ enum CouponType {
 }
 
 model SiteSettings {
-  id         String   @id @default("default")
-  storeName  String   @default("PetShop")
-  logoUrl    String?
-  adminEmail String?
-  updatedAt  DateTime @updatedAt
+  id              String   @id @default("default")
+  storeName       String   @default("PetShop")
+  logoUrl         String?
+  adminEmail      String?
+  promptpayId     String?
+  bankName        String?
+  bankAccount     String?
+  bankAccountName String?
+  updatedAt       DateTime @updatedAt
 
   @@map("site_settings")
 }

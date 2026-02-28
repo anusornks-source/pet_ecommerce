@@ -10,21 +10,17 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const { label, name, phone, address, isDefault } = await req.json();
 
-  // Verify ownership
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const existing = await (prisma as any).address.findFirst({ where: { id, userId: session.userId } });
+  const existing = await prisma.address.findFirst({ where: { id, userId: session.userId } });
   if (!existing) return NextResponse.json({ success: false, error: "ไม่พบที่อยู่" }, { status: 404 });
 
   if (isDefault) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (prisma as any).address.updateMany({
+    await prisma.address.updateMany({
       where: { userId: session.userId, id: { not: id } },
       data: { isDefault: false },
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updated = await (prisma as any).address.update({
+  const updated = await prisma.address.update({
     where: { id },
     data: { label, name, phone, address, isDefault },
   });
@@ -39,23 +35,19 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   const { id } = await params;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const existing = await (prisma as any).address.findFirst({ where: { id, userId: session.userId } });
+  const existing = await prisma.address.findFirst({ where: { id, userId: session.userId } });
   if (!existing) return NextResponse.json({ success: false, error: "ไม่พบที่อยู่" }, { status: 404 });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (prisma as any).address.delete({ where: { id } });
+  await prisma.address.delete({ where: { id } });
 
   // If deleted address was default, assign default to oldest remaining
   if (existing.isDefault) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const next = await (prisma as any).address.findFirst({
+    const next = await prisma.address.findFirst({
       where: { userId: session.userId },
       orderBy: { createdAt: "asc" },
     });
     if (next) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (prisma as any).address.update({ where: { id: next.id }, data: { isDefault: true } });
+      await prisma.address.update({ where: { id: next.id }, data: { isDefault: true } });
     }
   }
 

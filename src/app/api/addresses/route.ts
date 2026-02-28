@@ -3,12 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
 // GET /api/addresses — list user's saved addresses
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const addresses = await (prisma as any).address.findMany({
+  const addresses = await prisma.address.findMany({
     where: { userId: session.userId },
     orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
   });
@@ -26,21 +25,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "กรุณากรอกข้อมูลให้ครบ" }, { status: 400 });
   }
 
-  // If new address is default, unset others first
   if (isDefault) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (prisma as any).address.updateMany({
+    await prisma.address.updateMany({
       where: { userId: session.userId },
       data: { isDefault: false },
     });
   }
 
-  // If this is the first address, make it default automatically
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const count = await (prisma as any).address.count({ where: { userId: session.userId } });
+  const count = await prisma.address.count({ where: { userId: session.userId } });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const created = await (prisma as any).address.create({
+  const created = await prisma.address.create({
     data: {
       userId: session.userId,
       label: label || "บ้าน",

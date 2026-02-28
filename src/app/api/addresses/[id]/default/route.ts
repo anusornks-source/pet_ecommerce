@@ -9,18 +9,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const existing = await (prisma as any).address.findFirst({ where: { id, userId: session.userId } });
+  const existing = await prisma.address.findFirst({ where: { id, userId: session.userId } });
   if (!existing) return NextResponse.json({ success: false, error: "ไม่พบที่อยู่" }, { status: 404 });
 
-  // Unset all, then set this one
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (prisma as any).address.updateMany({
+  await prisma.address.updateMany({
     where: { userId: session.userId },
     data: { isDefault: false },
   });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updated = await (prisma as any).address.update({
+
+  const updated = await prisma.address.update({
     where: { id },
     data: { isDefault: true },
   });

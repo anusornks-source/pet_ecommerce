@@ -6,8 +6,7 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const settings = await (prisma.siteSettings as any).upsert({
+  const settings = await prisma.siteSettings.upsert({
     where: { id: "default" },
     create: { id: "default", storeName: "PetShop" },
     update: {},
@@ -23,8 +22,7 @@ export async function PUT(request: NextRequest) {
   const body = await request.json();
   const { storeName, logoUrl, heroImageUrl, adminEmail, promptpayId, bankName, bankAccount, bankAccountName } = body;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const settings = await (prisma.siteSettings as any).upsert({
+  const settings = await prisma.siteSettings.upsert({
     where: { id: "default" },
     create: {
       id: "default",

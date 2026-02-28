@@ -160,8 +160,8 @@ export default async function HomePage() {
                 ดูทั้งหมด →
               </Link>
             </div>
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
-              {highlightProducts.map((product) => {
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {highlightProducts.slice(0, 5).map((product) => {
                 const img = product.images?.find((i: string) => {
                   try { new URL(i); return true; } catch { return false; }
                 });
@@ -170,29 +170,29 @@ export default async function HomePage() {
                   <Link
                     key={product.id}
                     href={`/products/${product.id}`}
-                    className="group shrink-0 w-44 snap-start"
+                    className="group"
                   >
-                    <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                      <div className="relative h-44 overflow-hidden bg-orange-50">
+                    <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
+                      <div className="relative h-44 overflow-hidden bg-orange-50 shrink-0">
                         <Image
                           src={image}
                           alt={product.name}
                           fill
                           className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          sizes="176px"
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
                         />
                         <span className="absolute top-2 left-2 bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                           ✨ แนะนำ
                         </span>
                       </div>
-                      <div className="p-3">
+                      <div className="p-3 flex flex-col flex-1">
                         <p className="text-xs text-stone-500 mb-0.5">
                           {product.category.icon} {product.category.name}
                         </p>
-                        <p className="text-sm font-semibold text-stone-800 line-clamp-2 group-hover:text-orange-500 transition-colors">
+                        <p className="text-sm font-semibold text-stone-800 line-clamp-2 group-hover:text-orange-500 transition-colors flex-1">
                           {product.name}
                         </p>
-                        <p className="text-base font-bold text-orange-500 mt-1.5">
+                        <p className="text-base font-bold text-orange-500 mt-2">
                           {new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", minimumFractionDigits: 0 }).format(product.price)}
                         </p>
                       </div>

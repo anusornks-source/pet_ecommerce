@@ -6,13 +6,15 @@ import toast from "react-hot-toast";
 
 export default function AdminSettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const heroInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState<"logo" | "hero" | null>(null);
 
   const [form, setForm] = useState({
     storeName: "",
     logoUrl: "",
+    heroImageUrl: "",
     adminEmail: "",
     promptpayId: "",
     bankName: "",
@@ -28,6 +30,7 @@ export default function AdminSettingsPage() {
           setForm({
             storeName: d.data.storeName ?? "",
             logoUrl: d.data.logoUrl ?? "",
+            heroImageUrl: d.data.heroImageUrl ?? "",
             adminEmail: d.data.adminEmail ?? "",
             promptpayId: d.data.promptpayId ?? "",
             bankName: d.data.bankName ?? "",
@@ -39,16 +42,17 @@ export default function AdminSettingsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleUpload = async (file: File) => {
-    setUploading(true);
+  const handleUpload = async (file: File, target: "logo" | "hero") => {
+    setUploading(target);
     const fd = new FormData();
     fd.append("file", file);
     const res = await fetch("/api/upload", { method: "POST", body: fd });
     const data = await res.json();
-    setUploading(false);
+    setUploading(null);
     if (data.success) {
-      setForm((f) => ({ ...f, logoUrl: data.url }));
-      toast.success("อัปโหลด logo สำเร็จ");
+      if (target === "logo") setForm((f) => ({ ...f, logoUrl: data.url }));
+      else setForm((f) => ({ ...f, heroImageUrl: data.url }));
+      toast.success(target === "logo" ? "อัปโหลด logo สำเร็จ" : "อัปโหลดรูป Hero สำเร็จ");
     } else {
       toast.error(data.error ?? "อัปโหลดไม่สำเร็จ");
     }
@@ -104,6 +108,7 @@ export default function AdminSettingsPage() {
             />
           </div>
 
+          {/* Logo */}
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-1.5">โลโก้ร้าน</label>
             <div className="flex gap-3 items-start">
@@ -116,9 +121,9 @@ export default function AdminSettingsPage() {
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
+                  onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], "logo")}
                 />
-                {uploading ? (
+                {uploading === "logo" ? (
                   <div className="flex items-center justify-center gap-2">
                     <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
                     <span className="text-sm text-orange-500">กำลังอัปโหลด...</span>
@@ -139,6 +144,49 @@ export default function AdminSettingsPage() {
               value={form.logoUrl}
               onChange={(e) => setForm((f) => ({ ...f, logoUrl: e.target.value }))}
               placeholder="หรือวาง URL โลโก้โดยตรง"
+              className={`${inputCls} mt-2`}
+            />
+          </div>
+
+          {/* Hero Image */}
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1.5">รูปหน้าแรก (Hero)</label>
+            <div
+              onClick={() => heroInputRef.current?.click()}
+              className="relative border-2 border-dashed border-stone-200 rounded-xl overflow-hidden cursor-pointer hover:border-orange-300 hover:bg-stone-50 transition-colors"
+              style={{ height: "140px" }}
+            >
+              <input
+                ref={heroInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], "hero")}
+              />
+              {form.heroImageUrl && isValidUrl(form.heroImageUrl) ? (
+                <>
+                  <Image src={form.heroImageUrl} alt="Hero" fill className="object-cover" sizes="640px" />
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                    <span className="text-white text-sm font-medium">📷 เปลี่ยนรูป</span>
+                  </div>
+                </>
+              ) : uploading === "hero" ? (
+                <div className="h-full flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm text-orange-500">กำลังอัปโหลด...</span>
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center gap-1 text-stone-400">
+                  <span className="text-3xl">🖼️</span>
+                  <p className="text-sm">คลิกเพื่ออัปโหลดรูป Hero หน้าแรก</p>
+                  <p className="text-xs">แนะนำ: 1200×600px ขึ้นไป</p>
+                </div>
+              )}
+            </div>
+            <input
+              value={form.heroImageUrl}
+              onChange={(e) => setForm((f) => ({ ...f, heroImageUrl: e.target.value }))}
+              placeholder="หรือวาง URL รูป Hero โดยตรง"
               className={`${inputCls} mt-2`}
             />
           </div>
@@ -234,7 +282,7 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_live_..."`}</pre>
 
         <button
           type="submit"
-          disabled={saving || uploading}
+          disabled={saving || uploading !== null}
           className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-60"
         >
           {saving ? "กำลังบันทึก..." : "บันทึกการตั้งค่า"}

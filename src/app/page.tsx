@@ -30,12 +30,25 @@ async function getCategories() {
   });
 }
 
+async function getSettings() {
+  return prisma.siteSettings.upsert({
+    where: { id: "default" },
+    create: { id: "default", storeName: "PetShop" },
+    update: {},
+  });
+}
+
+const DEFAULT_HERO_IMAGE = "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=1400";
+
 export default async function HomePage() {
-  const [featuredProducts, highlightProducts, categories] = await Promise.all([
+  const [featuredProducts, highlightProducts, categories, settings] = await Promise.all([
     getFeaturedProducts(),
     getHighlightProducts(),
     getCategories(),
+    getSettings(),
   ]);
+
+  const heroImageUrl: string = settings?.heroImageUrl || DEFAULT_HERO_IMAGE;
 
   const pets = [
     { emoji: "🐕", label: "สุนัข", slug: "dogs", bg: "bg-amber-50", border: "border-amber-200" },
@@ -46,60 +59,65 @@ export default async function HomePage() {
 
   return (
     <div>
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100">
-        <div className="max-w-6xl mx-auto px-4 py-16 md:py-24 flex flex-col md:flex-row items-center gap-10">
-          <div className="flex-1 space-y-6">
-            <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-600 px-4 py-2 rounded-full text-sm font-medium">
+      {/* Hero Section — full-width background image */}
+      <section className="relative overflow-hidden h-120 md:h-140">
+        {/* Background image */}
+        <Image
+          src={heroImageUrl}
+          alt="Hero"
+          fill
+          className="object-cover"
+          priority
+          sizes="100vw"
+        />
+        {/* Gradient overlay: dark on left for text, fades to transparent on right */}
+        <div className="absolute inset-0 bg-linear-to-r from-black/65 via-black/30 to-transparent" />
+
+        {/* Content */}
+        <div className="relative z-10 max-w-6xl mx-auto px-4 h-full flex items-center">
+          <div className="max-w-lg space-y-6">
+            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium border border-white/30">
               🎉 ยินดีต้อนรับสู่ PetShop
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-stone-800 leading-tight">
+            <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight drop-shadow-md">
               ทุกสิ่งที่{" "}
-              <span className="text-orange-500">น้องรัก</span>
+              <span className="text-orange-300">น้องรัก</span>
               <br />ต้องการ ที่นี่ครบ!
             </h1>
-            <p className="text-stone-600 text-lg leading-relaxed">
+            <p className="text-white/85 text-lg leading-relaxed">
               คัดสรรสัตว์เลี้ยงคุณภาพ พร้อมอาหาร ของเล่น และอุปกรณ์ครบครัน จัดส่งถึงบ้านทั่วประเทศ
             </p>
             <div className="flex flex-wrap gap-3">
               <Link href="/products" className="btn-primary px-8 py-3 text-base">
                 ช้อปเลย 🛒
               </Link>
-              <Link href="/products?category=dogs" className="btn-outline px-8 py-3 text-base">
+              <Link
+                href="/products?category=dogs"
+                className="bg-white/20 backdrop-blur-sm border border-white/40 text-white hover:bg-white/30 transition-colors px-8 py-3 text-base rounded-xl font-medium"
+              >
                 ดูสัตว์เลี้ยง
               </Link>
             </div>
-            <div className="flex items-center gap-6 text-sm text-stone-500">
+            <div className="flex items-center gap-6 text-sm text-white/80">
               <div className="flex items-center gap-1.5">✅ สินค้าคุณภาพ</div>
               <div className="flex items-center gap-1.5">🚚 จัดส่งทั่วไทย</div>
               <div className="flex items-center gap-1.5">💬 ดูแลหลังขาย</div>
             </div>
           </div>
-          <div className="flex-1 relative">
-            <div className="relative w-full h-80 md:h-96">
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-200/40 to-amber-200/40 rounded-3xl" />
-              <Image
-                src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=600"
-                alt="Happy pets"
-                fill
-                className="object-cover rounded-3xl"
-                priority
-              />
-            </div>
-            {/* Floating badges */}
-            <div className="absolute -bottom-4 -left-4 bg-white rounded-2xl shadow-lg p-3 flex items-center gap-2">
-              <span className="text-2xl">⭐</span>
-              <div>
-                <p className="text-xs text-stone-500">ความพึงพอใจ</p>
-                <p className="font-bold text-stone-800">4.9/5.0</p>
-              </div>
-            </div>
-            <div className="absolute -top-4 -right-4 bg-orange-500 text-white rounded-2xl shadow-lg p-3">
-              <p className="text-xs font-medium">สินค้ามากกว่า</p>
-              <p className="text-2xl font-bold">500+</p>
-              <p className="text-xs">รายการ</p>
-            </div>
+        </div>
+
+        {/* Floating badges */}
+        <div className="absolute bottom-6 right-6 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-3 flex items-center gap-2 z-10">
+          <span className="text-2xl">⭐</span>
+          <div>
+            <p className="text-xs text-stone-500">ความพึงพอใจ</p>
+            <p className="font-bold text-stone-800">4.9/5.0</p>
           </div>
+        </div>
+        <div className="absolute top-6 right-6 bg-orange-500/90 backdrop-blur-sm text-white rounded-2xl shadow-lg p-3 z-10 text-center">
+          <p className="text-xs font-medium">สินค้ามากกว่า</p>
+          <p className="text-2xl font-bold">500+</p>
+          <p className="text-xs">รายการ</p>
         </div>
       </section>
 

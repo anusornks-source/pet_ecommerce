@@ -21,7 +21,7 @@ export async function PUT(request: NextRequest) {
   if (isNextResponse(auth)) return auth;
 
   const body = await request.json();
-  const { storeName, logoUrl, adminEmail, promptpayId, bankName, bankAccount, bankAccountName } = body;
+  const { storeName, logoUrl, heroImageUrl, adminEmail, promptpayId, bankName, bankAccount, bankAccountName } = body;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const settings = await (prisma.siteSettings as any).upsert({
@@ -30,6 +30,7 @@ export async function PUT(request: NextRequest) {
       id: "default",
       storeName: storeName ?? "PetShop",
       logoUrl: logoUrl || null,
+      heroImageUrl: heroImageUrl || null,
       adminEmail: adminEmail || null,
       promptpayId: promptpayId || null,
       bankName: bankName || null,
@@ -39,6 +40,7 @@ export async function PUT(request: NextRequest) {
     update: {
       ...(storeName !== undefined && { storeName }),
       ...(logoUrl !== undefined && { logoUrl: logoUrl || null }),
+      ...(heroImageUrl !== undefined && { heroImageUrl: heroImageUrl || null }),
       ...(adminEmail !== undefined && { adminEmail: adminEmail || null }),
       ...(promptpayId !== undefined && { promptpayId: promptpayId || null }),
       ...(bankName !== undefined && { bankName: bankName || null }),

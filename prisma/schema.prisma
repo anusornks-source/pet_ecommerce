@@ -234,6 +234,7 @@ model SiteSettings {
   id              String   @id @default("default")
   storeName       String   @default("PetShop")
   logoUrl         String?
+  heroImageUrl    String?
   adminEmail      String?
   promptpayId     String?
   bankName        String?

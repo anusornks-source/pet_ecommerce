@@ -53,52 +53,51 @@ export async function POST(request: NextRequest) {
     // Extract images embedded in description HTML, strip <img> tags
     const { cleaned: description, urls: descImages } = extractImgUrls(detail.description ?? "");
 
-    // Merge CJ productImages + description images (deduplicated)
-    const existingImages = new Set(detail.productImages ?? []);
+    // Use productImageSet (array) as primary source; fallback: parse productImage JSON string
+    let mainImages: string[] = [];
+    if (Array.isArray(detail.productImageSet) && detail.productImageSet.length > 0) {
+      mainImages = detail.productImageSet;
+    } else if (typeof detail.productImage === "string" && detail.productImage.startsWith("[")) {
+      try { mainImages = JSON.parse(detail.productImage); } catch { mainImages = []; }
+    }
+
+    // Merge main images + description images (deduplicated)
+    const existingImages = new Set(mainImages);
     const allImages = [
-      ...(detail.productImages ?? []),
+      ...mainImages,
       ...descImages.filter((u) => !existingImages.has(u)),
     ];
 
-    // Parse variants — variantPrice from CJ is in USD
+    // productKeyEn tells us the attribute order, e.g. "Color-Size" or "Size" or "Color"
+    const keyOrder = (detail.productKeyEn ?? "").toLowerCase().split("-");
+
+    // Parse variants — variantSellPrice from CJ is in USD
     const variants = (detail.variants ?? []).map((v) => {
-      const props: Record<string, string> = {};
-      (v.variantProperty ?? "").split(";").forEach((part) => {
-        const [key, ...rest] = part.split(":");
-        const val = rest.join(":"); // handle values that contain ":"
-        if (key && val) props[key.trim().toLowerCase()] = val.trim();
-      });
+      // variantKey = "Yellow-XS", "Purple-S" etc. Split and map using keyOrder
+      const keyParts = (v.variantKey ?? "").split("-");
 
-      // Flexible key matching: find any key containing "size" or "color/colour"
-      const sizeKey = Object.keys(props).find((k) => k.includes("size"));
-      const colorKey = Object.keys(props).find((k) => k.includes("color") || k.includes("colour"));
+      let size: string | null = null;
+      let color: string | null = null;
 
-      // Fallback: if no size/color keys found, split combined property (e.g. "Sizecolour:S/Red")
-      let size = sizeKey ? props[sizeKey] : null;
-      let color = colorKey ? props[colorKey] : null;
-
-      if (!size && !color && v.variantProperty) {
-        const values = Object.values(props);
-        if (values.length === 1) {
-          // "Sizecolour:S/Red" → split by "/"
-          const parts = values[0].split("/");
-          size = parts[0]?.trim() || null;
-          color = parts[1]?.trim() || null;
-        } else if (values.length >= 2) {
-          size = values[0] || null;
-          color = values[1] || null;
-        } else {
-          size = v.variantProperty || null; // last resort: raw string
-        }
+      if (keyOrder.length > 0 && keyParts.length > 0) {
+        keyOrder.forEach((keyName, idx) => {
+          const val = keyParts[idx]?.trim() || null;
+          if (!val) return;
+          if (keyName.includes("color") || keyName.includes("colour")) color = val;
+          else if (keyName.includes("size")) size = val;
+        });
       }
 
-      // Use fallbackCostUSD if variantPrice is 0 or missing
-      const costUSD = v.variantPrice || fallbackCostUSD;
+      // Fallback: if still empty, use raw variantKey as size label
+      if (!size && !color && v.variantKey) size = v.variantKey;
+
+      // Use fallbackCostUSD if variantSellPrice is 0 or missing
+      const costUSD = v.variantSellPrice || fallbackCostUSD;
       return {
         size,
         color,
         price: Math.ceil(costUSD * usdToThb * priceFactor), // sell price in THB
-        stock: v.variantStock ?? 0,
+        stock: v.inventoryNum ?? 0,
         sku: v.variantSku ?? null,
         cjVid: v.vid,
         costUSD,

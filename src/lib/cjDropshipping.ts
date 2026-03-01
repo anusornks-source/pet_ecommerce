@@ -13,9 +13,10 @@ export interface CJListItem {
 export interface CJVariantDetail {
   vid: string;
   variantSku: string;
-  variantPrice: number;
-  variantStock: number;
-  variantProperty: string; // e.g. "Color:Red" or "Size:M"
+  variantSellPrice: number;   // actual CJ field (was variantPrice)
+  inventoryNum: number | null; // actual CJ field (was variantStock)
+  variantProperty: string;    // often "[]" — use variantKey instead
+  variantKey: string;         // e.g. "Yellow-XS", "Purple-S"
   variantImage?: string;
 }
 
@@ -23,7 +24,9 @@ export interface CJProductDetail {
   pid: string;
   productNameEn: string;
   description: string;
-  productImages: string[];
+  productImageSet: string[]; // actual CJ field (was productImages)
+  productImage: string;      // JSON string of array (fallback)
+  productKeyEn: string;      // e.g. "Color-Size" — guides variant parsing
   categoryName: string;
   variants: CJVariantDetail[];
 }

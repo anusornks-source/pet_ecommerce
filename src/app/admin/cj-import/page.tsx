@@ -185,6 +185,7 @@ export default function CJImportPage() {
                   <div className="p-3">
                     <p className="text-xs font-medium text-stone-800 leading-tight line-clamp-2 mb-1">{item.productNameEn}</p>
                     <p className="text-xs text-stone-400 mb-1">{item.categoryName}</p>
+                    <p className="text-[10px] text-stone-300 font-mono mb-1 select-all break-all">{item.pid}</p>
                     <p className="text-xs text-stone-400">ต้นทุน: ${costUSD.toFixed(2)}</p>
                     <p className="text-sm font-semibold text-orange-600 mb-2">
                       ราคาขาย: ฿{sellTHB.toLocaleString("th-TH")}

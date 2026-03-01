@@ -320,7 +320,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           {/* Description */}
           <div>
             <h3 className="font-semibold text-stone-800 mb-2">รายละเอียด</h3>
-            <p className="text-stone-600 leading-relaxed">{product.description}</p>
+            <div
+              className="text-stone-600 leading-relaxed [&_p]:mb-2 [&_b]:font-semibold [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-2"
+              dangerouslySetInnerHTML={{ __html: product.description }}
+            />
           </div>
 
           {/* Quantity + Add to cart */}

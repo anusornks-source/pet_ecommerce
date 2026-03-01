@@ -40,8 +40,9 @@ export async function POST(request: NextRequest) {
   try {
     const detail = await getCJProductDetail(pid);
 
-    // Keep description HTML intact (images in description stay in place, e.g. size charts)
-    const description = detail.description ?? "";
+    // sourceDescription = original CJ HTML (keep for admin reference)
+    // description starts empty — admin fills in Thai-friendly copy
+    const sourceDescription = detail.description ?? "";
 
     // Use productImageSet (array) as primary source; fallback: parse productImage JSON string
     let allImages: string[] = [];
@@ -124,7 +125,8 @@ export async function POST(request: NextRequest) {
     const product = await prisma.product.create({
       data: {
         name: detail.productNameEn,
-        description,
+        description: "",
+        sourceDescription,
         price: sellPrice,
         stock: variantData.reduce((s, v) => s + (v.stock as number), 0),
         images: allImages,

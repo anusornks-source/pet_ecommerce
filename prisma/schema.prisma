@@ -55,10 +55,11 @@ model Product {
   featured        Boolean  @default(false)
   highlight       Boolean  @default(false)
   highlightOrder  Int?
-  cjProductId     String?
-  costPrice       Float?
-  source          String?
-  sourceData      Json?
+  cjProductId         String?
+  costPrice           Float?
+  source              String?
+  sourceDescription   String?   // original CJ description (HTML) — for admin reference
+  sourceData          Json?
   createdAt       DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

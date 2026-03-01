@@ -66,7 +66,7 @@ useEffect(() => {
   const handleSearch = async (p = 1) => {
     if (!keyword.trim()) return;
     setSearching(true);
-    if (p === 1) setResults([]);
+    setResults([]);
     try {
       const url = searchMode === "pid"
         ? `/api/admin/cj-products?pid=${encodeURIComponent(keyword.trim())}`
@@ -74,9 +74,10 @@ useEffect(() => {
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
-        setResults(p === 1 ? data.data.list : [...results, ...data.data.list]);
+        setResults(data.data.list);
         setTotal(data.data.total);
         setPage(p);
+        window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
         toast.error(data.error || "ค้นหาไม่สำเร็จ");
       }
@@ -200,7 +201,7 @@ useEffect(() => {
       {/* Results */}
       {results.length > 0 && (
         <>
-          <p className="text-sm text-stone-500 mb-3">พบ {total.toLocaleString()} รายการ</p>
+          <p className="text-sm text-stone-500 mb-3">พบ {total.toLocaleString()} รายการ — หน้า {page}/{Math.ceil(total / 20)}</p>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {results.map((item) => {
               const imported = importedIds[item.pid];
@@ -297,14 +298,56 @@ useEffect(() => {
             })}
           </div>
 
-          {results.length < total && (
-            <div className="text-center mt-6">
-              <button onClick={() => handleSearch(page + 1)} disabled={searching}
-                className="px-6 py-2 border border-stone-200 rounded-xl text-sm text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-60">
-                {searching ? "กำลังโหลด..." : "โหลดเพิ่ม"}
-              </button>
-            </div>
-          )}
+          {/* Pagination */}
+          {total > 20 && (() => {
+            const totalPages = Math.ceil(total / 20);
+            const delta = 2;
+            const pages: (number | "...")[] = [];
+            for (let i = 1; i <= totalPages; i++) {
+              if (i === 1 || i === totalPages || (i >= page - delta && i <= page + delta)) {
+                pages.push(i);
+              } else if (pages[pages.length - 1] !== "...") {
+                pages.push("...");
+              }
+            }
+            return (
+              <div className="flex items-center justify-center gap-1 mt-8">
+                <button
+                  onClick={() => handleSearch(page - 1)}
+                  disabled={page <= 1 || searching}
+                  className="px-3 py-2 rounded-xl border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 disabled:opacity-40 transition-colors"
+                >
+                  ←
+                </button>
+                {pages.map((p, i) =>
+                  p === "..." ? (
+                    <span key={`ellipsis-${i}`} className="px-2 text-stone-400 text-sm">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => p !== page && handleSearch(p)}
+                      disabled={searching}
+                      className={`w-9 h-9 rounded-xl text-sm font-medium transition-colors ${
+                        p === page
+                          ? "bg-orange-500 text-white"
+                          : "border border-stone-200 text-stone-600 hover:bg-stone-50"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+                <button
+                  onClick={() => handleSearch(page + 1)}
+                  disabled={page >= totalPages || searching}
+                  className="px-3 py-2 rounded-xl border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 disabled:opacity-40 transition-colors"
+                >
+                  →
+                </button>
+                <span className="ml-3 text-xs text-stone-400">หน้า {page}/{totalPages} ({total.toLocaleString()} รายการ)</span>
+              </div>
+            );
+          })()}
         </>
       )}
 

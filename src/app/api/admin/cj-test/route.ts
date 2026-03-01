@@ -1,27 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
-import { getCJToken } from "@/lib/cjDropshipping";
+
+const CJ_BASE = "https://developers.cjdropshipping.com/api2.0/v1";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
-  if (!process.env.CJ_API_KEY) {
+  const apiKey = process.env.CJ_API_KEY;
+  if (!apiKey) {
     return NextResponse.json({ success: false, error: "CJ_API_KEY ไม่ได้ตั้งค่าใน env" });
   }
 
+  // Step 1: Get access token (always fresh, bypass DB cache)
+  let token: string;
   try {
-    const token = await getCJToken();
+    const authRes = await fetch(`${CJ_BASE}/authentication/getAccessToken`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ apiKey }),
+    });
+    const authData = await authRes.json();
+    if (!authData.result || !authData.data?.accessToken) {
+      return NextResponse.json({
+        success: false,
+        step: "auth",
+        error: authData.message || JSON.stringify(authData),
+      });
+    }
+    token = authData.data.accessToken as string;
+  } catch (err) {
+    return NextResponse.json({
+      success: false,
+      step: "auth",
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
 
-    // Test token with a simple product search
-    const res = await fetch("https://developers.cjdropshipping.com/api2.0/v1/product/list", {
+  // Step 2: Test token with product search
+  try {
+    const searchRes = await fetch(`${CJ_BASE}/product/list`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "CJ-Access-Token": token },
       body: JSON.stringify({ pageNum: 1, pageSize: 1, productNameEn: "pet" }),
     });
-    const data = await res.json();
+    const searchData = await searchRes.json();
 
-    if (data.result) {
+    if (searchData.result) {
       return NextResponse.json({
         success: true,
         message: "✅ เชื่อมต่อ CJDropshipping สำเร็จ",
@@ -31,11 +56,13 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: false,
-      error: `CJ ตอบกลับ: ${data.message || JSON.stringify(data)}`,
+      step: "search",
+      error: searchData.message || JSON.stringify(searchData),
     });
   } catch (err) {
     return NextResponse.json({
       success: false,
+      step: "search",
       error: err instanceof Error ? err.message : String(err),
     });
   }

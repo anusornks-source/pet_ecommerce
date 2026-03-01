@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
-  const { pid, categoryId, petType, priceFactor = 3, usdToThb = 36 } = await request.json();
+  const { pid, categoryId, petType, priceFactor = 3, usdToThb = 36, fallbackCostUSD = 0 } = await request.json();
 
   if (!pid || !categoryId) {
     return NextResponse.json({ success: false, error: "pid และ categoryId จำเป็น" }, { status: 400 });
@@ -67,7 +67,8 @@ export async function POST(request: NextRequest) {
         const [key, val] = part.split(":");
         if (key && val) props[key.trim().toLowerCase()] = val.trim();
       });
-      const costUSD = v.variantPrice ?? 0;
+      // Use fallbackCostUSD if variantPrice is 0 or missing
+      const costUSD = v.variantPrice || fallbackCostUSD;
       return {
         size: props["size"] ?? null,
         color: props["color"] ?? null,
@@ -75,12 +76,12 @@ export async function POST(request: NextRequest) {
         stock: v.variantStock ?? 0,
         sku: v.variantSku ?? null,
         cjVid: v.vid,
-        costUSD, // keep for reference (not in schema, just for calculation)
+        costUSD,
       };
     });
 
-    const costPriceUSD = variants[0]?.costUSD ?? 0;
-    const sellPrice = variants[0]?.price ?? Math.ceil(costPriceUSD * usdToThb * priceFactor);
+    const costPriceUSD = variants[0]?.costUSD || fallbackCostUSD;
+    const sellPrice = variants[0]?.price || Math.ceil(costPriceUSD * usdToThb * priceFactor);
 
     const variantData = variants.map(({ costUSD: _c, ...rest }) => rest);
 

@@ -94,6 +94,7 @@ export default function CJImportPage() {
           petType: form.petType || null,
           priceFactor,
           usdToThb,
+          fallbackCostUSD: Number(item.sellPrice),
         }),
       });
       const data = await res.json();

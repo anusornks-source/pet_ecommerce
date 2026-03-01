@@ -50,7 +50,7 @@ export async function getCJProductDetail(pid: string): Promise<CJProductDetail> 
   return data.data as CJProductDetail;
 }
 
-async function getCJToken(): Promise<string> {
+export async function getCJToken(): Promise<string> {
   // Check DB for a valid cached token (persists across serverless instances)
   const settings = await prisma.siteSettings.findUnique({ where: { id: "default" } });
   if (

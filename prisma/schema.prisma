@@ -262,8 +262,10 @@ model SiteSettings {
   promptpayId     String?
   bankName        String?
   bankAccount     String?
-  bankAccountName String?
-  updatedAt       DateTime @updatedAt
+  bankAccountName  String?
+  cjAccessToken    String?
+  cjTokenExpiresAt DateTime?
+  updatedAt        DateTime @updatedAt
 
   @@map("site_settings")
 }

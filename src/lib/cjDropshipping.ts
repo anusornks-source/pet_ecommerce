@@ -1,3 +1,5 @@
+import { prisma } from "@/lib/prisma";
+
 const CJ_BASE = "https://developers.cjdropshipping.com/api2.0/v1";
 
 export interface CJListItem {
@@ -49,6 +51,16 @@ export async function getCJProductDetail(pid: string): Promise<CJProductDetail> 
 }
 
 async function getCJToken(): Promise<string> {
+  // Check DB for a valid cached token (persists across serverless instances)
+  const settings = await prisma.siteSettings.findUnique({ where: { id: "default" } });
+  if (
+    settings?.cjAccessToken &&
+    settings.cjTokenExpiresAt &&
+    settings.cjTokenExpiresAt > new Date(Date.now() + 5 * 60 * 1000)
+  ) {
+    return settings.cjAccessToken;
+  }
+
   const email = process.env.CJ_EMAIL;
   const password = process.env.CJ_PASSWORD;
 
@@ -68,7 +80,17 @@ async function getCJToken(): Promise<string> {
     throw new Error(`CJ Auth failed: ${data.message || JSON.stringify(data)}`);
   }
 
-  return data.data.accessToken as string;
+  const token = data.data.accessToken as string;
+  const expiresAt = new Date(Date.now() + 11 * 60 * 60 * 1000); // 11 hours
+
+  // Save to DB so all serverless instances share the same token
+  await prisma.siteSettings.upsert({
+    where: { id: "default" },
+    create: { id: "default", cjAccessToken: token, cjTokenExpiresAt: expiresAt },
+    update: { cjAccessToken: token, cjTokenExpiresAt: expiresAt },
+  });
+
+  return token;
 }
 
 interface CJProduct {

@@ -109,15 +109,6 @@ function LoginForm() {
             </button>
           </form>
 
-          {/* Demo accounts */}
-          <div className="mt-6 p-4 bg-amber-50 rounded-xl border border-amber-200">
-            <p className="text-xs font-medium text-amber-700 mb-2">💡 บัญชีทดสอบ</p>
-            <div className="space-y-1 text-xs text-amber-600">
-              <p>demo@petshop.com / demo1234</p>
-              <p>admin@petshop.com / admin1234</p>
-            </div>
-          </div>
-
           {/* Divider */}
           <div className="flex items-center gap-3 my-5">
             <div className="flex-1 h-px bg-stone-200" />

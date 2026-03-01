@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { use } from "react";
 import ProductForm from "../ProductForm";
+import toast from "react-hot-toast";
 
 interface ProductVariant {
   id: string;
@@ -37,6 +38,26 @@ export default function EditProductPage({
   const { id } = use(params);
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSyncStock = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch(`/api/admin/products/${id}/sync-stock`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`อัปเดตสต็อกแล้ว ${data.data.updated}/${data.data.total} variants`);
+        // Reload page to show updated stock
+        window.location.reload();
+      } else {
+        toast.error(data.error || "เกิดข้อผิดพลาด");
+      }
+    } catch {
+      toast.error("ไม่สามารถ sync ได้");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   useEffect(() => {
     fetch(`/api/admin/products/${id}`)
@@ -63,9 +84,20 @@ export default function EditProductPage({
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-stone-800">แก้ไขสินค้า</h1>
-        <p className="text-stone-500 text-sm mt-1">{product.name}</p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-stone-800">แก้ไขสินค้า</h1>
+          <p className="text-stone-500 text-sm mt-1">{product.name}</p>
+        </div>
+        {product.variants.some((v) => v.cjVid) && (
+          <button
+            onClick={handleSyncStock}
+            disabled={syncing}
+            className="shrink-0 flex items-center gap-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 px-4 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            {syncing ? "กำลัง Sync..." : "🔄 Sync Stock จาก CJ"}
+          </button>
+        )}
       </div>
       <div className="bg-white rounded-2xl border border-stone-100 p-6 max-w-2xl">
         <ProductForm

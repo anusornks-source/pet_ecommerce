@@ -60,29 +60,41 @@ export async function getCJProductDetail(pid: string): Promise<CJProductDetail> 
 }
 
 // Returns a map of { vid -> stock } for the given variant IDs
+// Queries in chunks of 5 to stay within CJ API limits
 export async function getCJInventory(vids: string[]): Promise<Record<string, number>> {
   if (vids.length === 0) return {};
+  const unique = [...new Set(vids)];
+  const map: Record<string, number> = {};
+
   try {
     const token = await getCJToken();
-    const res = await fetch(`${CJ_BASE}/product/stock/queryByVid?vid=${vids.join(",")}`, {
-      headers: { "CJ-Access-Token": token },
-    });
-    const data = parseCJJson(await res.text());
-    console.log("[CJ Inventory] response:", JSON.stringify(data).slice(0, 500));
-    if (!data.result || !Array.isArray(data.data)) return {};
-    const map: Record<string, number> = {};
-    for (const item of data.data) {
-      // CJ actual field: storageNum (= totalInventoryNum)
-      const stock = item.storageNum ?? item.totalInventoryNum ?? item.quantity ?? item.remainNum ?? 0;
-      const vid = item.vid ?? item.variantId ?? item.skuId;
-      if (vid) map[vid] = stock;
+    // CJ API only supports single vid per request; retry with backoff on failure
+    const delays = [150, 500, 1000]; // ms between retries
+    for (const vid of unique) {
+      let success = false;
+      for (let attempt = 0; attempt < delays.length && !success; attempt++) {
+        if (attempt > 0) await new Promise((r) => setTimeout(r, delays[attempt]));
+        const res = await fetch(`${CJ_BASE}/product/stock/queryByVid?vid=${vid}`, {
+          headers: { "CJ-Access-Token": token },
+        });
+        const data = parseCJJson(await res.text());
+        if (data.result && Array.isArray(data.data)) {
+          for (const item of data.data) {
+            const stock = item.storageNum ?? item.totalInventoryNum ?? item.quantity ?? item.remainNum ?? 0;
+            const itemVid = item.vid ?? item.variantId ?? item.skuId;
+            if (itemVid) map[itemVid] = stock;
+          }
+          success = true;
+        }
+      }
+      await new Promise((r) => setTimeout(r, 150)); // base delay between vids
     }
     console.log("[CJ Inventory] map:", map);
-    return map;
   } catch (err) {
     console.error("[CJ Inventory] error:", err);
-    return {};
   }
+
+  return map;
 }
 
 export async function getCJToken(): Promise<string> {

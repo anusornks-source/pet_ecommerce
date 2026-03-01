@@ -352,3 +352,11 @@ model Coupon {
   @@map("coupons")
 }
 
+// Stores processed Stripe event IDs to prevent duplicate processing
+model ProcessedStripeEvent {
+  id        String   @id // Stripe event ID (evt_xxx)
+  createdAt DateTime @default(now())
+
+  @@map("processed_stripe_events")
+}
+

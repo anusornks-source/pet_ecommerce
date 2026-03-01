@@ -99,6 +99,7 @@ export default function AdminOrderDetailPage({
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [refunding, setRefunding] = useState(false);
   const [cjLogs, setCjLogs] = useState<CjApiLog[]>([]);
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
 
@@ -120,6 +121,26 @@ export default function AdminOrderDetailPage({
       toast.error("ไม่สามารถ sync ได้");
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleRefund = async () => {
+    if (!order || order.payment?.method !== "STRIPE") return;
+    if (!confirm(`ยืนยันคืนเงิน ฿${order.payment.amount.toLocaleString("th-TH")} ผ่าน Stripe?`)) return;
+    setRefunding(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${id}/refund`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`คืนเงินสำเร็จ (${data.refundId})`);
+        setOrder((o) => o ? { ...o, status: "CANCELLED", payment: o.payment ? { ...o.payment, status: "REFUNDED" } : null } : o);
+      } else {
+        toast.error(data.error || "คืนเงินไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("เกิดข้อผิดพลาด");
+    } finally {
+      setRefunding(false);
     }
   };
 
@@ -443,21 +464,40 @@ export default function AdminOrderDetailPage({
             <div className="bg-white rounded-2xl border border-stone-100 p-5">
               <h2 className="font-semibold text-stone-800 mb-3">การชำระเงิน</h2>
               <div className="space-y-2 text-sm">
-                <div>
-                  <span className="text-stone-400">วิธีชำระ: </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-stone-400">วิธีชำระ:</span>
                   <span className="text-stone-700">{order.payment.method}</span>
                 </div>
-                <div>
-                  <span className="text-stone-400">สถานะ: </span>
-                  <span className="text-stone-700">{order.payment.status}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-stone-400">สถานะ:</span>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                    order.payment.status === "PAID" ? "bg-green-100 text-green-700" :
+                    order.payment.status === "REFUNDED" ? "bg-purple-100 text-purple-700" :
+                    order.payment.status === "FAILED" ? "bg-red-100 text-red-600" :
+                    "bg-yellow-100 text-yellow-700"
+                  }`}>
+                    {order.payment.status === "PAID" ? "✓ ชำระแล้ว" :
+                     order.payment.status === "REFUNDED" ? "↩ คืนเงินแล้ว" :
+                     order.payment.status === "FAILED" ? "✗ ล้มเหลว" : "รอชำระ"}
+                  </span>
                 </div>
-                <div>
-                  <span className="text-stone-400">จำนวน: </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-stone-400">จำนวน:</span>
                   <span className="font-semibold text-stone-800">
                     ฿{order.payment.amount.toLocaleString("th-TH")}
                   </span>
                 </div>
               </div>
+              {/* Refund button — Stripe only, paid, not yet refunded */}
+              {order.payment.method === "STRIPE" && order.payment.status === "PAID" && (
+                <button
+                  onClick={handleRefund}
+                  disabled={refunding}
+                  className="mt-4 w-full py-2 rounded-xl border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50"
+                >
+                  {refunding ? "กำลังคืนเงิน..." : "↩ คืนเงิน (Stripe Refund)"}
+                </button>
+              )}
             </div>
           )}
         </div>

@@ -35,6 +35,7 @@ export const PAYMENT_METHOD_LABEL: Record<string, string> = {
   BANK_TRANSFER: "โอนเงินธนาคาร",
   PROMPTPAY: "พร้อมเพย์",
   COD: "เก็บเงินปลายทาง",
+  STRIPE: "Stripe (บัตรเครดิต)",
 };
 
 

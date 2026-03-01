@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice, formatDate, ORDER_STATUS_LABEL, PAYMENT_METHOD_LABEL } from "@/lib/utils";
 
@@ -47,9 +48,10 @@ const TIMELINE_STEPS = [
 
 const STATUS_ORDER = ["PENDING", "CONFIRMED", "SHIPPING", "DELIVERED"];
 
-export default function OrderTrackingPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+function OrderTrackingContent({ id }: { id: string }) {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const paymentResult = searchParams.get("payment"); // "success" | "cancel"
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -94,6 +96,7 @@ export default function OrderTrackingPage({ params }: { params: Promise<{ id: st
 
   const currentIdx = STATUS_ORDER.indexOf(order.status);
   const isCancelled = order.status === "CANCELLED";
+  const isRefunded = order.payment?.status === "REFUNDED";
 
   // Find timestamp for a status from history
   const getTimestamp = (status: string): string | null => {
@@ -104,6 +107,26 @@ export default function OrderTrackingPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
+      {/* Stripe payment result flash */}
+      {paymentResult === "success" && (
+        <div className="mb-5 p-4 bg-green-50 border border-green-200 rounded-2xl flex items-center gap-3">
+          <span className="text-2xl">✅</span>
+          <div>
+            <p className="font-semibold text-green-800">ชำระเงินสำเร็จ!</p>
+            <p className="text-sm text-green-600">ระบบกำลังดำเนินการคำสั่งซื้อของคุณ</p>
+          </div>
+        </div>
+      )}
+      {paymentResult === "cancel" && (
+        <div className="mb-5 p-4 bg-yellow-50 border border-yellow-200 rounded-2xl flex items-center gap-3">
+          <span className="text-2xl">⚠️</span>
+          <div>
+            <p className="font-semibold text-yellow-800">การชำระเงินถูกยกเลิก</p>
+            <p className="text-sm text-yellow-600">คำสั่งซื้อยังคงอยู่ คุณสามารถลองชำระเงินใหม่ได้</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <Link href="/profile/orders" className="text-stone-400 hover:text-orange-500 transition-colors text-sm">
@@ -228,6 +251,17 @@ export default function OrderTrackingPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
+      {/* Refund banner */}
+      {isRefunded && (
+        <div className="mb-5 p-4 bg-purple-50 border border-purple-200 rounded-2xl flex items-center gap-3">
+          <span className="text-2xl">↩</span>
+          <div>
+            <p className="font-semibold text-purple-800">คืนเงินแล้ว</p>
+            <p className="text-sm text-purple-600">เงินจะเข้าบัญชีภายใน 5-10 วันทำการ</p>
+          </div>
+        </div>
+      )}
+
       {/* Order info */}
       <div className="card p-5 mb-5 space-y-2 text-sm">
         <h3 className="font-semibold text-stone-800 mb-3">ข้อมูลการจัดส่ง</h3>
@@ -240,10 +274,25 @@ export default function OrderTrackingPage({ params }: { params: Promise<{ id: st
           <span className="text-stone-700">{order.phone}</span>
         </div>
         {order.payment && (
-          <div className="flex gap-2">
-            <span className="text-stone-400 w-24 shrink-0">วิธีชำระ</span>
-            <span className="text-stone-700">{PAYMENT_METHOD_LABEL[order.payment.method] || order.payment.method}</span>
-          </div>
+          <>
+            <div className="flex gap-2 items-center">
+              <span className="text-stone-400 w-24 shrink-0">วิธีชำระ</span>
+              <span className="text-stone-700">{PAYMENT_METHOD_LABEL[order.payment.method] || order.payment.method}</span>
+            </div>
+            <div className="flex gap-2 items-center">
+              <span className="text-stone-400 w-24 shrink-0">สถานะชำระ</span>
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                order.payment.status === "PAID" ? "bg-green-100 text-green-700" :
+                order.payment.status === "REFUNDED" ? "bg-purple-100 text-purple-700" :
+                order.payment.status === "FAILED" ? "bg-red-100 text-red-600" :
+                "bg-yellow-100 text-yellow-700"
+              }`}>
+                {order.payment.status === "PAID" ? "✓ ชำระแล้ว" :
+                 order.payment.status === "REFUNDED" ? "↩ คืนเงินแล้ว" :
+                 order.payment.status === "FAILED" ? "✗ ล้มเหลว" : "รอชำระ"}
+              </span>
+            </div>
+          </>
         )}
         {order.note && (
           <div className="flex gap-2">
@@ -298,5 +347,18 @@ export default function OrderTrackingPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OrderTrackingPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  return (
+    <Suspense fallback={
+      <div className="max-w-2xl mx-auto px-4 py-20 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <OrderTrackingContent id={id} />
+    </Suspense>
   );
 }

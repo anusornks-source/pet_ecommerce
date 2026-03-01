@@ -172,7 +172,7 @@ export default function CJImportPage() {
                     </p>
                     <p className="text-xs text-stone-400 mb-2">{item.categoryName}</p>
                     <p className="text-sm font-semibold text-orange-600 mb-2">
-                      ${item.sellPrice?.toFixed(2) ?? "-"}
+                      ${Number(item.sellPrice)?.toFixed(2) ?? "-"}
                     </p>
 
                     {imported ? (

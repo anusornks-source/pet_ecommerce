@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
-import { searchCJProducts, getCJProductDetail } from "@/lib/cjDropshipping";
+import { searchCJProducts, getCJProductDetail, getCJInventory } from "@/lib/cjDropshipping";
 
 // GET /api/admin/cj-products?keyword=xxx&page=1
 export async function GET(request: NextRequest) {
@@ -51,6 +51,10 @@ export async function POST(request: NextRequest) {
       try { allImages = JSON.parse(detail.productImage); } catch { allImages = []; }
     }
 
+    // Fetch CJ inventory for all variant vids (best-effort — falls back to 0 if unavailable)
+    const vids = (detail.variants ?? []).map((v) => v.vid).filter(Boolean);
+    const inventoryMap = await getCJInventory(vids);
+
     // productKeyEn tells us the attribute order, e.g. "Color-Size" or "Size" or "Color"
     const keyOrder = (detail.productKeyEn ?? "").toLowerCase().split("-");
 
@@ -76,11 +80,13 @@ export async function POST(request: NextRequest) {
 
       // Use fallbackCostUSD if variantSellPrice is 0 or missing
       const costUSD = v.variantSellPrice || fallbackCostUSD;
+      // Stock: inventoryMap (from CJ inventory API) > inventoryNum (product detail) > 0
+      const stock = inventoryMap[v.vid] ?? v.inventoryNum ?? 0;
       return {
         size,
         color,
         price: Math.ceil(costUSD * usdToThb * priceFactor), // sell price in THB
-        stock: v.inventoryNum ?? 0,
+        stock,
         sku: v.variantSku ?? null,
         cjVid: v.vid,
         costUSD,

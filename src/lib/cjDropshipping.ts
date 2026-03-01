@@ -52,6 +52,28 @@ export async function getCJProductDetail(pid: string): Promise<CJProductDetail> 
   return data.data as CJProductDetail;
 }
 
+// Returns a map of { vid -> stock } for the given variant IDs
+export async function getCJInventory(vids: string[]): Promise<Record<string, number>> {
+  if (vids.length === 0) return {};
+  try {
+    const token = await getCJToken();
+    const res = await fetch(`${CJ_BASE}/product/stock/queryByVid`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "CJ-Access-Token": token },
+      body: JSON.stringify({ vid: vids.join(",") }),
+    });
+    const data = await res.json();
+    if (!data.result || !Array.isArray(data.data)) return {};
+    const map: Record<string, number> = {};
+    for (const item of data.data) {
+      map[item.vid] = item.quantity ?? item.inventoryNum ?? item.remainNum ?? 0;
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
 export async function getCJToken(): Promise<string> {
   // Check DB for a valid cached token (persists across serverless instances)
   const settings = await prisma.siteSettings.findUnique({ where: { id: "default" } });

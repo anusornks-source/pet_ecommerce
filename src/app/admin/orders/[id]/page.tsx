@@ -30,6 +30,21 @@ interface Order {
   } | null;
 }
 
+interface StockCheckItem {
+  name: string;
+  quantity: number;
+  available: number;
+  source: "CJ" | "local";
+  ok: boolean;
+}
+
+interface StockCheck {
+  ok: boolean;
+  cjApiAvailable: boolean;
+  items: StockCheckItem[];
+  outOfStock: string[];
+}
+
 const statusLabel: Record<string, string> = {
   PENDING: "รอดำเนินการ",
   CONFIRMED: "ยืนยันแล้ว",
@@ -57,6 +72,14 @@ export default function AdminOrderDetailPage({
   const [loading, setLoading] = useState(true);
   const [newStatus, setNewStatus] = useState("");
   const [saving, setSaving] = useState(false);
+  const [checking, setChecking] = useState(false);
+
+  // Stock check modal state
+  const [stockModal, setStockModal] = useState<{
+    open: boolean;
+    stockCheck: StockCheck | null;
+    pendingStatus: string;
+  }>({ open: false, stockCheck: null, pendingStatus: "" });
 
   useEffect(() => {
     fetch(`/api/admin/orders/${id}`)
@@ -72,16 +95,43 @@ export default function AdminOrderDetailPage({
 
   const handleUpdateStatus = async () => {
     if (!order || newStatus === order.status) return;
+
+    // Two-step: if confirming an unconfirmed order, do dry-run stock check first
+    if (newStatus === "CONFIRMED" && order.status !== "CONFIRMED") {
+      setChecking(true);
+      try {
+        const res = await fetch(`/api/admin/orders/${id}?dryRun=true`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus }),
+        });
+        const data = await res.json();
+        if (data.success && data.dryRun) {
+          setStockModal({ open: true, stockCheck: data.stockCheck, pendingStatus: newStatus });
+          return;
+        }
+      } catch {
+        toast.error("ไม่สามารถตรวจสอบสต็อกได้");
+      } finally {
+        setChecking(false);
+      }
+    }
+
+    await commitStatus(newStatus);
+  };
+
+  const commitStatus = async (status: string) => {
     setSaving(true);
     const res = await fetch(`/api/admin/orders/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
+      body: JSON.stringify({ status }),
     });
     const data = await res.json();
     if (data.success) {
       toast.success("อัปเดตสถานะแล้ว");
-      setOrder((o) => (o ? { ...o, status: newStatus } : o));
+      setOrder((o) => (o ? { ...o, status, cjOrderId: data.data?.cjOrderId ?? o.cjOrderId } : o));
+      setStockModal({ open: false, stockCheck: null, pendingStatus: "" });
     } else {
       toast.error(data.error || "เกิดข้อผิดพลาด");
     }
@@ -191,10 +241,10 @@ export default function AdminOrderDetailPage({
             </select>
             <button
               onClick={handleUpdateStatus}
-              disabled={saving || newStatus === order.status}
+              disabled={saving || checking || newStatus === order.status}
               className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
             >
-              {saving ? "กำลังบันทึก..." : "อัปเดตสถานะ"}
+              {checking ? "กำลังตรวจสต็อก..." : saving ? "กำลังบันทึก..." : "อัปเดตสถานะ"}
             </button>
           </div>
 
@@ -278,6 +328,92 @@ export default function AdminOrderDetailPage({
           )}
         </div>
       </div>
+
+      {/* Stock Check Modal */}
+      {stockModal.open && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="px-6 py-5 border-b border-stone-100">
+              <h2 className="text-lg font-bold text-stone-800">ตรวจสอบสต็อกก่อนยืนยัน</h2>
+              {stockModal.stockCheck && (
+                <p className="text-xs text-stone-400 mt-1">
+                  {stockModal.stockCheck.cjApiAvailable
+                    ? "ข้อมูลสต็อก CJ แบบ real-time"
+                    : "ข้อมูลสต็อกจากฐานข้อมูลภายใน"}
+                </p>
+              )}
+            </div>
+
+            <div className="px-6 py-4">
+              {stockModal.stockCheck === null ? (
+                <p className="text-sm text-stone-500 text-center py-4">ไม่มีสินค้า CJ ในออเดอร์นี้</p>
+              ) : (
+                <div className="space-y-2">
+                  {stockModal.stockCheck.items.map((item, i) => (
+                    <div
+                      key={i}
+                      className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm ${
+                        item.ok ? "bg-green-50 border border-green-100" : "bg-red-50 border border-red-200"
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0 mr-3">
+                        <p className="font-medium text-stone-800 truncate">{item.name}</p>
+                        <p className="text-xs text-stone-400 mt-0.5">
+                          ต้องการ {item.quantity} ชิ้น
+                          {" · "}
+                          <span className={item.source === "CJ" ? "text-blue-500" : "text-stone-400"}>
+                            {item.source === "CJ" ? "CJ" : "คลัง"}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className={`font-semibold ${item.ok ? "text-green-600" : "text-red-600"}`}>
+                          {item.ok ? "✓" : "✗"} {item.available} ชิ้น
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {stockModal.stockCheck && !stockModal.stockCheck.ok && (
+                <div className="mt-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                  <p className="text-sm font-semibold text-red-700 mb-1">สต็อกไม่เพียงพอ</p>
+                  {stockModal.stockCheck.outOfStock.map((msg, i) => (
+                    <p key={i} className="text-xs text-red-600">{msg}</p>
+                  ))}
+                </div>
+              )}
+
+              {stockModal.stockCheck && stockModal.stockCheck.ok && (
+                <div className="mt-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                  <p className="text-sm font-semibold text-green-700">สต็อกเพียงพอ พร้อมยืนยันออเดอร์</p>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-stone-100 flex gap-3">
+              <button
+                onClick={() => setStockModal({ open: false, stockCheck: null, pendingStatus: "" })}
+                className="flex-1 border border-stone-200 text-stone-600 py-2.5 rounded-xl text-sm font-medium hover:bg-stone-50 transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={() => commitStatus(stockModal.pendingStatus)}
+                disabled={saving}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors text-white disabled:opacity-50 ${
+                  stockModal.stockCheck && !stockModal.stockCheck.ok
+                    ? "bg-orange-500 hover:bg-orange-600"
+                    : "bg-green-500 hover:bg-green-600"
+                }`}
+              >
+                {saving ? "กำลังยืนยัน..." : stockModal.stockCheck && !stockModal.stockCheck.ok ? "ยืนยันต่อแม้สต็อกไม่พอ" : "ยืนยันออเดอร์"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

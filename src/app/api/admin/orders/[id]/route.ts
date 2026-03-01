@@ -38,6 +38,7 @@ export async function PUT(
   if (isNextResponse(auth)) return auth;
 
   const { id } = await params;
+  const dryRun = request.nextUrl.searchParams.get("dryRun") === "true";
   const body = await request.json();
   const { status, note } = body;
 
@@ -79,10 +80,12 @@ export async function PUT(
     const cjVidItems = current.items.filter((item) => item.variant?.cjVid);
     const cjVids = cjVidItems.map((item) => item.variant!.cjVid!);
     let inventoryMap: Record<string, number> = {};
+    let cjApiAvailable = false;
 
     if (cjVids.length > 0) {
       try {
         inventoryMap = await getCJInventory(cjVids);
+        cjApiAvailable = Object.keys(inventoryMap).length > 0;
       } catch {
         // If CJ API fails entirely, fall through to local stock check only
       }
@@ -90,23 +93,41 @@ export async function PUT(
 
     // 2. Check each item — CJ items use CJ real-time stock, others use local DB
     const outOfStock: string[] = [];
+    const stockCheckItems: {
+      name: string;
+      quantity: number;
+      available: number;
+      source: "CJ" | "local";
+      ok: boolean;
+    }[] = [];
+
     for (const item of current.items) {
       const cjVid = item.variant?.cjVid;
-      if (cjVid && Object.keys(inventoryMap).length > 0) {
-        // CJ item: check against CJ real-time stock
+      if (cjVid && cjApiAvailable) {
         const cjStock = inventoryMap[cjVid] ?? 0;
-        if (cjStock < item.quantity) {
-          outOfStock.push(
-            `${item.product.name} (CJ มีสต็อก ${cjStock} ชิ้น ต้องการ ${item.quantity} ชิ้น)`
-          );
-        }
+        const ok = cjStock >= item.quantity;
+        stockCheckItems.push({ name: item.product.name, quantity: item.quantity, available: cjStock, source: "CJ", ok });
+        if (!ok) outOfStock.push(`${item.product.name} (CJ มีสต็อก ${cjStock} ชิ้น ต้องการ ${item.quantity} ชิ้น)`);
       } else {
-        // Non-CJ item: check local DB stock (already decremented at placement)
         const localStock = item.variant ? item.variant.stock : item.product.stock;
-        if (localStock < 0) {
-          outOfStock.push(`${item.product.name} (ขาด ${Math.abs(localStock)} ชิ้น)`);
-        }
+        const ok = localStock >= 0;
+        stockCheckItems.push({ name: item.product.name, quantity: item.quantity, available: localStock + item.quantity, source: "local", ok });
+        if (!ok) outOfStock.push(`${item.product.name} (ขาด ${Math.abs(localStock)} ชิ้น)`);
       }
+    }
+
+    // dryRun: return stock check results without committing
+    if (dryRun) {
+      return NextResponse.json({
+        success: true,
+        dryRun: true,
+        stockCheck: {
+          ok: outOfStock.length === 0,
+          cjApiAvailable,
+          items: stockCheckItems,
+          outOfStock,
+        },
+      });
     }
 
     if (outOfStock.length > 0) {
@@ -125,6 +146,9 @@ export async function PUT(
         data: { stock: Math.max(0, inventoryMap[cjVid] - item.quantity) },
       });
     }
+  } else if (dryRun) {
+    // dryRun for non-CONFIRM transitions — nothing to check, just return ok
+    return NextResponse.json({ success: true, dryRun: true, stockCheck: null });
   }
 
   // ── CANCEL: restore stock ──────────────────────────────────────────────────

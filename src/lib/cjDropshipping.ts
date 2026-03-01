@@ -42,12 +42,19 @@ export async function searchCJProducts(keyword: string, page = 1): Promise<{ lis
   return { list: data.data?.list ?? [], total: data.data?.total ?? 0 };
 }
 
+// CJ sends vid as a large integer (>53-bit) — parse as text first to preserve precision
+function parseCJJson(text: string) {
+  // Convert numeric vid values to strings before JSON.parse to avoid float rounding
+  const safe = text.replace(/"vid"\s*:\s*(\d{10,})/g, '"vid":"$1"');
+  return JSON.parse(safe);
+}
+
 export async function getCJProductDetail(pid: string): Promise<CJProductDetail> {
   const token = await getCJToken();
   const res = await fetch(`${CJ_BASE}/product/query?pid=${pid}`, {
     headers: { "CJ-Access-Token": token },
   });
-  const data = await res.json();
+  const data = parseCJJson(await res.text());
   if (!data.result || !data.data) throw new Error(data.message || "CJ product not found");
   return data.data as CJProductDetail;
 }
@@ -57,19 +64,23 @@ export async function getCJInventory(vids: string[]): Promise<Record<string, num
   if (vids.length === 0) return {};
   try {
     const token = await getCJToken();
-    const res = await fetch(`${CJ_BASE}/product/stock/queryByVid`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "CJ-Access-Token": token },
-      body: JSON.stringify({ vid: vids.join(",") }),
+    const res = await fetch(`${CJ_BASE}/product/stock/queryByVid?vid=${vids.join(",")}`, {
+      headers: { "CJ-Access-Token": token },
     });
-    const data = await res.json();
+    const data = parseCJJson(await res.text());
+    console.log("[CJ Inventory] response:", JSON.stringify(data).slice(0, 500));
     if (!data.result || !Array.isArray(data.data)) return {};
     const map: Record<string, number> = {};
     for (const item of data.data) {
-      map[item.vid] = item.quantity ?? item.inventoryNum ?? item.remainNum ?? 0;
+      // Try all known field names for stock quantity
+      const stock = item.quantity ?? item.remainNum ?? item.inventoryNum ?? item.stockNum ?? 0;
+      const vid = item.vid ?? item.variantId ?? item.skuId;
+      if (vid) map[vid] = stock;
     }
+    console.log("[CJ Inventory] map:", map);
     return map;
-  } catch {
+  } catch (err) {
+    console.error("[CJ Inventory] error:", err);
     return {};
   }
 }

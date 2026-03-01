@@ -14,6 +14,7 @@ interface Product {
   featured: boolean;
   active: boolean;
   createdAt: string;
+  source: string | null;
   petType: string | null;
   category: { name: string };
 }
@@ -137,6 +138,9 @@ export default function AdminProductsPage() {
                 <th className="text-center px-4 py-3 text-stone-500 font-medium hidden lg:table-cell">
                   แนะนำ
                 </th>
+                <th className="text-center px-4 py-3 text-stone-500 font-medium hidden lg:table-cell">
+                  แหล่งที่มา
+                </th>
                 <th className="text-center px-4 py-3 text-stone-500 font-medium hidden xl:table-cell">
                   วันที่สร้าง
                 </th>
@@ -185,6 +189,13 @@ export default function AdminProductsPage() {
                       <span className="text-orange-500">⭐</span>
                     ) : (
                       <span className="text-stone-200">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-center hidden lg:table-cell">
+                    {product.source === "CJ" ? (
+                      <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-600">CJ</span>
+                    ) : (
+                      <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-500">เอง</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-center text-stone-400 text-xs hidden xl:table-cell whitespace-nowrap">

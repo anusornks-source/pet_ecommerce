@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
-import { createCJOrder, getCJInventory, getCJFreight } from "@/lib/cjDropshipping";
+import { createCJOrder, getCJInventory, getCJFreight, cancelCJOrder } from "@/lib/cjDropshipping";
 
 export async function GET(
   request: NextRequest,
@@ -196,7 +196,8 @@ export async function PUT(
     return NextResponse.json({ success: true, dryRun: true, stockCheck: null, costEstimate: null });
   }
 
-  // ── CANCEL: restore stock ──────────────────────────────────────────────────
+  // ── CANCEL: restore stock + cancel on CJ ──────────────────────────────────
+  let cjCancelHistoryEntry: { status: string; timestamp: string; note: string } | null = null;
   if (status === "CANCELLED" && current.status !== "CANCELLED") {
     for (const item of current.items) {
       if (item.variant) {
@@ -211,6 +212,16 @@ export async function PUT(
         });
       }
     }
+
+    // Cancel on CJ if the order was submitted to CJ
+    if (current.cjOrderId) {
+      const cjCancel = await cancelCJOrder(current.cjOrderId, id);
+      cjCancelHistoryEntry = {
+        status: cjCancel.success ? "CJ_CANCELLED" : "CJ_CANCEL_FAILED",
+        timestamp: new Date().toISOString(),
+        note: cjCancel.message,
+      };
+    }
   }
 
   const history = (Array.isArray(current?.statusHistory) ? current.statusHistory : []) as Array<{
@@ -218,6 +229,9 @@ export async function PUT(
   }>;
 
   history.push({ status, timestamp: new Date().toISOString(), ...(note ? { note } : {}) });
+
+  // Append CJ cancel result to history if applicable
+  if (cjCancelHistoryEntry) history.push(cjCancelHistoryEntry);
 
   // Build update data
   const updateData: Record<string, unknown> = { status, statusHistory: history };

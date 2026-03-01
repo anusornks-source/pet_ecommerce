@@ -248,6 +248,43 @@ export async function getCJFreight(
   }
 }
 
+// Cancels a CJ order (only works for orders in CREATED/UNPAID status)
+// Returns { success, message }
+export async function cancelCJOrder(cjOrderId: string, orderId?: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const token = await getCJToken();
+    const reqBody = { orderId: cjOrderId };
+
+    const res = await fetch(`${CJ_BASE}/shopping/order/deleteOrder`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "CJ-Access-Token": token },
+      body: JSON.stringify(reqBody),
+    });
+    const data = await res.json();
+
+    // Log API call (best-effort)
+    try {
+      await prisma.cjApiLog.create({
+        data: {
+          orderId: orderId ?? null,
+          action: "cancelOrder",
+          request: reqBody as object,
+          response: data as object,
+          success: !!data.result,
+          error: data.result ? null : (data.message ?? JSON.stringify(data)),
+        },
+      });
+    } catch { /* swallow */ }
+
+    return {
+      success: !!data.result,
+      message: data.message ?? (data.result ? "ยกเลิกสำเร็จ" : "ยกเลิกไม่สำเร็จ"),
+    };
+  } catch (err) {
+    return { success: false, message: err instanceof Error ? err.message : "Unknown error" };
+  }
+}
+
 export async function getCJOrderStatus(cjOrderId: string): Promise<string | null> {
   try {
     const token = await getCJToken();

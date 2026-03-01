@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: false,
       error: `CJ ตอบกลับ: ${data.message || JSON.stringify(data)}`,
+      emailUsed: email.replace(/(.{2}).+(@.+)/, "$1***$2"),
     });
   } catch (err) {
     return NextResponse.json({

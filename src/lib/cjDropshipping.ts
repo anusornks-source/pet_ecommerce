@@ -30,10 +30,9 @@ export interface CJProductDetail {
 
 export async function searchCJProducts(keyword: string, page = 1): Promise<{ list: CJListItem[]; total: number }> {
   const token = await getCJToken();
-  const res = await fetch(`${CJ_BASE}/product/list`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "CJ-Access-Token": token },
-    body: JSON.stringify({ pageNum: page, pageSize: 20, productNameEn: keyword }),
+  const params = new URLSearchParams({ pageNum: String(page), pageSize: "20", productNameEn: keyword });
+  const res = await fetch(`${CJ_BASE}/product/list?${params}`, {
+    headers: { "CJ-Access-Token": token },
   });
   const data = await res.json();
   if (!data.result) throw new Error(data.message || "CJ search failed");

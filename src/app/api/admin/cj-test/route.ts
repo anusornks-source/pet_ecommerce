@@ -39,10 +39,8 @@ export async function GET(request: NextRequest) {
 
   // Step 2: Test token with product search
   try {
-    const searchRes = await fetch(`${CJ_BASE}/product/list`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "CJ-Access-Token": token },
-      body: JSON.stringify({ pageNum: 1, pageSize: 1, productNameEn: "pet" }),
+    const searchRes = await fetch(`${CJ_BASE}/product/list?pageNum=1&pageSize=1&productNameEn=pet`, {
+      headers: { "CJ-Access-Token": token },
     });
     const searchData = await searchRes.json();
 

@@ -189,8 +189,9 @@ model Order {
   address       String
   phone         String
   note          String?
-  statusHistory Json?
-  cjOrderId       String?
+  statusHistory    Json?
+  stripeSessionId  String?
+  cjOrderId        String?
   cjStatus        String?
   trackingNumber  String?
   trackingCarrier String?
@@ -254,6 +255,7 @@ enum PaymentMethod {
   BANK_TRANSFER
   PROMPTPAY
   COD
+  STRIPE
 }
 
 enum PaymentStatus {

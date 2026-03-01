@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import ProductCard from "@/components/ProductCard";
-import type { Product, Category } from "@/types";
+import type { Product, Category, PetType } from "@/types";
 
 export default function ProductsClient() {
   const searchParams = useSearchParams();
@@ -11,6 +11,7 @@ export default function ProductsClient() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [petTypeList, setPetTypeList] = useState<PetType[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -51,6 +52,9 @@ export default function ProductsClient() {
     fetch("/api/categories")
       .then((r) => r.json())
       .then((d) => d.success && setCategories(d.data));
+    fetch("/api/pet-types")
+      .then((r) => r.json())
+      .then((d) => d.success && setPetTypeList(d.data));
   }, []);
 
   useEffect(() => {
@@ -71,14 +75,6 @@ export default function ProductsClient() {
     setPriceRange(["", ""]);
     router.push("/products");
   };
-
-  const petTypes = [
-    { value: "DOG", label: "🐕 สุนัข" },
-    { value: "CAT", label: "🐈 แมว" },
-    { value: "BIRD", label: "🐦 นก" },
-    { value: "FISH", label: "🐠 ปลา" },
-    { value: "RABBIT", label: "🐰 กระต่าย" },
-  ];
 
   const applyPriceFilter = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -209,15 +205,15 @@ export default function ProductsClient() {
                 >
                   ทั้งหมด
                 </button>
-                {petTypes.map((pt) => (
+                {petTypeList.map((pt) => (
                   <button
-                    key={pt.value}
-                    onClick={() => setFilter("petType", pt.value)}
+                    key={pt.slug}
+                    onClick={() => setFilter("petType", pt.slug)}
                     className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                      petType === pt.value ? "bg-orange-500 text-white" : "text-stone-600 hover:bg-orange-50"
+                      petType === pt.slug ? "bg-orange-500 text-white" : "text-stone-600 hover:bg-orange-50"
                     }`}
                   >
-                    {pt.label}
+                    {pt.icon} {pt.name}
                   </button>
                 ))}
               </div>

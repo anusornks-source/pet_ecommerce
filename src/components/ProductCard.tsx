@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
-import { formatPrice, PET_TYPE_LABEL } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils";
 import type { Product } from "@/types";
 import toast from "react-hot-toast";
 
@@ -89,7 +89,7 @@ export default function ProductCard({ product }: Props) {
             </span>
             {product.petType && (
               <span className="text-xs text-stone-500 bg-stone-50 px-2 py-0.5 rounded-full">
-                {PET_TYPE_LABEL[product.petType] || product.petType}
+                {product.petType.icon} {product.petType.name}
               </span>
             )}
           </div>

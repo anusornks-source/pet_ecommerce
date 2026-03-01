@@ -10,6 +10,13 @@ interface Category {
   name: string;
 }
 
+interface PetType {
+  id: string;
+  name: string;
+  slug: string;
+  icon: string | null;
+}
+
 interface VariantRow {
   id?: string;
   size: string;
@@ -34,27 +41,18 @@ interface ProductFormProps {
     stock: string;
     images: string;
     categoryId: string;
-    petType: string;
+    petTypeId: string;
     active: boolean;
     featured: boolean;
     variants?: VariantRow[];
   };
 }
 
-const petTypes = [
-  { value: "", label: "ทุกสัตว์เลี้ยง" },
-  { value: "DOG", label: "สุนัข" },
-  { value: "CAT", label: "แมว" },
-  { value: "BIRD", label: "นก" },
-  { value: "FISH", label: "ปลา" },
-  { value: "RABBIT", label: "กระต่าย" },
-  { value: "OTHER", label: "อื่นๆ" },
-];
-
 export default function ProductForm({ productId, initialData }: ProductFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [petTypes, setPetTypes] = useState<PetType[]>([]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -68,7 +66,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
     stock: "",
     images: "",
     categoryId: "",
-    petType: "",
+    petTypeId: "",
     active: true,
     featured: false,
     ...initialData,
@@ -91,6 +89,10 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
     fetch("/api/admin/categories")
       .then((r) => r.json())
       .then((d) => { if (d.success) setCategories(d.data); });
+
+    fetch("/api/admin/pet-types")
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setPetTypes(d.data); });
 
     fetch("/api/admin/settings")
       .then((r) => r.json())
@@ -149,7 +151,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
       price: parseFloat(form.price),
       stock: parseInt(form.stock),
       images: imageList,
-      petType: form.petType || null,
+      petTypeId: form.petTypeId || null,
       variants,
     };
 
@@ -303,13 +305,14 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
             ประเภทสัตว์เลี้ยง
           </label>
           <select
-            value={form.petType}
-            onChange={(e) => setForm((f) => ({ ...f, petType: e.target.value }))}
+            value={form.petTypeId}
+            onChange={(e) => setForm((f) => ({ ...f, petTypeId: e.target.value }))}
             className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
           >
+            <option value="">ทุกสัตว์เลี้ยง</option>
             {petTypes.map((p) => (
-              <option key={p.value} value={p.value}>
-                {p.label}
+              <option key={p.id} value={p.id}>
+                {p.icon} {p.name}
               </option>
             ))}
           </select>

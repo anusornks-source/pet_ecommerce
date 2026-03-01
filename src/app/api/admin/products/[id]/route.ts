@@ -12,7 +12,7 @@ export async function GET(
   const { id } = await params;
   const product = await prisma.product.findUnique({
     where: { id },
-    include: { category: true, variants: { orderBy: { createdAt: "asc" } } },
+    include: { category: true, petType: true, variants: { orderBy: { createdAt: "asc" } } },
   });
 
   if (!product) {
@@ -42,7 +42,7 @@ export async function PUT(
     stock,
     images,
     categoryId,
-    petType,
+    petTypeId,
     active,
     featured,
     variants,
@@ -55,7 +55,6 @@ export async function PUT(
     active?: boolean;
   };
 
-  // Handle variants: replace all existing variants with the new set
   if (variants !== undefined) {
     await prisma.productVariant.deleteMany({ where: { productId: id } });
     if (variants.length > 0) {
@@ -84,15 +83,13 @@ export async function PUT(
       ...(shortDescription !== undefined && { shortDescription: shortDescription || null }),
       ...(price !== undefined && { price: parseFloat(price) }),
       ...(stock !== undefined && { stock: parseInt(stock) }),
-      ...(images !== undefined && {
-        images: Array.isArray(images) ? images : [],
-      }),
+      ...(images !== undefined && { images: Array.isArray(images) ? images : [] }),
       ...(categoryId !== undefined && { categoryId }),
-      ...(petType !== undefined && { petType: petType || null }),
+      ...(petTypeId !== undefined && { petTypeId: petTypeId || null }),
       ...(active !== undefined && { active: !!active }),
       ...(featured !== undefined && { featured: !!featured }),
     },
-    include: { category: true, variants: { orderBy: { createdAt: "asc" } } },
+    include: { category: true, petType: true, variants: { orderBy: { createdAt: "asc" } } },
   });
 
   return NextResponse.json({ success: true, data: product });

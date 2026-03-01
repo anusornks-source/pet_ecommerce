@@ -49,7 +49,7 @@ async function searchProducts(params: {
     };
   }
   if (params.petType) {
-    where.petType = params.petType.toUpperCase();
+    where.petType = { slug: { contains: params.petType.toLowerCase(), mode: "insensitive" } };
   }
   if (params.minPrice !== undefined || params.maxPrice !== undefined) {
     where.price = {
@@ -60,7 +60,7 @@ async function searchProducts(params: {
 
   const products = await prisma.product.findMany({
     where,
-    include: { category: true },
+    include: { category: true, petType: true },
     orderBy: { featured: "desc" },
     take: 4,
   });
@@ -71,7 +71,7 @@ async function searchProducts(params: {
     price: p.price,
     stock: p.stock,
     category: p.category.name,
-    petType: p.petType,
+    petType: p.petType?.name ?? null,
     image: (() => {
       const imgs = p.images as string[];
       const valid = imgs?.find((img) => {
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
               properties: {
                 query: { type: "string", description: "คำค้นหาสินค้า เช่น 'อาหารแมว' 'แชมพูสุนัข'" },
                 category: { type: "string", description: "หมวดหมู่ เช่น 'อาหาร' 'ของเล่น' 'ยา'" },
-                petType: { type: "string", description: "ประเภทสัตว์: DOG, CAT, BIRD, FISH, RABBIT, OTHER" },
+                petType: { type: "string", description: "ประเภทสัตว์: dog, cat, bird, fish, rabbit, other" },
                 minPrice: { type: "number", description: "ราคาต่ำสุด (บาท)" },
                 maxPrice: { type: "number", description: "ราคาสูงสุด (บาท)" },
               },

@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const source = searchParams.get("source") || "";       // "CJ" | "own" | ""
   const active = searchParams.get("active") || "";       // "true" | "false" | ""
   const categoryId = searchParams.get("categoryId") || "";
-  const petType = searchParams.get("petType") || "";
+  const petType = searchParams.get("petType") || "";     // slug e.g. "dog"
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {};
@@ -27,11 +27,11 @@ export async function GET(request: NextRequest) {
   if (active === "true") where.active = true;
   if (active === "false") where.active = false;
   if (categoryId) where.categoryId = categoryId;
-  if (petType) where.petType = petType;
+  if (petType) where.petType = { slug: petType };
 
   const products = await prisma.product.findMany({
     where,
-    include: { category: true },
+    include: { category: true, petType: true },
     orderBy: { createdAt: "desc" },
   });
 
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     stock,
     images,
     categoryId,
-    petType,
+    petTypeId,
     featured,
     variants = [],
   } = body;
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       stock: parseInt(stock),
       images: Array.isArray(images) ? images : [],
       categoryId,
-      petType: petType || null,
+      petTypeId: petTypeId || null,
       featured: !!featured,
       ...(variants.length > 0 && {
         variants: {
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
         },
       }),
     },
-    include: { category: true, variants: true },
+    include: { category: true, petType: true, variants: true },
   });
 
   return NextResponse.json({ success: true, data: product }, { status: 201 });

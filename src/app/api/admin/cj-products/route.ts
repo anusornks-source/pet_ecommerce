@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
-  const { pid, categoryId, petType, priceFactor = 3, usdToThb = 36, fallbackCostUSD = 0 } = await request.json();
+  const { pid, categoryId, petTypeId, priceFactor = 3, usdToThb = 36, fallbackCostUSD = 0 } = await request.json();
 
   if (!pid || !categoryId) {
     return NextResponse.json({ success: false, error: "pid และ categoryId จำเป็น" }, { status: 400 });
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
         stock: variantData.reduce((s, v) => s + (v.stock as number), 0),
         images: allImages,
         categoryId,
-        petType: petType || null,
+        petTypeId: petTypeId || null,
         active: false,
         cjProductId: detail.pid,
         costPrice: costPriceUSD,

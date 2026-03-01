@@ -15,7 +15,8 @@ interface Product {
   active: boolean;
   createdAt: string;
   source: string | null;
-  petType: string | null;
+  petTypeId: string | null;
+  petType: { id: string; name: string; slug: string; icon: string | null } | null;
   category: { id: string; name: string };
 }
 
@@ -24,14 +25,12 @@ interface Category {
   name: string;
 }
 
-const PET_TYPE_OPTIONS = [
-  { value: "DOG", label: "🐶 สุนัข" },
-  { value: "CAT", label: "🐱 แมว" },
-  { value: "BIRD", label: "🐦 นก" },
-  { value: "FISH", label: "🐟 ปลา" },
-  { value: "RABBIT", label: "🐰 กระต่าย" },
-  { value: "OTHER", label: "🐾 อื่นๆ" },
-];
+interface PetType {
+  id: string;
+  name: string;
+  slug: string;
+  icon: string | null;
+}
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -44,6 +43,7 @@ function formatDate(iso: string) {
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [petTypes, setPetTypes] = useState<PetType[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterSource, setFilterSource] = useState("");
@@ -57,6 +57,9 @@ export default function AdminProductsPage() {
     fetch("/api/admin/categories")
       .then((r) => r.json())
       .then((d) => { if (d.success) setCategories(d.data); });
+    fetch("/api/admin/pet-types")
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setPetTypes(d.data); });
   }, []);
 
   const fetchProducts = useCallback(async () => {
@@ -173,8 +176,8 @@ export default function AdminProductsPage() {
             className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
           >
             <option value="">ประเภทสัตว์: ทั้งหมด</option>
-            {PET_TYPE_OPTIONS.map((p) => (
-              <option key={p.value} value={p.value}>{p.label}</option>
+            {petTypes.map((p) => (
+              <option key={p.slug} value={p.slug}>{p.icon} {p.name}</option>
             ))}
           </select>
           {activeFilterCount > 0 && (

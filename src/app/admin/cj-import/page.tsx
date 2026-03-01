@@ -19,15 +19,12 @@ interface Category {
   icon: string | null;
 }
 
-const PET_TYPES = [
-  { value: "", label: "ไม่ระบุ" },
-  { value: "DOG", label: "🐕 สุนัข" },
-  { value: "CAT", label: "🐈 แมว" },
-  { value: "BIRD", label: "🐦 นก" },
-  { value: "FISH", label: "🐟 ปลา" },
-  { value: "RABBIT", label: "🐰 กระต่าย" },
-  { value: "OTHER", label: "อื่นๆ" },
-];
+interface PetType {
+  id: string;
+  name: string;
+  slug: string;
+  icon: string | null;
+}
 
 export default function CJImportPage() {
   const [keyword, setKeyword] = useState("");
@@ -37,8 +34,9 @@ export default function CJImportPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [petTypes, setPetTypes] = useState<PetType[]>([]);
   const [importingPid, setImportingPid] = useState<string | null>(null);
-  const [importForm, setImportForm] = useState<Record<string, { categoryId: string; petType: string }>>({});
+  const [importForm, setImportForm] = useState<Record<string, { categoryId: string; petTypeId: string }>>({});
   const [importedIds, setImportedIds] = useState<Record<string, string>>({});
 
   // Price factor settings
@@ -50,6 +48,9 @@ useEffect(() => {
     fetch("/api/admin/categories")
       .then((r) => r.json())
       .then((d) => { if (d.success) setCategories(d.data); });
+    fetch("/api/admin/pet-types")
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setPetTypes(d.data); });
   }, []);
 
   const calcSellPrice = (usd: number) => Math.ceil(Number(usd) * usdToThb * priceFactor);
@@ -89,7 +90,7 @@ useEffect(() => {
     if (importingPid === pid) { setImportingPid(null); return; }
     setImportingPid(pid);
     if (!importForm[pid]) {
-      setImportForm((f) => ({ ...f, [pid]: { categoryId: categories[0]?.id ?? "", petType: "" } }));
+      setImportForm((f) => ({ ...f, [pid]: { categoryId: categories[0]?.id ?? "", petTypeId: "" } }));
     }
   };
 
@@ -104,7 +105,7 @@ useEffect(() => {
         body: JSON.stringify({
           pid: item.pid,
           categoryId: form.categoryId,
-          petType: form.petType || null,
+          petTypeId: form.petTypeId || null,
           priceFactor,
           usdToThb,
           fallbackCostUSD: Number(item.sellPrice),
@@ -275,11 +276,12 @@ useEffect(() => {
                       <div>
                         <label className="block text-xs text-stone-500 mb-1">ประเภทสัตว์</label>
                         <select
-                          value={form.petType}
-                          onChange={(e) => setImportForm((f) => ({ ...f, [item.pid]: { ...form, petType: e.target.value } }))}
+                          value={form.petTypeId}
+                          onChange={(e) => setImportForm((f) => ({ ...f, [item.pid]: { ...form, petTypeId: e.target.value } }))}
                           className="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-300"
                         >
-                          {PET_TYPES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                          <option value="">ไม่ระบุ</option>
+                          {petTypes.map((p) => <option key={p.id} value={p.id}>{p.icon} {p.name}</option>)}
                         </select>
                       </div>
                       <button

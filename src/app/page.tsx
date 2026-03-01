@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 async function getFeaturedProducts() {
   const products = await prisma.product.findMany({
     where: { featured: true, active: true },
-    include: { category: true },
+    include: { category: true, petType: true },
     orderBy: { createdAt: "desc" },
   });
   return products as unknown as Product[];
@@ -18,7 +18,7 @@ async function getFeaturedProducts() {
 async function getHighlightProducts() {
   const products = await prisma.product.findMany({
     where: { highlight: true, active: true },
-    include: { category: true },
+    include: { category: true, petType: true },
     orderBy: { highlightOrder: "asc" },
   });
   return products as unknown as Product[];
@@ -51,9 +51,9 @@ export default async function HomePage() {
   const heroImageUrl: string = settings?.heroImageUrl || DEFAULT_HERO_IMAGE;
 
   const pets = [
-    { emoji: "🐕", label: "สุนัข", slug: "dogs", bg: "bg-amber-50", border: "border-amber-200" },
-    { emoji: "🐈", label: "แมว", slug: "cats", bg: "bg-orange-50", border: "border-orange-200" },
-    { emoji: "🐦", label: "นก", slug: "birds", bg: "bg-sky-50", border: "border-sky-200" },
+    { emoji: "🐕", label: "สุนัข", slug: "dog", bg: "bg-amber-50", border: "border-amber-200" },
+    { emoji: "🐈", label: "แมว", slug: "cat", bg: "bg-orange-50", border: "border-orange-200" },
+    { emoji: "🐦", label: "นก", slug: "bird", bg: "bg-sky-50", border: "border-sky-200" },
     { emoji: "🐠", label: "ปลา", slug: "fish", bg: "bg-teal-50", border: "border-teal-200" },
   ];
 
@@ -128,7 +128,7 @@ export default async function HomePage() {
           {pets.map((pet) => (
             <Link
               key={pet.slug}
-              href={`/products?petType=${pet.slug.toUpperCase().replace("S", "").replace("H", "")}`}
+              href={`/products?petType=${pet.slug}`}
               className={`${pet.bg} ${pet.border} border-2 rounded-2xl p-6 flex flex-col items-center gap-3 hover:scale-105 transition-transform cursor-pointer`}
             >
               <span className="text-5xl">{pet.emoji}</span>

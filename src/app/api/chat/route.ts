@@ -39,7 +39,7 @@ async function searchProducts(params: {
     };
   }
   if (params.petType) {
-    where.petType = params.petType.toUpperCase();
+    where.petType = { slug: { contains: params.petType.toLowerCase(), mode: "insensitive" } };
   }
   if (params.minPrice !== undefined || params.maxPrice !== undefined) {
     where.price = {
@@ -53,7 +53,7 @@ async function searchProducts(params: {
 
   const products = await prisma.product.findMany({
     where,
-    include: { category: true },
+    include: { category: true, petType: true },
     orderBy: { featured: "desc" },
     take: 6,
   });
@@ -65,7 +65,7 @@ async function searchProducts(params: {
     stock: p.stock,
     category: p.category.name,
     categoryIcon: p.category.icon,
-    petType: p.petType,
+    petType: p.petType?.name ?? null,
     featured: p.featured,
     image: (() => {
       const imgs = p.images as string[];
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
                 },
                 petType: {
                   type: "string",
-                  description: "ประเภทสัตว์เลี้ยง: DOG, CAT, BIRD, FISH, RABBIT, OTHER",
+                  description: "ประเภทสัตว์เลี้ยง: dog, cat, bird, fish, rabbit, other",
                 },
                 minPrice: {
                   type: "number",

@@ -37,11 +37,4 @@ export const PAYMENT_METHOD_LABEL: Record<string, string> = {
   COD: "เก็บเงินปลายทาง",
 };
 
-export const PET_TYPE_LABEL: Record<string, string> = {
-  DOG: "สุนัข",
-  CAT: "แมว",
-  BIRD: "นก",
-  FISH: "ปลา",
-  RABBIT: "กระต่าย",
-  OTHER: "อื่นๆ",
-};
+

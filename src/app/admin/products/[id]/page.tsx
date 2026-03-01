@@ -29,7 +29,7 @@ interface Product {
   stock: number;
   images: string[];
   categoryId: string;
-  petType: string | null;
+  petTypeId: string | null;
   active: boolean;
   featured: boolean;
   variants: ProductVariant[];
@@ -135,7 +135,7 @@ export default function EditProductPage({
             stock: product.stock.toString(),
             images: product.images.join(", "),
             categoryId: product.categoryId,
-            petType: product.petType || "",
+            petTypeId: product.petTypeId || "",
             active: product.active,
             featured: product.featured,
             variants: product.variants.map((v) => ({

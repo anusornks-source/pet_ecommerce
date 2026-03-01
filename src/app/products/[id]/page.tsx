@@ -7,7 +7,7 @@ import { useEffect, useState, use } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
-import { formatPrice, PET_TYPE_LABEL } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils";
 import type { Product, ProductVariant, Review } from "@/types";
 import toast from "react-hot-toast";
 import ShareButtons from "@/components/ShareButtons";
@@ -265,7 +265,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               </span>
               {product.petType && (
                 <span className="text-sm text-stone-500 bg-stone-50 px-3 py-1 rounded-full">
-                  {PET_TYPE_LABEL[product.petType] || product.petType}
+                  {product.petType.icon} {product.petType.name}
                 </span>
               )}
             </div>
@@ -450,7 +450,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           }
         });
         // Also add petType and category as basic specs
-        if (product.petType) specMap.set("เหมาะสำหรับ", new Set([product.petType === "DOG" ? "สุนัข" : product.petType === "CAT" ? "แมว" : product.petType]));
+        if (product.petType) specMap.set("เหมาะสำหรับ", new Set([product.petType.name]));
         const specs = Array.from(specMap.entries());
         if (specs.length === 0) return null;
         return (

@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     where.category = { slug: category };
   }
   if (petType) {
-    where.petType = petType;
+    where.petType = { slug: petType };
   }
   if (search) {
     where.OR = [
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
   const [products, total] = await Promise.all([
     prisma.product.findMany({
       where,
-      include: { category: true },
+      include: { category: true, petType: true },
       orderBy,
       skip,
       take: limit,

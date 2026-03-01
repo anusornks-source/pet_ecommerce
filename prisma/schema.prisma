@@ -42,6 +42,17 @@ model Category {
   @@map("categories")
 }
 
+model PetType {
+  id       String    @id @default(cuid())
+  name     String    @unique  // Thai name e.g. "สุนัข"
+  slug     String    @unique  // "dog", "cat"
+  icon     String?            // emoji e.g. "🐕"
+  order    Int       @default(0)
+  products Product[]
+
+  @@map("pet_types")
+}
+
 model Product {
   id                  String   @id @default(cuid())
   name                String
@@ -51,7 +62,7 @@ model Product {
   stock       Int      @default(0)
   images      String[]
   categoryId  String
-  petType     PetType?
+  petTypeId   String?
   active          Boolean  @default(true)
   featured        Boolean  @default(false)
   highlight       Boolean  @default(false)
@@ -65,6 +76,7 @@ model Product {
   updatedAt   DateTime @updatedAt
 
   category   Category         @relation(fields: [categoryId], references: [id])
+  petType    PetType?         @relation(fields: [petTypeId], references: [id])
   cartItems  CartItem[]
   orderItems OrderItem[]
   reviews    Review[]
@@ -227,14 +239,6 @@ enum Role {
   ADMIN
 }
 
-enum PetType {
-  DOG
-  CAT
-  BIRD
-  FISH
-  RABBIT
-  OTHER
-}
 
 enum OrderStatus {
   PENDING

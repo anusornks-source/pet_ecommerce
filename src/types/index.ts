@@ -16,6 +16,14 @@ export interface Category {
   icon?: string | null;
 }
 
+export interface PetType {
+  id: string;
+  name: string;
+  slug: string;
+  icon?: string | null;
+  order: number;
+}
+
 export interface ProductVariant {
   id: string;
   productId: string;
@@ -38,7 +46,8 @@ export interface Product {
   images: string[];
   categoryId: string;
   category: Category;
-  petType?: string | null;
+  petTypeId?: string | null;
+  petType?: PetType | null;
   featured: boolean;
   highlight: boolean;
   highlightOrder?: number | null;

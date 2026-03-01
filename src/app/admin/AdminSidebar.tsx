@@ -7,6 +7,7 @@ const navItems = [
   { href: "/admin", label: "Dashboard", icon: "📊", exact: true },
   { href: "/admin/analytics", label: "Analytics", icon: "📈" },
   { href: "/admin/products", label: "สินค้า", icon: "📦" },
+  { href: "/admin/cj-import", label: "นำเข้าจาก CJ", icon: "🚚" },
   { href: "/admin/highlight", label: "Highlight Shelf", icon: "✨" },
   { href: "/admin/categories", label: "หมวดหมู่", icon: "🏷️" },
   { href: "/admin/orders", label: "คำสั่งซื้อ", icon: "🛒" },

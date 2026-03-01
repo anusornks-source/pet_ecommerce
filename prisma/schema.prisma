@@ -51,6 +51,7 @@ model Product {
   images      String[]
   categoryId  String
   petType     PetType?
+  active          Boolean  @default(true)
   featured        Boolean  @default(false)
   highlight       Boolean  @default(false)
   highlightOrder  Int?
@@ -77,6 +78,7 @@ model ProductVariant {
   stock     Int      @default(0)
   sku       String?
   cjVid     String?
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
 
   product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)

@@ -1,5 +1,53 @@
 const CJ_BASE = "https://developers.cjdropshipping.com/api2.0/v1";
 
+export interface CJListItem {
+  pid: string;
+  productNameEn: string;
+  productImage: string;
+  sellPrice: number;
+  categoryName: string;
+}
+
+export interface CJVariantDetail {
+  vid: string;
+  variantSku: string;
+  variantPrice: number;
+  variantStock: number;
+  variantProperty: string; // e.g. "Color:Red" or "Size:M"
+  variantImage?: string;
+}
+
+export interface CJProductDetail {
+  pid: string;
+  productNameEn: string;
+  description: string;
+  productImages: string[];
+  categoryName: string;
+  variants: CJVariantDetail[];
+}
+
+export async function searchCJProducts(keyword: string, page = 1): Promise<{ list: CJListItem[]; total: number }> {
+  const token = await getCJToken();
+  const res = await fetch(`${CJ_BASE}/product/list`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "CJ-Access-Token": token },
+    body: JSON.stringify({ pageNum: page, pageSize: 20, productNameEn: keyword }),
+  });
+  const data = await res.json();
+  if (!data.result) throw new Error(data.message || "CJ search failed");
+  return { list: data.data?.list ?? [], total: data.data?.total ?? 0 };
+}
+
+export async function getCJProductDetail(pid: string): Promise<CJProductDetail> {
+  const token = await getCJToken();
+  const res = await fetch(`${CJ_BASE}/product/query?pid=${pid}`, {
+    headers: { "CJ-Access-Token": token },
+  });
+  const data = await res.json();
+  if (!data.result || !data.data) throw new Error(data.message || "CJ product not found");
+  return data.data as CJProductDetail;
+}
+
 async function getCJToken(): Promise<string> {
   const email = process.env.CJ_EMAIL;
   const password = process.env.CJ_PASSWORD;

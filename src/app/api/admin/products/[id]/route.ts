@@ -42,11 +42,12 @@ export async function PUT(
     images,
     categoryId,
     petType,
+    active,
     featured,
     variants,
   } = body;
 
-  type VariantInput = { id?: string; size?: string; color?: string; price: string; stock: string; sku?: string; cjVid?: string };
+  type VariantInput = { id?: string; size?: string; color?: string; price: string; stock: string; sku?: string; cjVid?: string; active?: boolean };
 
   // Handle variants: replace all existing variants with the new set
   if (variants !== undefined) {
@@ -61,6 +62,7 @@ export async function PUT(
           stock: parseInt(v.stock) || 0,
           sku: v.sku || null,
           cjVid: v.cjVid || null,
+          active: v.active !== false,
         })),
       });
     }
@@ -78,6 +80,7 @@ export async function PUT(
       }),
       ...(categoryId !== undefined && { categoryId }),
       ...(petType !== undefined && { petType: petType || null }),
+      ...(active !== undefined && { active: !!active }),
       ...(featured !== undefined && { featured: !!featured }),
     },
     include: { category: true, variants: { orderBy: { createdAt: "asc" } } },

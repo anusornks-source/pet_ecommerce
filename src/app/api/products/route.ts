@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   const maxPrice = searchParams.get("maxPrice");
   const sort = searchParams.get("sort") || "newest";
 
-  const where: Record<string, unknown> = {};
+  const where: Record<string, unknown> = { active: true };
 
   if (category) {
     where.category = { slug: category };

@@ -12,6 +12,7 @@ interface ProductVariant {
   stock: number;
   sku: string | null;
   cjVid: string | null;
+  active: boolean;
 }
 
 interface Product {
@@ -23,6 +24,7 @@ interface Product {
   images: string[];
   categoryId: string;
   petType: string | null;
+  active: boolean;
   featured: boolean;
   variants: ProductVariant[];
 }
@@ -76,6 +78,7 @@ export default function EditProductPage({
             images: product.images.join(", "),
             categoryId: product.categoryId,
             petType: product.petType || "",
+            active: product.active,
             featured: product.featured,
             variants: product.variants.map((v) => ({
               id: v.id,
@@ -85,6 +88,7 @@ export default function EditProductPage({
               stock: v.stock.toString(),
               sku: v.sku ?? "",
               cjVid: v.cjVid ?? "",
+              active: v.active,
             })),
           }}
         />

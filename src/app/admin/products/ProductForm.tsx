@@ -18,6 +18,7 @@ interface VariantRow {
   stock: string;
   sku: string;
   cjVid: string;
+  active: boolean;
 }
 
 interface ProductFormProps {
@@ -30,6 +31,7 @@ interface ProductFormProps {
     images: string;
     categoryId: string;
     petType: string;
+    active: boolean;
     featured: boolean;
     variants?: VariantRow[];
   };
@@ -61,15 +63,16 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
     images: "",
     categoryId: "",
     petType: "",
+    active: true,
     featured: false,
     ...initialData,
   });
 
   const [variants, setVariants] = useState<VariantRow[]>(initialData?.variants ?? []);
-  const emptyVariant = (): VariantRow => ({ size: "", color: "", price: "", stock: "", sku: "", cjVid: "" });
+  const emptyVariant = (): VariantRow => ({ size: "", color: "", price: "", stock: "", sku: "", cjVid: "", active: true });
   const addVariant = () => setVariants((v) => [...v, emptyVariant()]);
   const removeVariant = (idx: number) => setVariants((v) => v.filter((_, i) => i !== idx));
-  const updateVariant = (idx: number, key: keyof VariantRow, value: string) =>
+  const updateVariant = (idx: number, key: keyof VariantRow, value: string | boolean) =>
     setVariants((v) => v.map((row, i) => (i === idx ? { ...row, [key]: value } : row)));
 
   useEffect(() => {
@@ -314,11 +317,11 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
         {variants.length > 0 && (
           <div className="space-y-2">
             {/* Header */}
-            <div className="grid grid-cols-[70px_70px_80px_60px_80px_100px_32px] gap-2 text-xs text-stone-400 px-1">
-              <span>ขนาด</span><span>สี</span><span>ราคา (฿)</span><span>สต็อก</span><span>SKU</span><span>CJ VID</span><span />
+            <div className="grid grid-cols-[70px_70px_80px_60px_80px_100px_44px_32px] gap-2 text-xs text-stone-400 px-1">
+              <span>ขนาด</span><span>สี</span><span>ราคา (฿)</span><span>สต็อก</span><span>SKU</span><span>CJ VID</span><span>แสดง</span><span />
             </div>
             {variants.map((v, idx) => (
-              <div key={idx} className="grid grid-cols-[70px_70px_80px_60px_80px_100px_32px] gap-2 items-center">
+              <div key={idx} className={`grid grid-cols-[70px_70px_80px_60px_80px_100px_44px_32px] gap-2 items-center ${!v.active ? "opacity-50" : ""}`}>
                 <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
                   placeholder="S/M/L" value={v.size} onChange={(e) => updateVariant(idx, "size", e.target.value)} />
                 <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
@@ -331,6 +334,14 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
                   placeholder="SKU-001" value={v.sku} onChange={(e) => updateVariant(idx, "sku", e.target.value)} />
                 <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
                   placeholder="CJ VID" value={v.cjVid} onChange={(e) => updateVariant(idx, "cjVid", e.target.value)} />
+                <button
+                  type="button"
+                  onClick={() => setVariants((vs) => vs.map((row, i) => i === idx ? { ...row, active: !row.active } : row))}
+                  className={`w-10 h-7 rounded-full transition-colors shrink-0 relative ${v.active ? "bg-green-400" : "bg-stone-200"}`}
+                  title={v.active ? "แสดงอยู่" : "ซ่อนอยู่"}
+                >
+                  <span className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${v.active ? "translate-x-4" : "translate-x-0.5"}`} />
+                </button>
                 <button type="button" onClick={() => removeVariant(idx)}
                   className="w-7 h-7 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 flex items-center justify-center text-xs transition-colors">
                   ✕
@@ -341,17 +352,34 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
         )}
       </div>
 
-      <div className="flex items-center gap-3">
-        <input
-          type="checkbox"
-          id="featured"
-          checked={form.featured}
-          onChange={(e) => setForm((f) => ({ ...f, featured: e.target.checked }))}
-          className="w-4 h-4 accent-orange-500"
-        />
-        <label htmlFor="featured" className="text-sm font-medium text-stone-700">
-          สินค้าแนะนำ ⭐
-        </label>
+      <div className="flex items-center gap-6">
+        {/* Active toggle */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setForm((f) => ({ ...f, active: !f.active }))}
+            className={`relative w-11 h-6 rounded-full transition-colors ${form.active ? "bg-green-400" : "bg-stone-300"}`}
+          >
+            <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.active ? "translate-x-5" : "translate-x-0.5"}`} />
+          </button>
+          <span className={`text-sm font-medium ${form.active ? "text-green-600" : "text-stone-400"}`}>
+            {form.active ? "แสดงในร้าน (Active)" : "ซ่อนจากร้าน (Inactive)"}
+          </span>
+        </div>
+
+        {/* Featured */}
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="featured"
+            checked={form.featured}
+            onChange={(e) => setForm((f) => ({ ...f, featured: e.target.checked }))}
+            className="w-4 h-4 accent-orange-500"
+          />
+          <label htmlFor="featured" className="text-sm font-medium text-stone-700">
+            สินค้าแนะนำ ⭐
+          </label>
+        </div>
       </div>
 
       <div className="flex items-center gap-3 pt-2">

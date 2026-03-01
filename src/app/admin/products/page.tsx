@@ -12,8 +12,18 @@ interface Product {
   stock: number;
   images: string[];
   featured: boolean;
+  active: boolean;
+  createdAt: string;
   petType: string | null;
   category: { name: string };
+}
+
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleString("th-TH", {
+    day: "2-digit", month: "2-digit", year: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+  });
 }
 
 export default function AdminProductsPage() {
@@ -21,6 +31,7 @@ export default function AdminProductsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -49,6 +60,24 @@ export default function AdminProductsPage() {
       toast.error(data.error || "เกิดข้อผิดพลาด");
     }
     setDeleting(null);
+  };
+
+  const handleToggleActive = async (product: Product) => {
+    setTogglingId(product.id);
+    const res = await fetch(`/api/admin/products/${product.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: !product.active }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, active: !product.active } : p))
+      );
+    } else {
+      toast.error(data.error || "เกิดข้อผิดพลาด");
+    }
+    setTogglingId(null);
   };
 
   return (
@@ -108,12 +137,18 @@ export default function AdminProductsPage() {
                 <th className="text-center px-4 py-3 text-stone-500 font-medium hidden lg:table-cell">
                   แนะนำ
                 </th>
+                <th className="text-center px-4 py-3 text-stone-500 font-medium hidden xl:table-cell">
+                  วันที่สร้าง
+                </th>
+                <th className="text-center px-4 py-3 text-stone-500 font-medium">
+                  เผยแพร่
+                </th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-50">
               {products.map((product) => (
-                <tr key={product.id} className="hover:bg-stone-50 transition-colors">
+                <tr key={product.id} className={`hover:bg-stone-50 transition-colors ${!product.active ? "opacity-50" : ""}`}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-stone-100 shrink-0">
@@ -123,6 +158,7 @@ export default function AdminProductsPage() {
                             alt={product.name}
                             fill
                             className="object-cover"
+                            unoptimized
                           />
                         ) : (
                           <div className="flex items-center justify-center h-full text-stone-300 text-lg">
@@ -150,6 +186,25 @@ export default function AdminProductsPage() {
                     ) : (
                       <span className="text-stone-200">—</span>
                     )}
+                  </td>
+                  <td className="px-4 py-3 text-center text-stone-400 text-xs hidden xl:table-cell whitespace-nowrap">
+                    {formatDate(product.createdAt)}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      onClick={() => handleToggleActive(product)}
+                      disabled={togglingId === product.id}
+                      title={product.active ? "คลิกเพื่อซ่อน" : "คลิกเพื่อเผยแพร่"}
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
+                        product.active ? "bg-green-500" : "bg-stone-200"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                          product.active ? "translate-x-4" : "translate-x-0.5"
+                        }`}
+                      />
+                    </button>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">

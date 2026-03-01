@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 async function getFeaturedProducts() {
   const products = await prisma.product.findMany({
-    where: { featured: true },
+    where: { featured: true, active: true },
     include: { category: true },
     orderBy: { createdAt: "desc" },
   });
@@ -17,7 +17,7 @@ async function getFeaturedProducts() {
 
 async function getHighlightProducts() {
   const products = await prisma.product.findMany({
-    where: { highlight: true },
+    where: { highlight: true, active: true },
     include: { category: true },
     orderBy: { highlightOrder: "asc" },
   });

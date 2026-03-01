@@ -51,6 +51,10 @@ export async function getCJProductDetail(pid: string): Promise<CJProductDetail> 
 }
 
 export async function getCJToken(): Promise<string> {
+  // If CJ_API_KEY is set, use it directly as the access token (no auth step needed)
+  const apiKey = process.env.CJ_API_KEY;
+  if (apiKey) return apiKey;
+
   // Check DB for a valid cached token (persists across serverless instances)
   const settings = await prisma.siteSettings.findUnique({ where: { id: "default" } });
   if (

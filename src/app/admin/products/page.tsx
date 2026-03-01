@@ -47,7 +47,7 @@ export default function AdminProductsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterSource, setFilterSource] = useState("");
-  const [filterActive, setFilterActive] = useState("");
+  const [filterActive, setFilterActive] = useState("true");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterPetType, setFilterPetType] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);

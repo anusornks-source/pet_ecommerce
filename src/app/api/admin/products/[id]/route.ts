@@ -37,6 +37,7 @@ export async function PUT(
   const {
     name,
     description,
+    shortDescription,
     price,
     stock,
     images,
@@ -80,6 +81,7 @@ export async function PUT(
     data: {
       ...(name !== undefined && { name }),
       ...(description !== undefined && { description }),
+      ...(shortDescription !== undefined && { shortDescription: shortDescription || null }),
       ...(price !== undefined && { price: parseFloat(price) }),
       ...(stock !== undefined && { stock: parseInt(stock) }),
       ...(images !== undefined && {

@@ -32,6 +32,7 @@ export interface Product {
   id: string;
   name: string;
   description: string;
+  shortDescription?: string | null;
   price: number;
   stock: number;
   images: string[];

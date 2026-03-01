@@ -238,6 +238,22 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               ))}
             </div>
           )}
+
+          {/* Features + Share — under image */}
+          <div className="mt-6 pt-6 px-4 border-t border-stone-100 space-y-4">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-stone-500">
+              {[
+                { icon: "🚚", label: "จัดส่งทั่วไทย" },
+                { icon: "✅", label: "สินค้าคุณภาพ" },
+                { icon: "💬", label: "ดูแลหลังขาย" },
+              ].map((f) => (
+                <span key={f.label} className="flex items-center gap-1.5">
+                  <span>{f.icon}</span>{f.label}
+                </span>
+              ))}
+            </div>
+            <ShareButtons url={`/products/${product.id}`} title={product.name} />
+          </div>
         </div>
 
         {/* Info */}
@@ -349,15 +365,6 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </div>
           )}
 
-          {/* Description */}
-          <div>
-            <h3 className="font-semibold text-stone-800 mb-2">รายละเอียด</h3>
-            <div
-              className="text-stone-600 leading-relaxed [&_p]:mb-2 [&_b]:font-semibold [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-2"
-              dangerouslySetInnerHTML={{ __html: product.description }}
-            />
-          </div>
-
           {/* Quantity + Add to cart */}
           {displayStock > 0 && (
             <div className="space-y-4">
@@ -417,26 +424,49 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </div>
           )}
 
-          {/* Features */}
-          <div className="grid grid-cols-3 gap-3 pt-4 border-t border-stone-100">
-            {[
-              { icon: "🚚", label: "จัดส่งทั่วไทย" },
-              { icon: "✅", label: "สินค้าคุณภาพ" },
-              { icon: "💬", label: "ดูแลหลังขาย" },
-            ].map((f) => (
-              <div key={f.label} className="text-center p-3 bg-orange-50 rounded-xl">
-                <div className="text-xl mb-1">{f.icon}</div>
-                <p className="text-xs text-stone-600">{f.label}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Share */}
-          <div className="pt-4 border-t border-stone-100">
-            <ShareButtons url={`/products/${product.id}`} title={product.name} />
-          </div>
         </div>
       </div>
+
+      {/* Description — full width below the grid */}
+      {product.description && (
+        <div className="mt-6 bg-white rounded-2xl border border-stone-100 p-6 md:p-8">
+          <h2 className="text-lg font-bold text-stone-800 mb-4 pb-3 border-b border-stone-100">รายละเอียดสินค้า</h2>
+          <div
+            className="text-stone-600 leading-relaxed [&_p]:mb-3 [&_b]:font-semibold [&_strong]:font-semibold [&_img]:max-w-full [&_img]:rounded-xl [&_img]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3 [&_li]:mb-1"
+            dangerouslySetInnerHTML={{ __html: product.description }}
+          />
+        </div>
+      )}
+
+      {/* Product Specs — derived from variant attributes */}
+      {(() => {
+        const specMap = new Map<string, Set<string>>();
+        (product.variants ?? []).forEach((v) => {
+          if (v.attributes) {
+            v.attributes.forEach(({ name, value }) => {
+              if (!specMap.has(name)) specMap.set(name, new Set());
+              specMap.get(name)!.add(value);
+            });
+          }
+        });
+        // Also add petType and category as basic specs
+        if (product.petType) specMap.set("เหมาะสำหรับ", new Set([product.petType === "DOG" ? "สุนัข" : product.petType === "CAT" ? "แมว" : product.petType]));
+        const specs = Array.from(specMap.entries());
+        if (specs.length === 0) return null;
+        return (
+          <div className="mt-6 bg-white rounded-2xl border border-stone-100 p-6 md:p-8">
+            <h2 className="text-lg font-bold text-stone-800 mb-4 pb-3 border-b border-stone-100">ข้อมูลจำเพาะสินค้า</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-0 text-sm divide-y divide-stone-50">
+              {specs.map(([name, values]) => (
+                <div key={name} className="flex gap-3 py-2.5">
+                  <span className="text-stone-400 w-36 shrink-0">{name}</span>
+                  <span className="text-stone-700">{Array.from(values).join(", ")}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Reviews Section */}
       <div className="mt-12">

@@ -23,6 +23,7 @@ interface Product {
   id: string;
   name: string;
   description: string;
+  shortDescription: string | null;
   sourceDescription: string | null;
   price: number;
   stock: number;
@@ -43,6 +44,7 @@ export default function EditProductPage({
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [showSourceDesc, setShowSourceDesc] = useState(false);
 
   const handleSyncStock = async () => {
     setSyncing(true);
@@ -103,16 +105,22 @@ export default function EditProductPage({
           </button>
         )}
       </div>
-      {/* Source Description Reference Panel — always visible for copy-paste */}
+      {/* Source Description Reference Panel — collapsible, default hidden */}
       {product.sourceDescription && (
         <div className="mb-4 max-w-2xl border border-stone-200 rounded-2xl overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3 bg-stone-50 border-b border-stone-200 text-sm font-medium text-stone-600">
+          <button
+            onClick={() => setShowSourceDesc((v) => !v)}
+            className="w-full flex items-center justify-between px-5 py-3 bg-stone-50 hover:bg-stone-100 transition-colors text-sm font-medium text-stone-600"
+          >
             <span>📄 รายละเอียดจาก CJ (ต้นฉบับ — คัดลอกเพื่อแก้ไข)</span>
-          </div>
-          <div
-            className="p-5 text-sm text-stone-600 leading-relaxed max-h-72 overflow-y-auto bg-white [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-2 [&_p]:mb-2"
-            dangerouslySetInnerHTML={{ __html: product.sourceDescription }}
-          />
+            <span className="text-stone-400 text-xs">{showSourceDesc ? "ซ่อน ▲" : "ดู ▼"}</span>
+          </button>
+          {showSourceDesc && (
+            <div
+              className="p-5 text-sm text-stone-600 leading-relaxed max-h-72 overflow-y-auto bg-white [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-2 [&_p]:mb-2"
+              dangerouslySetInnerHTML={{ __html: product.sourceDescription }}
+            />
+          )}
         </div>
       )}
 
@@ -122,6 +130,7 @@ export default function EditProductPage({
           initialData={{
             name: product.name,
             description: product.description,
+            shortDescription: product.shortDescription ?? "",
             price: product.price.toString(),
             stock: product.stock.toString(),
             images: product.images.join(", "),

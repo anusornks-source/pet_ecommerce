@@ -2,14 +2,59 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 import { searchCJProducts, getCJProductDetail, getCJInventory } from "@/lib/cjDropshipping";
+import Anthropic from "@anthropic-ai/sdk";
+
+async function generateShortDesc(name: string, sourceDescription: string): Promise<string | null> {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+  try {
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const clean = sourceDescription.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 1500);
+    const msg = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 200,
+      messages: [{
+        role: "user",
+        content: `คุณเป็นนักเขียนคอนเทนต์ร้านขายของออนไลน์ภาษาไทย\n\nชื่อสินค้า: ${name}\nรายละเอียด: ${clean}\n\nเขียนคำอธิบายสั้นๆ ภาษาไทย ไม่เกิน 2-3 ประโยค (ไม่เกิน 120 ตัวอักษร) เน้นจุดเด่นหลัก ตอบเป็น plain text เท่านั้น`,
+      }],
+    });
+    const text = msg.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
+    return text || null;
+  } catch {
+    return null;
+  }
+}
 
 // GET /api/admin/cj-products?keyword=xxx&page=1
+// GET /api/admin/cj-products?pid=xxx  — lookup by PID directly
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
+  const pid = request.nextUrl.searchParams.get("pid") ?? "";
   const keyword = request.nextUrl.searchParams.get("keyword") ?? "";
   const page = parseInt(request.nextUrl.searchParams.get("page") ?? "1");
+
+  // PID lookup mode — fetch product detail and return as single-item list
+  if (pid.trim()) {
+    try {
+      const detail = await getCJProductDetail(pid.trim());
+      const item = {
+        pid: detail.pid,
+        productNameEn: detail.productNameEn,
+        productImage: Array.isArray(detail.productImageSet) && detail.productImageSet.length > 0
+          ? detail.productImageSet[0]
+          : detail.productImage,
+        sellPrice: detail.variants?.[0]?.variantSellPrice ?? 0,
+        categoryName: detail.categoryName,
+      };
+      return NextResponse.json({ success: true, data: { list: [item], total: 1 } });
+    } catch (err) {
+      return NextResponse.json({
+        success: false,
+        error: err instanceof Error ? err.message : "PID not found",
+      });
+    }
+  }
 
   if (!keyword.trim()) {
     return NextResponse.json({ success: true, data: { list: [], total: 0 } });
@@ -122,10 +167,14 @@ export async function POST(request: NextRequest) {
 
     const variantData = variants.map(({ costUSD: _c, ...rest }) => rest);
 
+    // Generate short description with AI (best-effort, non-blocking)
+    const shortDescription = await generateShortDesc(detail.productNameEn, sourceDescription);
+
     const product = await prisma.product.create({
       data: {
         name: detail.productNameEn,
         description: sourceDescription,
+        shortDescription,
         sourceDescription,
         price: sellPrice,
         stock: variantData.reduce((s, v) => s + (v.stock as number), 0),

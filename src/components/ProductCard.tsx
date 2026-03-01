@@ -96,7 +96,11 @@ export default function ProductCard({ product }: Props) {
           <h3 className="font-semibold text-stone-800 mt-1 line-clamp-2 group-hover:text-orange-500 transition-colors">
             {product.name}
           </h3>
-          <p className="text-sm text-stone-500 mt-1 line-clamp-2">{product.description}</p>
+          {product.shortDescription && (
+            <p className="text-sm text-stone-500 mt-1 line-clamp-3">
+              {product.shortDescription}
+            </p>
+          )}
 
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-stone-50">
             <div>

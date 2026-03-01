@@ -16,6 +16,7 @@ const navItems = [
   { href: "/admin/stores", label: "สาขา", icon: "📍" },
   { href: "/admin/articles", label: "บทความ", icon: "📝" },
   { href: "/admin/settings", label: "ตั้งค่าร้าน", icon: "⚙️" },
+  { href: "/admin/system-integration", label: "System Integration", icon: "🔌" },
 ];
 
 export default function AdminSidebar() {

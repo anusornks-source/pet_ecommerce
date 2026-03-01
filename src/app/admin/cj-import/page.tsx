@@ -31,6 +31,7 @@ const PET_TYPES = [
 
 export default function CJImportPage() {
   const [keyword, setKeyword] = useState("");
+  const [searchMode, setSearchMode] = useState<"name" | "pid">("name");
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<CJItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -45,7 +46,7 @@ export default function CJImportPage() {
   const [usdToThb, setUsdToThb] = useState(36);
   const [estShippingUSD, setEstShippingUSD] = useState(2.0);
 
-  useEffect(() => {
+useEffect(() => {
     fetch("/api/admin/categories")
       .then((r) => r.json())
       .then((d) => { if (d.success) setCategories(d.data); });
@@ -66,7 +67,10 @@ export default function CJImportPage() {
     setSearching(true);
     if (p === 1) setResults([]);
     try {
-      const res = await fetch(`/api/admin/cj-products?keyword=${encodeURIComponent(keyword)}&page=${p}`);
+      const url = searchMode === "pid"
+        ? `/api/admin/cj-products?pid=${encodeURIComponent(keyword.trim())}`
+        : `/api/admin/cj-products?keyword=${encodeURIComponent(keyword)}&page=${p}`;
+      const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
         setResults(p === 1 ? data.data.list : [...results, ...data.data.list]);
@@ -160,12 +164,28 @@ export default function CJImportPage() {
 
       {/* Search bar */}
       <div className="flex gap-2 mb-6">
+        {/* Mode toggle */}
+        <div className="flex rounded-xl border border-stone-200 overflow-hidden shrink-0 text-sm">
+          <button
+            onClick={() => { setSearchMode("name"); setResults([]); setKeyword(""); }}
+            className={`px-3 py-2 font-medium transition-colors ${searchMode === "name" ? "bg-stone-800 text-white" : "bg-white text-stone-500 hover:bg-stone-50"}`}
+          >
+            ชื่อสินค้า
+          </button>
+          <button
+            onClick={() => { setSearchMode("pid"); setResults([]); setKeyword(""); }}
+            className={`px-3 py-2 font-medium transition-colors ${searchMode === "pid" ? "bg-stone-800 text-white" : "bg-white text-stone-500 hover:bg-stone-50"}`}
+          >
+            PID
+          </button>
+        </div>
+
         <input
           type="text" value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch(1)}
-          placeholder="ค้นหาสินค้า เช่น dog collar, cat food..."
-          className="flex-1 border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+          placeholder={searchMode === "pid" ? "วาง CJ Product ID เช่น 17392847591..." : "ค้นหาสินค้า เช่น dog collar, cat food..."}
+          className="flex-1 border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 font-mono placeholder:font-sans"
         />
         <button
           onClick={() => handleSearch(1)}

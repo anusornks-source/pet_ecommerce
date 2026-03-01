@@ -29,6 +29,7 @@ interface ProductFormProps {
   initialData?: {
     name: string;
     description: string;
+    shortDescription?: string;
     price: string;
     stock: string;
     images: string;
@@ -57,10 +58,12 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [generatingDesc, setGeneratingDesc] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
     description: "",
+    shortDescription: "",
     price: "",
     stock: "",
     images: "",
@@ -195,7 +198,60 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
 
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <label className="block text-sm font-medium text-stone-700">คำอธิบาย</label>
+          <label className="block text-sm font-medium text-stone-700">
+            คำอธิบายสั้น
+            <span className="ml-1.5 text-xs font-normal text-stone-400">(แสดงบน product card — ไม่เกิน 3 บรรทัด)</span>
+          </label>
+          <button
+            type="button"
+            disabled={generatingDesc}
+            onClick={async () => {
+              setGeneratingDesc(true);
+              try {
+                const res = await fetch("/api/admin/ai/generate-short-desc", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    name: form.name,
+                    description: form.description,
+                  }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                  setForm((f) => ({ ...f, shortDescription: data.shortDescription }));
+                } else {
+                  toast.error(data.error || "AI generation ไม่สำเร็จ");
+                }
+              } catch {
+                toast.error("เกิดข้อผิดพลาด");
+              } finally {
+                setGeneratingDesc(false);
+              }
+            }}
+            className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 border border-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          >
+            {generatingDesc ? (
+              <>
+                <span className="inline-block w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
+                กำลังสร้าง...
+              </>
+            ) : (
+              <>✨ AI สร้างให้</>
+            )}
+          </button>
+        </div>
+        <textarea
+          rows={2}
+          value={form.shortDescription}
+          onChange={(e) => setForm((f) => ({ ...f, shortDescription: e.target.value }))}
+          placeholder="เช่น สายจูงหนังแท้นุ่มมือ ปรับขนาดได้ เหมาะสำหรับสุนัขทุกสายพันธุ์..."
+          className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none"
+        />
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-sm font-medium text-stone-700">คำอธิบายเต็ม</label>
           <button type="button" onClick={() => setDescPreview((v) => !v)}
             className="text-xs text-stone-400 hover:text-orange-500 transition-colors">
             {descPreview ? "✏️ แก้ไข" : "👁 ดูตัวอย่าง HTML"}

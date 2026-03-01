@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
   const {
     name,
     description,
+    shortDescription,
     price,
     stock,
     images,
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
     data: {
       name,
       description,
+      shortDescription: shortDescription || null,
       price: parseFloat(price),
       stock: parseInt(stock),
       images: Array.isArray(images) ? images : [],

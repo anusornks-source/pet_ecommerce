@@ -43,10 +43,11 @@ model Category {
 }
 
 model Product {
-  id          String   @id @default(cuid())
-  name        String
-  description String
-  price       Float
+  id                  String   @id @default(cuid())
+  name                String
+  description         String
+  shortDescription    String?
+  price               Float
   stock       Int      @default(0)
   images      String[]
   categoryId  String

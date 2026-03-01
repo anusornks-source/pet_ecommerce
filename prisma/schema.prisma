@@ -58,6 +58,7 @@ model Product {
   cjProductId     String?
   costPrice       Float?
   source          String?
+  sourceData      Json?
   createdAt       DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

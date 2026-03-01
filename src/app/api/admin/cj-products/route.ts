@@ -97,6 +97,7 @@ export async function POST(request: NextRequest) {
         cjProductId: detail.pid,
         costPrice: costPriceUSD,
         source: "CJ",
+        sourceData: detail as object,
         variants: variantData.length > 0 ? { create: variantData } : undefined,
       },
     });

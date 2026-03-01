@@ -64,14 +64,39 @@ export async function POST(request: NextRequest) {
     const variants = (detail.variants ?? []).map((v) => {
       const props: Record<string, string> = {};
       (v.variantProperty ?? "").split(";").forEach((part) => {
-        const [key, val] = part.split(":");
+        const [key, ...rest] = part.split(":");
+        const val = rest.join(":"); // handle values that contain ":"
         if (key && val) props[key.trim().toLowerCase()] = val.trim();
       });
+
+      // Flexible key matching: find any key containing "size" or "color/colour"
+      const sizeKey = Object.keys(props).find((k) => k.includes("size"));
+      const colorKey = Object.keys(props).find((k) => k.includes("color") || k.includes("colour"));
+
+      // Fallback: if no size/color keys found, split combined property (e.g. "Sizecolour:S/Red")
+      let size = sizeKey ? props[sizeKey] : null;
+      let color = colorKey ? props[colorKey] : null;
+
+      if (!size && !color && v.variantProperty) {
+        const values = Object.values(props);
+        if (values.length === 1) {
+          // "Sizecolour:S/Red" → split by "/"
+          const parts = values[0].split("/");
+          size = parts[0]?.trim() || null;
+          color = parts[1]?.trim() || null;
+        } else if (values.length >= 2) {
+          size = values[0] || null;
+          color = values[1] || null;
+        } else {
+          size = v.variantProperty || null; // last resort: raw string
+        }
+      }
+
       // Use fallbackCostUSD if variantPrice is 0 or missing
       const costUSD = v.variantPrice || fallbackCostUSD;
       return {
-        size: props["size"] ?? null,
-        color: props["color"] ?? null,
+        size,
+        color,
         price: Math.ceil(costUSD * usdToThb * priceFactor), // sell price in THB
         stock: v.variantStock ?? 0,
         sku: v.variantSku ?? null,

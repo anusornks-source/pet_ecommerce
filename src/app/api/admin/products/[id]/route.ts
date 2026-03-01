@@ -46,7 +46,7 @@ export async function PUT(
     variants,
   } = body;
 
-  type VariantInput = { id?: string; size?: string; color?: string; price: string; stock: string; sku?: string };
+  type VariantInput = { id?: string; size?: string; color?: string; price: string; stock: string; sku?: string; cjVid?: string };
 
   // Handle variants: replace all existing variants with the new set
   if (variants !== undefined) {
@@ -60,6 +60,7 @@ export async function PUT(
           price: parseFloat(v.price) || 0,
           stock: parseInt(v.stock) || 0,
           sku: v.sku || null,
+          cjVid: v.cjVid || null,
         })),
       });
     }

@@ -17,6 +17,7 @@ interface VariantRow {
   price: string;
   stock: string;
   sku: string;
+  cjVid: string;
 }
 
 interface ProductFormProps {
@@ -65,7 +66,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
   });
 
   const [variants, setVariants] = useState<VariantRow[]>(initialData?.variants ?? []);
-  const emptyVariant = (): VariantRow => ({ size: "", color: "", price: "", stock: "", sku: "" });
+  const emptyVariant = (): VariantRow => ({ size: "", color: "", price: "", stock: "", sku: "", cjVid: "" });
   const addVariant = () => setVariants((v) => [...v, emptyVariant()]);
   const removeVariant = (idx: number) => setVariants((v) => v.filter((_, i) => i !== idx));
   const updateVariant = (idx: number, key: keyof VariantRow, value: string) =>
@@ -313,11 +314,11 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
         {variants.length > 0 && (
           <div className="space-y-2">
             {/* Header */}
-            <div className="grid grid-cols-[80px_80px_90px_70px_90px_32px] gap-2 text-xs text-stone-400 px-1">
-              <span>ขนาด</span><span>สี</span><span>ราคา (฿)</span><span>สต็อก</span><span>SKU</span><span />
+            <div className="grid grid-cols-[70px_70px_80px_60px_80px_100px_32px] gap-2 text-xs text-stone-400 px-1">
+              <span>ขนาด</span><span>สี</span><span>ราคา (฿)</span><span>สต็อก</span><span>SKU</span><span>CJ VID</span><span />
             </div>
             {variants.map((v, idx) => (
-              <div key={idx} className="grid grid-cols-[80px_80px_90px_70px_90px_32px] gap-2 items-center">
+              <div key={idx} className="grid grid-cols-[70px_70px_80px_60px_80px_100px_32px] gap-2 items-center">
                 <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
                   placeholder="S/M/L" value={v.size} onChange={(e) => updateVariant(idx, "size", e.target.value)} />
                 <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
@@ -328,6 +329,8 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
                   placeholder="0" value={v.stock} onChange={(e) => updateVariant(idx, "stock", e.target.value)} />
                 <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
                   placeholder="SKU-001" value={v.sku} onChange={(e) => updateVariant(idx, "sku", e.target.value)} />
+                <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
+                  placeholder="CJ VID" value={v.cjVid} onChange={(e) => updateVariant(idx, "cjVid", e.target.value)} />
                 <button type="button" onClick={() => removeVariant(idx)}
                   className="w-7 h-7 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 flex items-center justify-center text-xs transition-colors">
                   ✕

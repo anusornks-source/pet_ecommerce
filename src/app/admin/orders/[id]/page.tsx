@@ -13,6 +13,8 @@ interface Order {
   address: string;
   phone: string;
   note: string | null;
+  cjOrderId: string | null;
+  cjStatus: string | null;
   createdAt: string;
   user: { name: string; email: string; phone: string | null };
   items: {
@@ -224,6 +226,33 @@ export default function AdminOrderDetailPage({
               )}
             </div>
           </div>
+
+          {/* CJ Dropshipping */}
+          {order.cjOrderId && (
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
+              <h2 className="font-semibold text-blue-800 mb-3">🚚 CJDropshipping</h2>
+              <div className="space-y-2 text-sm">
+                <div>
+                  <span className="text-blue-600">CJ Order ID: </span>
+                  <span className="font-mono font-semibold text-blue-900">{order.cjOrderId}</span>
+                </div>
+                {order.cjStatus && (
+                  <div>
+                    <span className="text-blue-600">สถานะ CJ: </span>
+                    <span className="text-blue-900">{order.cjStatus}</span>
+                  </div>
+                )}
+                <a
+                  href="https://app.cjdropshipping.com/order-list.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block mt-1 text-xs text-blue-600 underline hover:text-blue-800"
+                >
+                  ดูใน CJ Dashboard →
+                </a>
+              </div>
+            </div>
+          )}
 
           {/* Payment */}
           {order.payment && (

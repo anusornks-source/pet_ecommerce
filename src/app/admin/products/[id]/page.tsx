@@ -11,6 +11,7 @@ interface ProductVariant {
   price: number;
   stock: number;
   sku: string | null;
+  cjVid: string | null;
 }
 
 interface Product {
@@ -83,6 +84,7 @@ export default function EditProductPage({
               price: v.price.toString(),
               stock: v.stock.toString(),
               sku: v.sku ?? "",
+              cjVid: v.cjVid ?? "",
             })),
           }}
         />

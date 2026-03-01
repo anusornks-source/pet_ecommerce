@@ -3,16 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 import { searchCJProducts, getCJProductDetail } from "@/lib/cjDropshipping";
 
-// Extract <img src="..."> URLs from HTML and return cleaned text + image URLs
-function extractImgUrls(html: string): { cleaned: string; urls: string[] } {
-  const urls: string[] = [];
-  const cleaned = html.replace(/<img[^>]+src=["']([^"']+)["'][^>]*\/?>/gi, (_, src) => {
-    urls.push(src);
-    return "";
-  });
-  return { cleaned: cleaned.trim(), urls };
-}
-
 // GET /api/admin/cj-products?keyword=xxx&page=1
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -50,23 +40,16 @@ export async function POST(request: NextRequest) {
   try {
     const detail = await getCJProductDetail(pid);
 
-    // Extract images embedded in description HTML, strip <img> tags
-    const { cleaned: description, urls: descImages } = extractImgUrls(detail.description ?? "");
+    // Keep description HTML intact (images in description stay in place, e.g. size charts)
+    const description = detail.description ?? "";
 
     // Use productImageSet (array) as primary source; fallback: parse productImage JSON string
-    let mainImages: string[] = [];
+    let allImages: string[] = [];
     if (Array.isArray(detail.productImageSet) && detail.productImageSet.length > 0) {
-      mainImages = detail.productImageSet;
+      allImages = detail.productImageSet;
     } else if (typeof detail.productImage === "string" && detail.productImage.startsWith("[")) {
-      try { mainImages = JSON.parse(detail.productImage); } catch { mainImages = []; }
+      try { allImages = JSON.parse(detail.productImage); } catch { allImages = []; }
     }
-
-    // Merge main images + description images (deduplicated)
-    const existingImages = new Set(mainImages);
-    const allImages = [
-      ...mainImages,
-      ...descImages.filter((u) => !existingImages.has(u)),
-    ];
 
     // productKeyEn tells us the attribute order, e.g. "Color-Size" or "Size" or "Color"
     const keyOrder = (detail.productKeyEn ?? "").toLowerCase().split("-");

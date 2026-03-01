@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
     const product = await prisma.product.create({
       data: {
         name: detail.productNameEn,
-        description: "",
+        description: sourceDescription,
         sourceDescription,
         price: sellPrice,
         stock: variantData.reduce((s, v) => s + (v.stock as number), 0),

@@ -22,6 +22,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [pinnedImage, setPinnedImage] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
@@ -146,8 +147,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const images = validImages.length > 0 ? validImages : [placeholder];
   const safeIndex = selectedImage < images.length ? selectedImage : 0;
 
-  // Show variant image as main when selected, otherwise show gallery image
-  const mainImage = selectedVariant?.variantImage ?? images[safeIndex];
+  // pinnedImage wins when user manually clicks gallery/thumbnails
+  // otherwise show variant image (if any), then fallback to gallery
+  const mainImage = pinnedImage ?? selectedVariant?.variantImage ?? images[safeIndex];
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -185,7 +187,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             {images.length > 1 && (
               <>
                 <button
-                  onClick={() => setSelectedImage((safeIndex - 1 + images.length) % images.length)}
+                  onClick={() => { const i = (safeIndex - 1 + images.length) % images.length; setSelectedImage(i); setPinnedImage(images[i]); }}
                   className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
                   aria-label="รูปก่อนหน้า"
                 >
@@ -194,7 +196,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   </svg>
                 </button>
                 <button
-                  onClick={() => setSelectedImage((safeIndex + 1) % images.length)}
+                  onClick={() => { const i = (safeIndex + 1) % images.length; setSelectedImage(i); setPinnedImage(images[i]); }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
                   aria-label="รูปถัดไป"
                 >
@@ -204,10 +206,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 </button>
                 {/* Dot indicators */}
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                  {images.map((_, idx) => (
+                  {images.map((img, idx) => (
                     <button
                       key={idx}
-                      onClick={() => setSelectedImage(idx)}
+                      onClick={() => { setSelectedImage(idx); setPinnedImage(img); }}
                       className={`h-2 rounded-full transition-all duration-200 ${
                         idx === safeIndex ? "bg-white w-5" : "bg-white/60 w-2"
                       }`}
@@ -224,7 +226,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               {images.map((img, idx) => (
                 <button
                   key={idx}
-                  onClick={() => setSelectedImage(idx)}
+                  onClick={() => { setSelectedImage(idx); setPinnedImage(img); }}
                   className={`relative w-20 h-20 rounded-xl overflow-hidden shrink-0 border-2 transition-all ${
                     safeIndex === idx
                       ? "border-orange-500 scale-105 shadow-md"
@@ -300,7 +302,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   return (
                     <button
                       key={v.id}
-                      onClick={() => setSelectedVariant(isSelected ? null : v)}
+                      onClick={() => { setSelectedVariant(isSelected ? null : v); setPinnedImage(null); }}
                       disabled={isOut}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 text-sm font-medium transition-all ${
                         isSelected

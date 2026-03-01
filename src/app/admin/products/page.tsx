@@ -195,7 +195,7 @@ export default function AdminProductsPage() {
                     {product.source === "CJ" ? (
                       <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-600">CJ</span>
                     ) : (
-                      <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-500">เอง</span>
+                      <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-500">Our Product</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-center text-stone-400 text-xs hidden xl:table-cell whitespace-nowrap">

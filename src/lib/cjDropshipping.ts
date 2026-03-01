@@ -72,8 +72,8 @@ export async function getCJInventory(vids: string[]): Promise<Record<string, num
     if (!data.result || !Array.isArray(data.data)) return {};
     const map: Record<string, number> = {};
     for (const item of data.data) {
-      // Try all known field names for stock quantity
-      const stock = item.quantity ?? item.remainNum ?? item.inventoryNum ?? item.stockNum ?? 0;
+      // CJ actual field: storageNum (= totalInventoryNum)
+      const stock = item.storageNum ?? item.totalInventoryNum ?? item.quantity ?? item.remainNum ?? 0;
       const vid = item.vid ?? item.variantId ?? item.skuId;
       if (vid) map[vid] = stock;
     }

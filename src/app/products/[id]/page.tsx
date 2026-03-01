@@ -310,7 +310,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               </div>
               {selectedVariant && (
                 <p className="text-xs text-stone-400 mt-1.5">
-                  {formatPrice(selectedVariant.price)} • เหลือ {selectedVariant.stock} ชิ้น
+                  {formatPrice(selectedVariant.price)}
                   {selectedVariant.sku && ` • SKU: ${selectedVariant.sku}`}
                 </p>
               )}

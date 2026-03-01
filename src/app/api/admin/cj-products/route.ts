@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 import { searchCJProducts, getCJProductDetail, getCJInventory } from "@/lib/cjDropshipping";
@@ -157,7 +158,7 @@ export async function POST(request: NextRequest) {
         sku: v.variantSku ?? null,
         cjVid: v.vid,
         variantImage: v.variantImage ?? null,
-        attributes,
+        attributes: attributes ?? Prisma.JsonNull,
         costUSD,
       };
     });

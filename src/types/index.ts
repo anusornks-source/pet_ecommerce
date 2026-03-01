@@ -24,6 +24,8 @@ export interface ProductVariant {
   price: number;
   stock: number;
   sku?: string | null;
+  variantImage?: string | null;
+  attributes?: { name: string; value: string }[] | null;
 }
 
 export interface Product {

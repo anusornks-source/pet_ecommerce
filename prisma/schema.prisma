@@ -81,9 +81,11 @@ model ProductVariant {
   stock     Int      @default(0)
   cjStock   Int?
   sku       String?
-  cjVid     String?
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  cjVid        String?
+  variantImage String?  // per-variant image URL (from CJ or manual)
+  attributes   Json?    // flexible attributes [{name, value}] e.g. flavor, material, weight
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
 
   product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
   cartItems  CartItem[]
@@ -174,8 +176,10 @@ model Order {
   phone         String
   note          String?
   statusHistory Json?
-  cjOrderId     String?
-  cjStatus      String?
+  cjOrderId       String?
+  cjStatus        String?
+  trackingNumber  String?
+  trackingCarrier String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 

@@ -15,6 +15,8 @@ interface Order {
   note: string | null;
   cjOrderId: string | null;
   cjStatus: string | null;
+  trackingNumber: string | null;
+  trackingCarrier: string | null;
   createdAt: string;
   user: { name: string; email: string; phone: string | null };
   items: {
@@ -86,6 +88,26 @@ export default function AdminOrderDetailPage({
   const [newStatus, setNewStatus] = useState("");
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSyncTracking = async () => {
+    if (!order?.cjOrderId) return;
+    setSyncing(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${id}/sync-tracking`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("อัปเดต tracking จาก CJ แล้ว");
+        setOrder((o) => o ? { ...o, ...data.data } : o);
+      } else {
+        toast.error(data.error || "เกิดข้อผิดพลาด");
+      }
+    } catch {
+      toast.error("ไม่สามารถ sync ได้");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   // Stock check modal state
   const [stockModal, setStockModal] = useState<{
@@ -300,7 +322,16 @@ export default function AdminOrderDetailPage({
           {/* CJ Dropshipping */}
           {order.cjOrderId && (
             <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
-              <h2 className="font-semibold text-blue-800 mb-3">🚚 CJDropshipping</h2>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-semibold text-blue-800">🚚 CJDropshipping</h2>
+                <button
+                  onClick={handleSyncTracking}
+                  disabled={syncing}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium transition-colors disabled:opacity-50"
+                >
+                  {syncing ? "กำลัง Sync..." : "🔄 Sync จาก CJ"}
+                </button>
+              </div>
               <div className="space-y-2 text-sm">
                 <div>
                   <span className="text-blue-600">CJ Order ID: </span>
@@ -312,11 +343,30 @@ export default function AdminOrderDetailPage({
                     <span className="text-blue-900">{order.cjStatus}</span>
                   </div>
                 )}
+                {order.trackingNumber && (
+                  <div>
+                    <span className="text-blue-600">Tracking: </span>
+                    <span className="font-mono font-semibold text-blue-900">{order.trackingNumber}</span>
+                    {order.trackingCarrier && (
+                      <span className="ml-1 text-xs text-blue-500">({order.trackingCarrier})</span>
+                    )}
+                  </div>
+                )}
+                {order.trackingNumber && (
+                  <a
+                    href={`https://t.17track.net/th#nums=${order.trackingNumber}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block text-xs text-blue-600 underline hover:text-blue-800"
+                  >
+                    ติดตามพัสดุ (17track) →
+                  </a>
+                )}
                 <a
                   href="https://app.cjdropshipping.com/order-list.html"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-block mt-1 text-xs text-blue-600 underline hover:text-blue-800"
+                  className="inline-block text-xs text-blue-600 underline hover:text-blue-800"
                 >
                   ดูใน CJ Dashboard →
                 </a>

@@ -19,6 +19,8 @@ interface VariantRow {
   sku: string;
   cjVid: string;
   cjStock?: number | null;
+  variantImage: string;
+  attributes?: { name: string; value: string }[] | null;
   active: boolean;
 }
 
@@ -75,7 +77,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
 
   const emptyVariant = (): VariantRow => {
     const stock = Math.floor(Math.random() * (stockRange.max - stockRange.min + 1)) + stockRange.min;
-    return { size: "", color: "", price: "", stock: String(stock), sku: "", cjVid: "", active: true };
+    return { size: "", color: "", price: "", stock: String(stock), sku: "", cjVid: "", variantImage: "", active: true };
   };
   const addVariant = () => setVariants((v) => [...v, emptyVariant()]);
   const removeVariant = (idx: number) => setVariants((v) => v.filter((_, i) => i !== idx));
@@ -342,42 +344,74 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
         </div>
 
         {variants.length > 0 && (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {/* Header */}
             <div className="grid grid-cols-[70px_70px_80px_60px_80px_100px_54px_44px_32px] gap-2 text-xs text-stone-400 px-1">
               <span>ขนาด</span><span>สี</span><span>ราคา (฿)</span><span>สต็อก</span><span>SKU</span><span>CJ VID</span><span>CJ Stock</span><span>แสดง</span><span />
             </div>
-            {variants.map((v, idx) => (
-              <div key={idx} className={`grid grid-cols-[70px_70px_80px_60px_80px_100px_54px_44px_32px] gap-2 items-center ${!v.active ? "opacity-50" : ""}`}>
-                <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
-                  placeholder="S/M/L" value={v.size} onChange={(e) => updateVariant(idx, "size", e.target.value)} />
-                <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
-                  placeholder="สี" value={v.color} onChange={(e) => updateVariant(idx, "color", e.target.value)} />
-                <input type="number" min="0" step="0.01" className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
-                  placeholder="0.00" value={v.price} onChange={(e) => updateVariant(idx, "price", e.target.value)} />
-                <input type="number" min="0" className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
-                  placeholder="0" value={v.stock} onChange={(e) => updateVariant(idx, "stock", e.target.value)} />
-                <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
-                  placeholder="SKU-001" value={v.sku} onChange={(e) => updateVariant(idx, "sku", e.target.value)} />
-                <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
-                  placeholder="CJ VID" value={v.cjVid} onChange={(e) => updateVariant(idx, "cjVid", e.target.value)} />
-                <div className="text-xs text-center text-stone-400 tabular-nums">
-                  {v.cjStock != null ? v.cjStock.toLocaleString() : "—"}
+            {variants.map((v, idx) => {
+              const isValidImg = (() => { try { new URL(v.variantImage ?? ""); return true; } catch { return false; } })();
+              return (
+                <div key={idx} className={`space-y-1.5 ${!v.active ? "opacity-50" : ""}`}>
+                  {/* Main row */}
+                  <div className="grid grid-cols-[70px_70px_80px_60px_80px_100px_54px_44px_32px] gap-2 items-center">
+                    <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
+                      placeholder="S/M/L" value={v.size} onChange={(e) => updateVariant(idx, "size", e.target.value)} />
+                    <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
+                      placeholder="สี" value={v.color} onChange={(e) => updateVariant(idx, "color", e.target.value)} />
+                    <input type="number" min="0" step="0.01" className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
+                      placeholder="0.00" value={v.price} onChange={(e) => updateVariant(idx, "price", e.target.value)} />
+                    <input type="number" min="0" className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
+                      placeholder="0" value={v.stock} onChange={(e) => updateVariant(idx, "stock", e.target.value)} />
+                    <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
+                      placeholder="SKU-001" value={v.sku} onChange={(e) => updateVariant(idx, "sku", e.target.value)} />
+                    <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
+                      placeholder="CJ VID" value={v.cjVid} onChange={(e) => updateVariant(idx, "cjVid", e.target.value)} />
+                    <div className="text-xs text-center text-stone-400 tabular-nums">
+                      {v.cjStock != null ? v.cjStock.toLocaleString() : "—"}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setVariants((vs) => vs.map((row, i) => i === idx ? { ...row, active: !row.active } : row))}
+                      className={`w-10 h-7 rounded-full transition-colors shrink-0 relative ${v.active ? "bg-green-400" : "bg-stone-200"}`}
+                      title={v.active ? "แสดงอยู่" : "ซ่อนอยู่"}
+                    >
+                      <span className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${v.active ? "translate-x-4" : "translate-x-0.5"}`} />
+                    </button>
+                    <button type="button" onClick={() => removeVariant(idx)}
+                      className="w-7 h-7 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 flex items-center justify-center text-xs transition-colors">
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Variant image row */}
+                  <div className="flex items-center gap-2 pl-1">
+                    {isValidImg && (
+                      <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-stone-200 shrink-0">
+                        <Image src={v.variantImage!} alt="" fill className="object-cover" sizes="32px" />
+                      </div>
+                    )}
+                    <input
+                      className="flex-1 border border-stone-200 rounded-lg px-2 py-1 text-xs text-stone-500 focus:outline-none focus:ring-1 focus:ring-orange-200 placeholder:text-stone-300"
+                      placeholder="🖼️ URL รูปภาพ variant (ถ้ามี)"
+                      value={v.variantImage ?? ""}
+                      onChange={(e) => updateVariant(idx, "variantImage", e.target.value)}
+                    />
+                  </div>
+
+                  {/* Attributes tags (read-only, from CJ) */}
+                  {v.attributes && v.attributes.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pl-1">
+                      {v.attributes.map((attr, ai) => (
+                        <span key={ai} className="text-[10px] bg-blue-50 text-blue-500 border border-blue-100 px-2 py-0.5 rounded-full">
+                          {attr.name}: {attr.value}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setVariants((vs) => vs.map((row, i) => i === idx ? { ...row, active: !row.active } : row))}
-                  className={`w-10 h-7 rounded-full transition-colors shrink-0 relative ${v.active ? "bg-green-400" : "bg-stone-200"}`}
-                  title={v.active ? "แสดงอยู่" : "ซ่อนอยู่"}
-                >
-                  <span className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${v.active ? "translate-x-4" : "translate-x-0.5"}`} />
-                </button>
-                <button type="button" onClick={() => removeVariant(idx)}
-                  className="w-7 h-7 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 flex items-center justify-center text-xs transition-colors">
-                  ✕
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

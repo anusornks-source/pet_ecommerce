@@ -248,3 +248,30 @@ export async function getCJOrderStatus(cjOrderId: string): Promise<string | null
     return null;
   }
 }
+
+export interface CJTrackingInfo {
+  cjStatus: string | null;
+  trackingNumber: string | null;
+  trackingCarrier: string | null;
+}
+
+// Fetches latest CJ order status + tracking number from CJ order detail API
+export async function getCJTrackingInfo(cjOrderId: string): Promise<CJTrackingInfo> {
+  try {
+    const token = await getCJToken();
+    const res = await fetch(`${CJ_BASE}/shopping/order/getOrderDetail?orderId=${cjOrderId}`, {
+      headers: { "CJ-Access-Token": token },
+    });
+    const data = await res.json();
+    if (!data.result || !data.data) return { cjStatus: null, trackingNumber: null, trackingCarrier: null };
+
+    const order = data.data;
+    return {
+      cjStatus: order.orderStatus ?? null,
+      trackingNumber: order.trackingNumber ?? order.trackingId ?? null,
+      trackingCarrier: order.logisticName ?? order.shippingCarrier ?? null,
+    };
+  } catch {
+    return { cjStatus: null, trackingNumber: null, trackingCarrier: null };
+  }
+}

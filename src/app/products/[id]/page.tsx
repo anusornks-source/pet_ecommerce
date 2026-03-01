@@ -26,6 +26,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [adding, setAdding] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
 
+  const [variantError, setVariantError] = useState(false);
+
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
@@ -92,7 +94,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     }
     if (!product) return;
     if (hasVariants && !selectedVariant) {
-      toast.error("กรุณาเลือก Variant ก่อน");
+      toast.error("กรุณาเลือกตัวเลือกสินค้าก่อนนะคะ ☝️");
+      setVariantError(true);
+      setTimeout(() => setVariantError(false), 2500);
+      document.getElementById("variant-selector")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
     if (displayStock === 0) return;
@@ -141,6 +146,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const images = validImages.length > 0 ? validImages : [placeholder];
   const safeIndex = selectedImage < images.length ? selectedImage : 0;
 
+  // Show variant image as main when selected, otherwise show gallery image
+  const mainImage = selectedVariant?.variantImage ?? images[safeIndex];
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Breadcrumb */}
@@ -161,7 +169,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         <div className="space-y-3">
           <div className="relative h-80 md:h-115 rounded-3xl overflow-hidden bg-orange-50 group">
             <Image
-              src={images[safeIndex]}
+              src={mainImage}
               alt={product.name}
               fill
               className="object-cover transition-opacity duration-200"
@@ -280,9 +288,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
           {/* Variant selector */}
           {hasVariants && (
-            <div>
+            <div id="variant-selector" className={`transition-all duration-300 rounded-xl ${variantError ? "ring-2 ring-orange-400 ring-offset-2 p-3 bg-orange-50" : ""}`}>
               <label className="text-sm font-medium text-stone-700 block mb-2">
-                เลือก Variant {!selectedVariant && <span className="text-red-400">*</span>}
+                เลือกตัวเลือกสินค้า {!selectedVariant && <span className="text-orange-400">*</span>}
               </label>
               <div className="flex flex-wrap gap-2">
                 {product.variants!.map((v) => {
@@ -294,7 +302,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                       key={v.id}
                       onClick={() => setSelectedVariant(isSelected ? null : v)}
                       disabled={isOut}
-                      className={`px-3 py-1.5 rounded-xl border-2 text-sm font-medium transition-all ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 text-sm font-medium transition-all ${
                         isSelected
                           ? "border-orange-500 bg-orange-50 text-orange-600"
                           : isOut
@@ -302,17 +310,39 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                           : "border-stone-200 text-stone-700 hover:border-orange-300 hover:bg-orange-50"
                       }`}
                     >
+                      {v.variantImage && (
+                        <div className="relative w-6 h-6 rounded-md overflow-hidden shrink-0">
+                          <Image src={v.variantImage} alt={label} fill className="object-cover" sizes="24px" />
+                        </div>
+                      )}
                       {label}
                       {isOut && " (หมด)"}
                     </button>
                   );
                 })}
               </div>
-              {selectedVariant && (
-                <p className="text-xs text-stone-400 mt-1.5">
-                  {formatPrice(selectedVariant.price)}
-                  {selectedVariant.sku && ` • SKU: ${selectedVariant.sku}`}
+              {selectedVariant ? (
+                <div className="mt-1.5 space-y-1">
+                  <p className="text-xs text-stone-400">
+                    {formatPrice(selectedVariant.price)}
+                    {selectedVariant.sku && ` • SKU: ${selectedVariant.sku}`}
+                  </p>
+                  {selectedVariant.attributes && selectedVariant.attributes.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {selectedVariant.attributes.map((attr, i) => (
+                        <span key={i} className="text-xs bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">
+                          {attr.name}: {attr.value}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : variantError ? (
+                <p className="mt-2 text-sm text-orange-500 font-medium animate-pulse">
+                  ☝️ กรุณาเลือกตัวเลือกสินค้าก่อนเพิ่มในตะกร้า
                 </p>
+              ) : (
+                <p className="mt-2 text-xs text-stone-400">กรุณาเลือกตัวเลือกสินค้า</p>
               )}
             </div>
           )}
@@ -361,7 +391,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               <div className="flex gap-3">
                 <button
                   onClick={handleAddToCart}
-                  disabled={adding || (hasVariants && !selectedVariant)}
+                  disabled={adding}
                   className="flex-1 btn-primary py-4 text-base flex items-center justify-center gap-2"
                 >
                   {adding ? (

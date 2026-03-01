@@ -14,6 +14,8 @@ interface ProductVariant {
   sku: string | null;
   cjVid: string | null;
   cjStock: number | null;
+  variantImage: string | null;
+  attributes: { name: string; value: string }[] | null;
   active: boolean;
 }
 
@@ -122,6 +124,8 @@ export default function EditProductPage({
               sku: v.sku ?? "",
               cjVid: v.cjVid ?? "",
               cjStock: v.cjStock ?? null,
+              variantImage: v.variantImage ?? "",
+              attributes: v.attributes ?? null,
               active: v.active,
             })),
           }}

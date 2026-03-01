@@ -84,6 +84,22 @@ export async function POST(request: NextRequest) {
       // Fallback: if still empty, use raw variantKey as size label
       if (!size && !color && v.variantKey) size = v.variantKey;
 
+      // Parse CJ variantProperty JSON → [{name, value}] attributes
+      let attributes: { name: string; value: string }[] | null = null;
+      try {
+        const props = JSON.parse(v.variantProperty || "[]");
+        if (Array.isArray(props) && props.length > 0) {
+          const parsed = props
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .map((p: any) => ({
+              name: String(p.property ?? p.name ?? "").trim(),
+              value: String(p.propertyValue ?? p.value ?? "").trim(),
+            }))
+            .filter((a) => a.name && a.value);
+          if (parsed.length > 0) attributes = parsed;
+        }
+      } catch { /* ignore */ }
+
       // Use fallbackCostUSD if variantSellPrice is 0 or missing
       const costUSD = v.variantSellPrice || fallbackCostUSD;
       return {
@@ -94,6 +110,8 @@ export async function POST(request: NextRequest) {
         cjStock: inventoryMap[v.vid] ?? v.inventoryNum ?? null, // real CJ warehouse stock
         sku: v.variantSku ?? null,
         cjVid: v.vid,
+        variantImage: v.variantImage ?? null,
+        attributes,
         costUSD,
       };
     });

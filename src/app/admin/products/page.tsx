@@ -16,8 +16,22 @@ interface Product {
   createdAt: string;
   source: string | null;
   petType: string | null;
-  category: { name: string };
+  category: { id: string; name: string };
 }
+
+interface Category {
+  id: string;
+  name: string;
+}
+
+const PET_TYPE_OPTIONS = [
+  { value: "DOG", label: "🐶 สุนัข" },
+  { value: "CAT", label: "🐱 แมว" },
+  { value: "BIRD", label: "🐦 นก" },
+  { value: "FISH", label: "🐟 ปลา" },
+  { value: "RABBIT", label: "🐰 กระต่าย" },
+  { value: "OTHER", label: "🐾 อื่นๆ" },
+];
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -29,20 +43,37 @@ function formatDate(iso: string) {
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [filterSource, setFilterSource] = useState("");
+  const [filterActive, setFilterActive] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterPetType, setFilterPetType] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
+  useEffect(() => {
+    fetch("/api/admin/categories")
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setCategories(d.data); });
+  }, []);
+
   const fetchProducts = useCallback(async () => {
     setLoading(true);
-    const res = await fetch(
-      `/api/admin/products?search=${encodeURIComponent(search)}`
-    );
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (filterSource) params.set("source", filterSource);
+    if (filterActive) params.set("active", filterActive);
+    if (filterCategory) params.set("categoryId", filterCategory);
+    if (filterPetType) params.set("petType", filterPetType);
+    const res = await fetch(`/api/admin/products?${params.toString()}`);
     const data = await res.json();
     if (data.success) setProducts(data.data);
     setLoading(false);
-  }, [search]);
+  }, [search, filterSource, filterActive, filterCategory, filterPetType]);
+
+  const activeFilterCount = [filterSource, filterActive, filterCategory, filterPetType].filter(Boolean).length;
 
   useEffect(() => {
     const timer = setTimeout(fetchProducts, 300);
@@ -98,15 +129,66 @@ export default function AdminProductsPage() {
         </Link>
       </div>
 
-      {/* Search */}
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="ค้นหาสินค้า..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-sm border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
-        />
+      {/* Search + Filters */}
+      <div className="mb-4 space-y-2">
+        <div className="flex flex-wrap gap-2">
+          <input
+            type="text"
+            placeholder="ค้นหาสินค้า..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 min-w-48 border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+          />
+          <select
+            value={filterSource}
+            onChange={(e) => setFilterSource(e.target.value)}
+            className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
+          >
+            <option value="">แหล่งที่มา: ทั้งหมด</option>
+            <option value="CJ">CJ Dropshipping</option>
+            <option value="own">สินค้าเรา</option>
+          </select>
+          <select
+            value={filterActive}
+            onChange={(e) => setFilterActive(e.target.value)}
+            className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
+          >
+            <option value="">สถานะ: ทั้งหมด</option>
+            <option value="true">เผยแพร่แล้ว</option>
+            <option value="false">ซ่อนอยู่</option>
+          </select>
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
+          >
+            <option value="">หมวดหมู่: ทั้งหมด</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          <select
+            value={filterPetType}
+            onChange={(e) => setFilterPetType(e.target.value)}
+            className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
+          >
+            <option value="">ประเภทสัตว์: ทั้งหมด</option>
+            {PET_TYPE_OPTIONS.map((p) => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+          {activeFilterCount > 0 && (
+            <button
+              onClick={() => { setFilterSource(""); setFilterActive(""); setFilterCategory(""); setFilterPetType(""); }}
+              className="flex items-center gap-1.5 border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-500 hover:bg-stone-50 transition-colors"
+            >
+              ล้าง
+              <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[10px] flex items-center justify-center font-bold">
+                {activeFilterCount}
+              </span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Table */}

@@ -8,15 +8,26 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search") || "";
+  const source = searchParams.get("source") || "";       // "CJ" | "own" | ""
+  const active = searchParams.get("active") || "";       // "true" | "false" | ""
+  const categoryId = searchParams.get("categoryId") || "";
+  const petType = searchParams.get("petType") || "";
 
-  const where = search
-    ? {
-        OR: [
-          { name: { contains: search, mode: "insensitive" as const } },
-          { description: { contains: search, mode: "insensitive" as const } },
-        ],
-      }
-    : {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const where: any = {};
+
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
+    ];
+  }
+  if (source === "CJ") where.source = "CJ";
+  if (source === "own") where.source = null;
+  if (active === "true") where.active = true;
+  if (active === "false") where.active = false;
+  if (categoryId) where.categoryId = categoryId;
+  if (petType) where.petType = petType;
 
   const products = await prisma.product.findMany({
     where,

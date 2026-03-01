@@ -32,6 +32,8 @@ interface OrderDetail {
   note: string | null;
   createdAt: string;
   statusHistory: StatusHistoryEntry[] | null;
+  trackingNumber: string | null;
+  trackingCarrier: string | null;
   items: OrderItem[];
   payment?: { method: string; status: string; amount: number } | null;
 }
@@ -198,6 +200,33 @@ export default function OrderTrackingPage({ params }: { params: Promise<{ id: st
           </div>
         )}
       </div>
+
+      {/* Tracking Card — show when tracking number available */}
+      {order.trackingNumber && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 mb-5">
+          <h3 className="font-semibold text-blue-800 mb-3">📦 ติดตามพัสดุ</h3>
+          <div className="space-y-2 text-sm">
+            <div className="flex gap-2 items-center">
+              <span className="text-blue-600 shrink-0">เลข Tracking</span>
+              <span className="font-mono font-bold text-blue-900 text-base tracking-wide">{order.trackingNumber}</span>
+            </div>
+            {order.trackingCarrier && (
+              <div className="flex gap-2">
+                <span className="text-blue-600 shrink-0">ขนส่ง</span>
+                <span className="text-blue-800">{order.trackingCarrier}</span>
+              </div>
+            )}
+            <a
+              href={`https://t.17track.net/th#nums=${order.trackingNumber}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 mt-1 px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium transition-colors"
+            >
+              ติดตามพัสดุ →
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Order info */}
       <div className="card p-5 mb-5 space-y-2 text-sm">

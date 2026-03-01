@@ -47,7 +47,12 @@ export async function PUT(
     variants,
   } = body;
 
-  type VariantInput = { id?: string; size?: string; color?: string; price: string; stock: string; sku?: string; cjVid?: string; active?: boolean };
+  type VariantInput = {
+    id?: string; size?: string; color?: string; price: string; stock: string;
+    sku?: string; cjVid?: string; variantImage?: string;
+    attributes?: { name: string; value: string }[] | null;
+    active?: boolean;
+  };
 
   // Handle variants: replace all existing variants with the new set
   if (variants !== undefined) {
@@ -62,6 +67,8 @@ export async function PUT(
           stock: parseInt(v.stock) || 0,
           sku: v.sku || null,
           cjVid: v.cjVid || null,
+          variantImage: v.variantImage || null,
+          attributes: v.attributes ?? null,
           active: v.active !== false,
         })),
       });

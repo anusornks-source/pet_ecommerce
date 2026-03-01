@@ -51,10 +51,6 @@ export async function getCJProductDetail(pid: string): Promise<CJProductDetail> 
 }
 
 export async function getCJToken(): Promise<string> {
-  // If CJ_API_KEY is set, use it directly as the access token (no auth step needed)
-  const apiKey = process.env.CJ_API_KEY;
-  if (apiKey) return apiKey;
-
   // Check DB for a valid cached token (persists across serverless instances)
   const settings = await prisma.siteSettings.findUnique({ where: { id: "default" } });
   if (
@@ -66,10 +62,11 @@ export async function getCJToken(): Promise<string> {
   }
 
   const email = process.env.CJ_EMAIL;
-  const password = process.env.CJ_PASSWORD;
+  // CJ_API_KEY is used as the "password" in the auth endpoint
+  const password = process.env.CJ_API_KEY || process.env.CJ_PASSWORD;
 
   if (!email || !password) {
-    throw new Error("CJ_EMAIL and CJ_PASSWORD are not configured in .env");
+    throw new Error("CJ_EMAIL and CJ_API_KEY are not configured in .env");
   }
 
   const res = await fetch(`${CJ_BASE}/authentication/getAccessToken`, {

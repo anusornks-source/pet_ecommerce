@@ -20,7 +20,7 @@ export async function PUT(request: NextRequest) {
   if (isNextResponse(auth)) return auth;
 
   const body = await request.json();
-  const { storeName, logoUrl, heroImageUrl, adminEmail, promptpayId, bankName, bankAccount, bankAccountName } = body;
+  const { storeName, logoUrl, heroImageUrl, adminEmail, promptpayId, bankName, bankAccount, bankAccountName, displayStockMin, displayStockMax } = body;
 
   const settings = await prisma.siteSettings.upsert({
     where: { id: "default" },
@@ -34,6 +34,8 @@ export async function PUT(request: NextRequest) {
       bankName: bankName || null,
       bankAccount: bankAccount || null,
       bankAccountName: bankAccountName || null,
+      ...(displayStockMin !== undefined && { displayStockMin: Number(displayStockMin) }),
+      ...(displayStockMax !== undefined && { displayStockMax: Number(displayStockMax) }),
     },
     update: {
       ...(storeName !== undefined && { storeName }),
@@ -44,6 +46,8 @@ export async function PUT(request: NextRequest) {
       ...(bankName !== undefined && { bankName: bankName || null }),
       ...(bankAccount !== undefined && { bankAccount: bankAccount || null }),
       ...(bankAccountName !== undefined && { bankAccountName: bankAccountName || null }),
+      ...(displayStockMin !== undefined && { displayStockMin: Number(displayStockMin) }),
+      ...(displayStockMax !== undefined && { displayStockMax: Number(displayStockMax) }),
     },
   });
 

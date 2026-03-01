@@ -13,6 +13,7 @@ interface ProductVariant {
   stock: number;
   sku: string | null;
   cjVid: string | null;
+  cjStock: number | null;
   active: boolean;
 }
 
@@ -120,6 +121,7 @@ export default function EditProductPage({
               stock: v.stock.toString(),
               sku: v.sku ?? "",
               cjVid: v.cjVid ?? "",
+              cjStock: v.cjStock ?? null,
               active: v.active,
             })),
           }}

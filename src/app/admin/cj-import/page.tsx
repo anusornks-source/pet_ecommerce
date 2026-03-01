@@ -43,6 +43,7 @@ export default function CJImportPage() {
   // Price factor settings
   const [priceFactor, setPriceFactor] = useState(3);
   const [usdToThb, setUsdToThb] = useState(36);
+  const [estShippingUSD, setEstShippingUSD] = useState(2.0);
 
   useEffect(() => {
     fetch("/api/admin/categories")
@@ -51,6 +52,14 @@ export default function CJImportPage() {
   }, []);
 
   const calcSellPrice = (usd: number) => Math.ceil(Number(usd) * usdToThb * priceFactor);
+  const calcMargin = (costUSD: number) => {
+    const sell = calcSellPrice(costUSD);
+    const cost = Math.ceil(costUSD * usdToThb);
+    const ship = Math.ceil(estShippingUSD * usdToThb);
+    const margin = sell - cost - ship;
+    const pct = sell > 0 ? Math.round((margin / sell) * 100) : 0;
+    return { sell, cost, ship, margin, pct };
+  };
 
   const handleSearch = async (p = 1) => {
     if (!keyword.trim()) return;
@@ -137,7 +146,16 @@ export default function CJImportPage() {
             className="w-16 border border-stone-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-200"
           />
         </div>
-        <span className="text-stone-400 text-xs">ราคาขาย = ต้นทุน USD × {usdToThb} × {priceFactor}</span>
+        <div className="flex items-center gap-2">
+          <label className="text-stone-500">ค่าส่ง CJ (ประมาณ)</label>
+          <span className="text-stone-400">$</span>
+          <input
+            type="number" min="0" step="0.5" value={estShippingUSD}
+            onChange={(e) => setEstShippingUSD(Number(e.target.value))}
+            className="w-16 border border-stone-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-200"
+          />
+        </div>
+        <span className="text-stone-400 text-xs">ราคาขาย = ต้นทุน × {usdToThb} × {priceFactor} | กำไร = ราคาขาย − ต้นทุน − ค่าส่ง</span>
       </div>
 
       {/* Search bar */}
@@ -168,7 +186,7 @@ export default function CJImportPage() {
               const isOpen = importingPid === item.pid;
               const form = importForm[item.pid] ?? { categoryId: categories[0]?.id ?? "", petType: "" };
               const costUSD = Number(item.sellPrice);
-              const sellTHB = calcSellPrice(costUSD);
+              const { sell: sellTHB, cost: costTHB, ship: shipTHB, margin, pct } = calcMargin(costUSD);
 
               return (
                 <div key={item.pid} className={`bg-white rounded-2xl border transition-all overflow-hidden ${isOpen ? "border-orange-300 shadow-md" : "border-stone-100 hover:border-stone-200"}`}>
@@ -186,10 +204,24 @@ export default function CJImportPage() {
                     <p className="text-xs font-medium text-stone-800 leading-tight line-clamp-2 mb-1">{item.productNameEn}</p>
                     <p className="text-xs text-stone-400 mb-1">{item.categoryName}</p>
                     <p className="text-[10px] text-stone-300 font-mono mb-1 select-all break-all">{item.pid}</p>
-                    <p className="text-xs text-stone-400">ต้นทุน: ${costUSD.toFixed(2)}</p>
-                    <p className="text-sm font-semibold text-orange-600 mb-2">
-                      ราคาขาย: ฿{sellTHB.toLocaleString("th-TH")}
-                    </p>
+                    <div className="text-[11px] text-stone-400 space-y-0.5 mb-2">
+                      <div className="flex justify-between">
+                        <span>ต้นทุน</span>
+                        <span>${costUSD.toFixed(2)} (฿{costTHB.toLocaleString()})</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>ค่าส่ง (ประมาณ)</span>
+                        <span>${estShippingUSD.toFixed(2)} (฿{shipTHB.toLocaleString()})</span>
+                      </div>
+                      <div className="flex justify-between font-medium text-orange-600">
+                        <span>ราคาขาย</span>
+                        <span>฿{sellTHB.toLocaleString()}</span>
+                      </div>
+                      <div className={`flex justify-between font-semibold border-t border-stone-100 pt-0.5 ${margin >= 0 ? "text-green-600" : "text-red-500"}`}>
+                        <span>กำไรประมาณ</span>
+                        <span>฿{margin.toLocaleString()} ({pct}%)</span>
+                      </div>
+                    </div>
 
                     {imported ? (
                       <Link href={`/admin/products/${imported}`} className="block text-center text-xs px-3 py-1.5 bg-green-50 text-green-600 border border-green-200 rounded-lg">

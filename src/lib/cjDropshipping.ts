@@ -195,6 +195,45 @@ export async function createCJOrder(input: CJOrderInput): Promise<{ cjOrderId: s
   return { cjOrderId: data.data.orderId as string };
 }
 
+export interface CJFreightOption {
+  logisticName: string;
+  logisticPrice: number; // USD
+  deliveryTime: string;
+}
+
+// Returns freight options for a CJ product shipped CN→TH
+// weightKg defaults to 0.3 kg per unit × quantity (rough estimate for small pet products)
+export async function getCJFreight(
+  pid: string,
+  quantity: number,
+  weightKgPerUnit = 0.3
+): Promise<CJFreightOption[]> {
+  try {
+    const token = await getCJToken();
+    const res = await fetch(`${CJ_BASE}/logistic/freightCalculate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "CJ-Access-Token": token },
+      body: JSON.stringify({
+        startCountryCode: "CN",
+        endCountryCode: "TH",
+        quantity,
+        weight: Math.max(0.1, weightKgPerUnit * quantity),
+        pid,
+      }),
+    });
+    const data = await res.json();
+    if (!data.result || !Array.isArray(data.data)) return [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (data.data as any[]).map((opt) => ({
+      logisticName: opt.logisticName ?? "",
+      logisticPrice: Number(opt.logisticPrice ?? 0),
+      deliveryTime: opt.logisticTime ?? opt.ageTime ?? "",
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export async function getCJOrderStatus(cjOrderId: string): Promise<string | null> {
   try {
     const token = await getCJToken();

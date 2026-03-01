@@ -26,23 +26,15 @@ export async function POST(
 
   let updated = 0;
   for (const variant of variants) {
-    const stock = inventoryMap[variant.cjVid!];
-    if (stock !== undefined) {
+    const cjStock = inventoryMap[variant.cjVid!];
+    if (cjStock !== undefined) {
       await prisma.productVariant.update({
         where: { id: variant.id },
-        data: { stock },
+        data: { cjStock },
       });
       updated++;
     }
   }
-
-  // Update product total stock
-  const allVariants = await prisma.productVariant.findMany({
-    where: { productId: id },
-    select: { stock: true },
-  });
-  const totalStock = allVariants.reduce((s, v) => s + v.stock, 0);
-  await prisma.product.update({ where: { id }, data: { stock: totalStock } });
 
   return NextResponse.json({
     success: true,

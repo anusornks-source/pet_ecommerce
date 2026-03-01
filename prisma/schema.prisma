@@ -79,6 +79,7 @@ model ProductVariant {
   color     String?
   price     Float
   stock     Int      @default(0)
+  cjStock   Int?
   sku       String?
   cjVid     String?
   active    Boolean  @default(true)
@@ -270,6 +271,8 @@ model SiteSettings {
   cjTokenExpiresAt DateTime?
   cjPriceFactor    Float    @default(3)
   usdToThb         Float    @default(36)
+  displayStockMin  Int      @default(50)
+  displayStockMax  Int      @default(100)
   updatedAt        DateTime @updatedAt
 
   @@map("site_settings")

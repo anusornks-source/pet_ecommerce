@@ -18,6 +18,7 @@ interface VariantRow {
   stock: string;
   sku: string;
   cjVid: string;
+  cjStock?: number | null;
   active: boolean;
 }
 
@@ -70,7 +71,12 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
 
   const [descPreview, setDescPreview] = useState(false);
   const [variants, setVariants] = useState<VariantRow[]>(initialData?.variants ?? []);
-  const emptyVariant = (): VariantRow => ({ size: "", color: "", price: "", stock: "", sku: "", cjVid: "", active: true });
+  const [stockRange, setStockRange] = useState({ min: 50, max: 100 });
+
+  const emptyVariant = (): VariantRow => {
+    const stock = Math.floor(Math.random() * (stockRange.max - stockRange.min + 1)) + stockRange.min;
+    return { size: "", color: "", price: "", stock: String(stock), sku: "", cjVid: "", active: true };
+  };
   const addVariant = () => setVariants((v) => [...v, emptyVariant()]);
   const removeVariant = (idx: number) => setVariants((v) => v.filter((_, i) => i !== idx));
   const updateVariant = (idx: number, key: keyof VariantRow, value: string | boolean) =>
@@ -79,8 +85,17 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
   useEffect(() => {
     fetch("/api/admin/categories")
       .then((r) => r.json())
+      .then((d) => { if (d.success) setCategories(d.data); });
+
+    fetch("/api/admin/settings")
+      .then((r) => r.json())
       .then((d) => {
-        if (d.success) setCategories(d.data);
+        if (d.success) {
+          setStockRange({
+            min: d.data.displayStockMin ?? 50,
+            max: d.data.displayStockMax ?? 100,
+          });
+        }
       });
   }, []);
 
@@ -329,11 +344,11 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
         {variants.length > 0 && (
           <div className="space-y-2">
             {/* Header */}
-            <div className="grid grid-cols-[70px_70px_80px_60px_80px_100px_44px_32px] gap-2 text-xs text-stone-400 px-1">
-              <span>ขนาด</span><span>สี</span><span>ราคา (฿)</span><span>สต็อก</span><span>SKU</span><span>CJ VID</span><span>แสดง</span><span />
+            <div className="grid grid-cols-[70px_70px_80px_60px_80px_100px_54px_44px_32px] gap-2 text-xs text-stone-400 px-1">
+              <span>ขนาด</span><span>สี</span><span>ราคา (฿)</span><span>สต็อก</span><span>SKU</span><span>CJ VID</span><span>CJ Stock</span><span>แสดง</span><span />
             </div>
             {variants.map((v, idx) => (
-              <div key={idx} className={`grid grid-cols-[70px_70px_80px_60px_80px_100px_44px_32px] gap-2 items-center ${!v.active ? "opacity-50" : ""}`}>
+              <div key={idx} className={`grid grid-cols-[70px_70px_80px_60px_80px_100px_54px_44px_32px] gap-2 items-center ${!v.active ? "opacity-50" : ""}`}>
                 <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
                   placeholder="S/M/L" value={v.size} onChange={(e) => updateVariant(idx, "size", e.target.value)} />
                 <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
@@ -346,6 +361,9 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
                   placeholder="SKU-001" value={v.sku} onChange={(e) => updateVariant(idx, "sku", e.target.value)} />
                 <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
                   placeholder="CJ VID" value={v.cjVid} onChange={(e) => updateVariant(idx, "cjVid", e.target.value)} />
+                <div className="text-xs text-center text-stone-400 tabular-nums">
+                  {v.cjStock != null ? v.cjStock.toLocaleString() : "—"}
+                </div>
                 <button
                   type="button"
                   onClick={() => setVariants((vs) => vs.map((row, i) => i === idx ? { ...row, active: !row.active } : row))}

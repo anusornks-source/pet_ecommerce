@@ -55,6 +55,12 @@ export async function POST(request: NextRequest) {
     const vids = (detail.variants ?? []).map((v) => v.vid).filter(Boolean);
     const inventoryMap = await getCJInventory(vids);
 
+    // Fetch display stock range from settings
+    const settings = await prisma.siteSettings.findUnique({ where: { id: "default" } });
+    const displayStockMin = settings?.displayStockMin ?? 50;
+    const displayStockMax = settings?.displayStockMax ?? 100;
+    const randomStock = () => Math.floor(Math.random() * (displayStockMax - displayStockMin + 1)) + displayStockMin;
+
     // productKeyEn tells us the attribute order, e.g. "Color-Size" or "Size" or "Color"
     const keyOrder = (detail.productKeyEn ?? "").toLowerCase().split("-");
 
@@ -80,13 +86,12 @@ export async function POST(request: NextRequest) {
 
       // Use fallbackCostUSD if variantSellPrice is 0 or missing
       const costUSD = v.variantSellPrice || fallbackCostUSD;
-      // Stock: inventoryMap (from CJ inventory API) > inventoryNum (product detail) > 0
-      const stock = inventoryMap[v.vid] ?? v.inventoryNum ?? 0;
       return {
         size,
         color,
         price: Math.ceil(costUSD * usdToThb * priceFactor), // sell price in THB
-        stock,
+        stock: randomStock(), // display stock shown to customers
+        cjStock: inventoryMap[v.vid] ?? v.inventoryNum ?? null, // real CJ warehouse stock
         sku: v.variantSku ?? null,
         cjVid: v.vid,
         costUSD,
@@ -103,7 +108,7 @@ export async function POST(request: NextRequest) {
         name: detail.productNameEn,
         description,
         price: sellPrice,
-        stock: variantData.reduce((s, v) => s + v.stock, 0),
+        stock: variantData.reduce((s, v) => s + (v.stock as number), 0),
         images: allImages,
         categoryId,
         petType: petType || null,

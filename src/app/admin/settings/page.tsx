@@ -20,6 +20,8 @@ export default function AdminSettingsPage() {
     bankName: "",
     bankAccount: "",
     bankAccountName: "",
+    displayStockMin: "50",
+    displayStockMax: "100",
   });
 
   useEffect(() => {
@@ -36,6 +38,8 @@ export default function AdminSettingsPage() {
             bankName: d.data.bankName ?? "",
             bankAccount: d.data.bankAccount ?? "",
             bankAccountName: d.data.bankAccountName ?? "",
+            displayStockMin: String(d.data.displayStockMin ?? 50),
+            displayStockMax: String(d.data.displayStockMax ?? 100),
           });
         }
       })
@@ -267,6 +271,39 @@ EMAIL_FROM="Shop Name <your@gmail.com>"`}</pre>
               className={inputCls}
             />
           </div>
+        </div>
+
+        {/* Display Stock */}
+        <div className="bg-white rounded-2xl border border-stone-100 p-6 space-y-4">
+          <div>
+            <h2 className="text-base font-semibold text-stone-700">📦 Display Stock (สต็อกที่แสดงลูกค้า)</h2>
+            <p className="text-xs text-stone-400 mt-0.5">ใช้กับสินค้า CJ และการสร้างสินค้าใหม่ — ระบบจะสุ่มค่าในช่วงนี้เป็นสต็อกที่โชว์ลูกค้า</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">ค่าต่ำสุด</label>
+              <input
+                type="number"
+                min="1"
+                value={form.displayStockMin}
+                onChange={(e) => setForm((f) => ({ ...f, displayStockMin: e.target.value }))}
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">ค่าสูงสุด</label>
+              <input
+                type="number"
+                min="1"
+                value={form.displayStockMax}
+                onChange={(e) => setForm((f) => ({ ...f, displayStockMax: e.target.value }))}
+                className={inputCls}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-stone-500 bg-stone-50 rounded-xl px-3 py-2">
+            ตัวอย่าง: ถ้าตั้ง 50–100 ระบบจะสุ่มระหว่าง 50 ถึง 100 ชิ้น • เมื่อลูกค้าซื้อจนเหลือ 0 ระบบจะ reset อัตโนมัติ
+          </p>
         </div>
 
         {/* Stripe */}

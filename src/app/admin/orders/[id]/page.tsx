@@ -45,6 +45,19 @@ interface StockCheck {
   outOfStock: string[];
 }
 
+interface CostEstimate {
+  itemsCostUSD: number;
+  itemsCostTHB: number;
+  freightTotalUSD: number;
+  freightTHB: number;
+  totalCostTHB: number;
+  estimatedMarginTHB: number;
+  usdToThb: number;
+  freightItems: { name: string; priceUSD: number; logistic: string }[];
+  freightApiAvailable: boolean;
+  logistic: string;
+}
+
 const statusLabel: Record<string, string> = {
   PENDING: "รอดำเนินการ",
   CONFIRMED: "ยืนยันแล้ว",
@@ -78,8 +91,9 @@ export default function AdminOrderDetailPage({
   const [stockModal, setStockModal] = useState<{
     open: boolean;
     stockCheck: StockCheck | null;
+    costEstimate: CostEstimate | null;
     pendingStatus: string;
-  }>({ open: false, stockCheck: null, pendingStatus: "" });
+  }>({ open: false, stockCheck: null, costEstimate: null, pendingStatus: "" });
 
   useEffect(() => {
     fetch(`/api/admin/orders/${id}`)
@@ -96,7 +110,7 @@ export default function AdminOrderDetailPage({
   const handleUpdateStatus = async () => {
     if (!order || newStatus === order.status) return;
 
-    // Two-step: if confirming an unconfirmed order, do dry-run stock check first
+    // Two-step: if confirming an unconfirmed order, do dry-run stock check + freight first
     if (newStatus === "CONFIRMED" && order.status !== "CONFIRMED") {
       setChecking(true);
       try {
@@ -107,7 +121,12 @@ export default function AdminOrderDetailPage({
         });
         const data = await res.json();
         if (data.success && data.dryRun) {
-          setStockModal({ open: true, stockCheck: data.stockCheck, pendingStatus: newStatus });
+          setStockModal({
+            open: true,
+            stockCheck: data.stockCheck,
+            costEstimate: data.costEstimate ?? null,
+            pendingStatus: newStatus,
+          });
           return;
         }
       } catch {
@@ -120,9 +139,10 @@ export default function AdminOrderDetailPage({
     await commitStatus(newStatus);
   };
 
-  const commitStatus = async (status: string) => {
+  const commitStatus = async (status: string, force = false) => {
     setSaving(true);
-    const res = await fetch(`/api/admin/orders/${id}`, {
+    const url = force ? `/api/admin/orders/${id}?force=true` : `/api/admin/orders/${id}`;
+    const res = await fetch(url, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
@@ -131,7 +151,7 @@ export default function AdminOrderDetailPage({
     if (data.success) {
       toast.success("อัปเดตสถานะแล้ว");
       setOrder((o) => (o ? { ...o, status, cjOrderId: data.data?.cjOrderId ?? o.cjOrderId } : o));
-      setStockModal({ open: false, stockCheck: null, pendingStatus: "" });
+      setStockModal({ open: false, stockCheck: null, costEstimate: null, pendingStatus: "" });
     } else {
       toast.error(data.error || "เกิดข้อผิดพลาด");
     }
@@ -244,7 +264,7 @@ export default function AdminOrderDetailPage({
               disabled={saving || checking || newStatus === order.status}
               className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
             >
-              {checking ? "กำลังตรวจสต็อก..." : saving ? "กำลังบันทึก..." : "อัปเดตสถานะ"}
+              {checking ? "กำลังตรวจสต็อกและค่าส่ง..." : saving ? "กำลังบันทึก..." : "อัปเดตสถานะ"}
             </button>
           </div>
 
@@ -329,12 +349,12 @@ export default function AdminOrderDetailPage({
         </div>
       </div>
 
-      {/* Stock Check Modal */}
+      {/* Stock Check + Cost Estimate Modal */}
       {stockModal.open && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-5 border-b border-stone-100">
-              <h2 className="text-lg font-bold text-stone-800">ตรวจสอบสต็อกก่อนยืนยัน</h2>
+              <h2 className="text-lg font-bold text-stone-800">ตรวจสอบก่อนยืนยัน</h2>
               {stockModal.stockCheck && (
                 <p className="text-xs text-stone-400 mt-1">
                   {stockModal.stockCheck.cjApiAvailable
@@ -344,63 +364,122 @@ export default function AdminOrderDetailPage({
               )}
             </div>
 
-            <div className="px-6 py-4">
+            <div className="px-6 py-4 space-y-4">
+              {/* Stock Check */}
               {stockModal.stockCheck === null ? (
-                <p className="text-sm text-stone-500 text-center py-4">ไม่มีสินค้า CJ ในออเดอร์นี้</p>
+                <p className="text-sm text-stone-500 text-center py-2">ไม่มีสินค้า CJ ในออเดอร์นี้</p>
               ) : (
-                <div className="space-y-2">
-                  {stockModal.stockCheck.items.map((item, i) => (
-                    <div
-                      key={i}
-                      className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm ${
-                        item.ok ? "bg-green-50 border border-green-100" : "bg-red-50 border border-red-200"
-                      }`}
-                    >
-                      <div className="flex-1 min-w-0 mr-3">
-                        <p className="font-medium text-stone-800 truncate">{item.name}</p>
-                        <p className="text-xs text-stone-400 mt-0.5">
-                          ต้องการ {item.quantity} ชิ้น
-                          {" · "}
-                          <span className={item.source === "CJ" ? "text-blue-500" : "text-stone-400"}>
-                            {item.source === "CJ" ? "CJ" : "คลัง"}
-                          </span>
-                        </p>
+                <div>
+                  <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-2">สต็อก</p>
+                  <div className="space-y-2">
+                    {stockModal.stockCheck.items.map((item, i) => (
+                      <div
+                        key={i}
+                        className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm ${
+                          item.ok ? "bg-green-50 border border-green-100" : "bg-red-50 border border-red-200"
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0 mr-3">
+                          <p className="font-medium text-stone-800 truncate">{item.name}</p>
+                          <p className="text-xs text-stone-400 mt-0.5">
+                            ต้องการ {item.quantity} ชิ้น
+                            {" · "}
+                            <span className={item.source === "CJ" ? "text-blue-500" : "text-stone-400"}>
+                              {item.source === "CJ" ? "CJ" : "คลัง"}
+                            </span>
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className={`font-semibold ${item.ok ? "text-green-600" : "text-red-600"}`}>
+                            {item.ok ? "✓" : "✗"} {item.available} ชิ้น
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className={`font-semibold ${item.ok ? "text-green-600" : "text-red-600"}`}>
-                          {item.ok ? "✓" : "✗"} {item.available} ชิ้น
-                        </p>
-                      </div>
+                    ))}
+                  </div>
+
+                  {!stockModal.stockCheck.ok && (
+                    <div className="mt-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                      <p className="text-sm font-semibold text-red-700 mb-1">สต็อกไม่เพียงพอ</p>
+                      {stockModal.stockCheck.outOfStock.map((msg, i) => (
+                        <p key={i} className="text-xs text-red-600">{msg}</p>
+                      ))}
                     </div>
-                  ))}
+                  )}
+
+                  {stockModal.stockCheck.ok && (
+                    <div className="mt-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                      <p className="text-sm font-semibold text-green-700">✓ สต็อกเพียงพอ</p>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {stockModal.stockCheck && !stockModal.stockCheck.ok && (
-                <div className="mt-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-                  <p className="text-sm font-semibold text-red-700 mb-1">สต็อกไม่เพียงพอ</p>
-                  {stockModal.stockCheck.outOfStock.map((msg, i) => (
-                    <p key={i} className="text-xs text-red-600">{msg}</p>
-                  ))}
-                </div>
-              )}
-
-              {stockModal.stockCheck && stockModal.stockCheck.ok && (
-                <div className="mt-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-                  <p className="text-sm font-semibold text-green-700">สต็อกเพียงพอ พร้อมยืนยันออเดอร์</p>
+              {/* Cost & Margin Estimate */}
+              {stockModal.costEstimate && (
+                <div className="bg-stone-50 border border-stone-200 rounded-xl px-4 py-3">
+                  <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">
+                    💰 ประมาณการต้นทุน & กำไร
+                  </p>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between text-stone-600">
+                      <span>ต้นทุนสินค้า CJ</span>
+                      <span className="font-medium">
+                        ฿{stockModal.costEstimate.itemsCostTHB.toLocaleString()}
+                        <span className="text-xs text-stone-400 ml-1">(~${stockModal.costEstimate.itemsCostUSD})</span>
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-stone-600">
+                      <span>
+                        ค่าส่ง ({stockModal.costEstimate.logistic})
+                        {!stockModal.costEstimate.freightApiAvailable && (
+                          <span className="text-xs text-amber-500 ml-1">*ประมาณ</span>
+                        )}
+                      </span>
+                      <span className="font-medium">
+                        ฿{stockModal.costEstimate.freightTHB.toLocaleString()}
+                        <span className="text-xs text-stone-400 ml-1">(~${stockModal.costEstimate.freightTotalUSD})</span>
+                      </span>
+                    </div>
+                    <div className="flex justify-between font-semibold text-stone-700 border-t border-stone-200 pt-1.5">
+                      <span>รวมต้นทุน</span>
+                      <span>฿{stockModal.costEstimate.totalCostTHB.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-stone-600">
+                      <span>ลูกค้าจ่าย</span>
+                      <span className="font-medium text-orange-500">฿{order.total.toLocaleString("th-TH")}</span>
+                    </div>
+                    <div className={`flex justify-between font-bold border-t border-stone-200 pt-1.5 ${
+                      stockModal.costEstimate.estimatedMarginTHB >= 0 ? "text-green-600" : "text-red-600"
+                    }`}>
+                      <span>กำไรประมาณ</span>
+                      <span>
+                        {stockModal.costEstimate.estimatedMarginTHB >= 0 ? "+" : ""}
+                        ฿{stockModal.costEstimate.estimatedMarginTHB.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                  {!stockModal.costEstimate.freightApiAvailable && (
+                    <p className="text-xs text-stone-400 mt-2">
+                      * ค่าส่งเป็นประมาณการ ใช้น้ำหนัก 0.3 kg/ชิ้น — ดูราคาจริงใน CJ Dashboard
+                    </p>
+                  )}
                 </div>
               )}
             </div>
 
             <div className="px-6 py-4 border-t border-stone-100 flex gap-3">
               <button
-                onClick={() => setStockModal({ open: false, stockCheck: null, pendingStatus: "" })}
+                onClick={() => setStockModal({ open: false, stockCheck: null, costEstimate: null, pendingStatus: "" })}
                 className="flex-1 border border-stone-200 text-stone-600 py-2.5 rounded-xl text-sm font-medium hover:bg-stone-50 transition-colors"
               >
                 ยกเลิก
               </button>
               <button
-                onClick={() => commitStatus(stockModal.pendingStatus)}
+                onClick={() => {
+                  const isInsufficient = stockModal.stockCheck && !stockModal.stockCheck.ok;
+                  commitStatus(stockModal.pendingStatus, !!isInsufficient);
+                }}
                 disabled={saving}
                 className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors text-white disabled:opacity-50 ${
                   stockModal.stockCheck && !stockModal.stockCheck.ok
@@ -408,7 +487,11 @@ export default function AdminOrderDetailPage({
                     : "bg-green-500 hover:bg-green-600"
                 }`}
               >
-                {saving ? "กำลังยืนยัน..." : stockModal.stockCheck && !stockModal.stockCheck.ok ? "ยืนยันต่อแม้สต็อกไม่พอ" : "ยืนยันออเดอร์"}
+                {saving
+                  ? "กำลังยืนยัน..."
+                  : stockModal.stockCheck && !stockModal.stockCheck.ok
+                  ? "ยืนยันต่อแม้สต็อกไม่พอ"
+                  : "ยืนยันออเดอร์"}
               </button>
             </div>
           </div>

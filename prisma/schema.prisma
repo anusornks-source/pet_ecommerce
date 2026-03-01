@@ -197,9 +197,10 @@ model Order {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  user    User        @relation(fields: [userId], references: [id])
-  items   OrderItem[]
-  payment Payment?
+  user      User        @relation(fields: [userId], references: [id])
+  items     OrderItem[]
+  payment   Payment?
+  cjApiLogs CjApiLog[]
 
   @@map("orders")
 }
@@ -317,6 +318,21 @@ model Store {
   updatedAt DateTime @updatedAt
 
   @@map("stores")
+}
+
+model CjApiLog {
+  id        String   @id @default(cuid())
+  orderId   String?
+  action    String   // "createOrder" | "syncTracking"
+  request   Json?
+  response  Json?
+  success   Boolean
+  error     String?
+  createdAt DateTime @default(now())
+
+  order Order? @relation(fields: [orderId], references: [id])
+
+  @@map("cj_api_logs")
 }
 
 model Coupon {

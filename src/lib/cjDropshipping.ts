@@ -156,7 +156,7 @@ interface CJOrderInput {
   remark?: string;
 }
 
-export async function createCJOrder(input: CJOrderInput): Promise<{ cjOrderId: string }> {
+export async function createCJOrder(input: CJOrderInput, orderId?: string): Promise<{ cjOrderId: string }> {
   const token = await getCJToken();
   const logisticName = process.env.CJ_LOGISTIC_NAME || "CJPACKET";
 
@@ -174,7 +174,7 @@ export async function createCJOrder(input: CJOrderInput): Promise<{ cjOrderId: s
     products: input.products,
     remark: input.remark || "",
     fromCountryCode: "CN",
-    payType: 2, // use CJ balance
+    payType: 2,
   };
 
   const res = await fetch(`${CJ_BASE}/shopping/order/createOrderV2`, {
@@ -187,6 +187,20 @@ export async function createCJOrder(input: CJOrderInput): Promise<{ cjOrderId: s
   });
 
   const data = await res.json();
+
+  // Log API call (best-effort — never blocks order flow)
+  try {
+    await prisma.cjApiLog.create({
+      data: {
+        orderId: orderId ?? null,
+        action: "createOrder",
+        request: body as object,
+        response: data as object,
+        success: !!data.result,
+        error: data.result ? null : (data.message ?? JSON.stringify(data)),
+      },
+    });
+  } catch { /* swallow log errors */ }
 
   if (!data.result || !data.data?.orderId) {
     throw new Error(`CJ createOrder failed: ${data.message || JSON.stringify(data)}`);
@@ -256,13 +270,28 @@ export interface CJTrackingInfo {
 }
 
 // Fetches latest CJ order status + tracking number from CJ order detail API
-export async function getCJTrackingInfo(cjOrderId: string): Promise<CJTrackingInfo> {
+export async function getCJTrackingInfo(cjOrderId: string, orderId?: string): Promise<CJTrackingInfo> {
   try {
     const token = await getCJToken();
     const res = await fetch(`${CJ_BASE}/shopping/order/getOrderDetail?orderId=${cjOrderId}`, {
       headers: { "CJ-Access-Token": token },
     });
     const data = await res.json();
+
+    // Log API call (best-effort)
+    try {
+      await prisma.cjApiLog.create({
+        data: {
+          orderId: orderId ?? null,
+          action: "syncTracking",
+          request: { cjOrderId } as object,
+          response: data as object,
+          success: !!data.result,
+          error: data.result ? null : (data.message ?? null),
+        },
+      });
+    } catch { /* swallow */ }
+
     if (!data.result || !data.data) return { cjStatus: null, trackingNumber: null, trackingCarrier: null };
 
     const order = data.data;

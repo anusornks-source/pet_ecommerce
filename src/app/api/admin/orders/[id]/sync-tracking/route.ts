@@ -21,7 +21,7 @@ export async function POST(
     return NextResponse.json({ success: false, error: "ออเดอร์นี้ไม่มี CJ Order ID" }, { status: 400 });
   }
 
-  const tracking = await getCJTrackingInfo(order.cjOrderId);
+  const tracking = await getCJTrackingInfo(order.cjOrderId, id);
 
   if (!tracking.cjStatus && !tracking.trackingNumber) {
     return NextResponse.json({ success: false, error: "ไม่สามารถดึงข้อมูลจาก CJ ได้" }, { status: 502 });

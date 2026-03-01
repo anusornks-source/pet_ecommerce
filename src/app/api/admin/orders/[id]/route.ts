@@ -246,7 +246,7 @@ export async function PUT(
           logisticName: process.env.CJ_LOGISTIC_NAME || "CJPACKET",
           products: cjProducts,
           remark: current.note ?? "",
-        });
+        }, id);
         updateData.cjOrderId = cjOrderId;
         history.push({ status: "CJ_SUBMITTED", timestamp: new Date().toISOString(), note: `CJ Order ID: ${cjOrderId}` });
         updateData.statusHistory = history;

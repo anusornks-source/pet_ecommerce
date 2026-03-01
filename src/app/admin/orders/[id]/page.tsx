@@ -32,6 +32,16 @@ interface Order {
   } | null;
 }
 
+interface CjApiLog {
+  id: string;
+  action: string;
+  request: unknown;
+  response: unknown;
+  success: boolean;
+  error: string | null;
+  createdAt: string;
+}
+
 interface StockCheckItem {
   name: string;
   quantity: number;
@@ -89,6 +99,8 @@ export default function AdminOrderDetailPage({
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [cjLogs, setCjLogs] = useState<CjApiLog[]>([]);
+  const [expandedLog, setExpandedLog] = useState<string | null>(null);
 
   const handleSyncTracking = async () => {
     if (!order?.cjOrderId) return;
@@ -99,6 +111,8 @@ export default function AdminOrderDetailPage({
       if (data.success) {
         toast.success("อัปเดต tracking จาก CJ แล้ว");
         setOrder((o) => o ? { ...o, ...data.data } : o);
+        // Refresh CJ logs
+        fetch(`/api/admin/orders/${id}/cj-logs`).then((r) => r.json()).then((d) => { if (d.success) setCjLogs(d.data); });
       } else {
         toast.error(data.error || "เกิดข้อผิดพลาด");
       }
@@ -127,6 +141,9 @@ export default function AdminOrderDetailPage({
         }
       })
       .finally(() => setLoading(false));
+    fetch(`/api/admin/orders/${id}/cj-logs`)
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setCjLogs(d.data); });
   }, [id]);
 
   const handleUpdateStatus = async () => {
@@ -370,6 +387,53 @@ export default function AdminOrderDetailPage({
                 >
                   ดูใน CJ Dashboard →
                 </a>
+              </div>
+            </div>
+          )}
+
+          {/* CJ API Logs */}
+          {cjLogs.length > 0 && (
+            <div className="bg-white rounded-2xl border border-stone-100 p-5">
+              <h2 className="font-semibold text-stone-800 mb-3">📋 CJ Logs</h2>
+              <div className="space-y-2">
+                {cjLogs.map((log) => (
+                  <div key={log.id} className="border border-stone-100 rounded-xl overflow-hidden">
+                    <div
+                      className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-stone-50 transition-colors"
+                      onClick={() => setExpandedLog(expandedLog === log.id ? null : log.id)}
+                    >
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${log.success ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
+                          {log.success ? "✓" : "✗"}
+                        </span>
+                        <span className="font-mono text-xs bg-stone-100 px-2 py-0.5 rounded text-stone-600">{log.action}</span>
+                        <span className="text-stone-400 text-xs">
+                          {new Date(log.createdAt).toLocaleString("th-TH", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                        </span>
+                      </div>
+                      <span className="text-stone-300 text-xs">{expandedLog === log.id ? "▲" : "▼"}</span>
+                    </div>
+                    {log.error && (
+                      <div className="px-4 pb-2 text-xs text-red-500 font-mono">{log.error}</div>
+                    )}
+                    {expandedLog === log.id && (
+                      <div className="border-t border-stone-100 divide-y divide-stone-50">
+                        {log.request !== null && (
+                          <div className="px-4 py-3">
+                            <p className="text-xs font-semibold text-stone-400 mb-1">Request →</p>
+                            <pre className="text-[10px] text-stone-600 bg-stone-50 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all">{JSON.stringify(log.request, null, 2)}</pre>
+                          </div>
+                        )}
+                        {log.response !== null && (
+                          <div className="px-4 py-3">
+                            <p className="text-xs font-semibold text-stone-400 mb-1">Response ←</p>
+                            <pre className="text-[10px] text-stone-600 bg-stone-50 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all">{JSON.stringify(log.response, null, 2)}</pre>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}

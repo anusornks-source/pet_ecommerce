@@ -73,45 +73,57 @@ export async function PUT(
     return NextResponse.json({ success: false, error: "ไม่พบคำสั่งซื้อ" }, { status: 404 });
   }
 
-  // ── CONFIRM: stock check + CJ inventory sync ──────────────────────────────
+  // ── CONFIRM: stock check (local + CJ) ────────────────────────────────────
   if (status === "CONFIRMED" && current.status !== "CONFIRMED") {
-    // 1. Check our DB stock (was already decremented at order placement)
-    //    If stock < 0 → oversold → block confirm
-    const outOfStock: string[] = [];
-    for (const item of current.items) {
-      const currentStock = item.variant ? item.variant.stock : item.product.stock;
-      if (currentStock < 0) {
-        outOfStock.push(`${item.product.name} (ขาด ${Math.abs(currentStock)} ชิ้น)`);
+    // 1. Fetch CJ real-time inventory for all CJ variant items
+    const cjVidItems = current.items.filter((item) => item.variant?.cjVid);
+    const cjVids = cjVidItems.map((item) => item.variant!.cjVid!);
+    let inventoryMap: Record<string, number> = {};
+
+    if (cjVids.length > 0) {
+      try {
+        inventoryMap = await getCJInventory(cjVids);
+      } catch {
+        // If CJ API fails entirely, fall through to local stock check only
       }
     }
+
+    // 2. Check each item — CJ items use CJ real-time stock, others use local DB
+    const outOfStock: string[] = [];
+    for (const item of current.items) {
+      const cjVid = item.variant?.cjVid;
+      if (cjVid && Object.keys(inventoryMap).length > 0) {
+        // CJ item: check against CJ real-time stock
+        const cjStock = inventoryMap[cjVid] ?? 0;
+        if (cjStock < item.quantity) {
+          outOfStock.push(
+            `${item.product.name} (CJ มีสต็อก ${cjStock} ชิ้น ต้องการ ${item.quantity} ชิ้น)`
+          );
+        }
+      } else {
+        // Non-CJ item: check local DB stock (already decremented at placement)
+        const localStock = item.variant ? item.variant.stock : item.product.stock;
+        if (localStock < 0) {
+          outOfStock.push(`${item.product.name} (ขาด ${Math.abs(localStock)} ชิ้น)`);
+        }
+      }
+    }
+
     if (outOfStock.length > 0) {
       return NextResponse.json(
-        { success: false, error: `สต็อกไม่เพียงพอ: ${outOfStock.join(", ")}` },
+        { success: false, error: `สต็อกไม่เพียงพอ:\n${outOfStock.join("\n")}` },
         { status: 400 }
       );
     }
 
-    // 2. Sync CJ inventory for CJ products (best-effort — don't block on failure)
-    const cjVids = current.items
-      .map((item) => item.variant?.cjVid)
-      .filter((v): v is string => !!v);
-
-    if (cjVids.length > 0) {
-      try {
-        const inventoryMap = await getCJInventory(cjVids);
-        for (const item of current.items) {
-          const cjVid = item.variant?.cjVid;
-          if (!cjVid || inventoryMap[cjVid] === undefined) continue;
-          // Update variant stock to CJ's real-time value (minus what we just ordered)
-          const cjStock = inventoryMap[cjVid];
-          await prisma.productVariant.update({
-            where: { id: item.variant!.id },
-            data: { stock: Math.max(0, cjStock - item.quantity) },
-          });
-        }
-      } catch {
-        // Non-blocking: CJ inventory sync failure doesn't prevent confirm
-      }
+    // 3. Update local CJ variant stock to CJ real-time value minus ordered quantity
+    for (const item of cjVidItems) {
+      const cjVid = item.variant!.cjVid!;
+      if (inventoryMap[cjVid] === undefined) continue;
+      await prisma.productVariant.update({
+        where: { id: item.variant!.id },
+        data: { stock: Math.max(0, inventoryMap[cjVid] - item.quantity) },
+      });
     }
   }
 

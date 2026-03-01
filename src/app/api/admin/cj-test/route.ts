@@ -6,9 +6,8 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
-  const email = process.env.CJ_EMAIL;
-  if (!email) {
-    return NextResponse.json({ success: false, error: "CJ_EMAIL ไม่ได้ตั้งค่าใน env" });
+  if (!process.env.CJ_API_KEY) {
+    return NextResponse.json({ success: false, error: "CJ_API_KEY ไม่ได้ตั้งค่าใน env" });
   }
 
   try {
@@ -26,7 +25,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: "✅ เชื่อมต่อ CJDropshipping สำเร็จ",
-        emailUsed: email.replace(/(.{2}).+(@.+)/, "$1***$2"),
         tokenPreview: token.slice(0, 20) + "...",
       });
     }
@@ -34,13 +32,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: false,
       error: `CJ ตอบกลับ: ${data.message || JSON.stringify(data)}`,
-      emailUsed: email.replace(/(.{2}).+(@.+)/, "$1***$2"),
     });
   } catch (err) {
     return NextResponse.json({
       success: false,
       error: err instanceof Error ? err.message : String(err),
-      emailUsed: email.replace(/(.{2}).+(@.+)/, "$1***$2"),
     });
   }
 }

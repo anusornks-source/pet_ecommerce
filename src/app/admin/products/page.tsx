@@ -214,6 +214,9 @@ export default function AdminProductsPage() {
                 <th className="text-left px-4 py-3 text-stone-500 font-medium hidden md:table-cell">
                   หมวดหมู่
                 </th>
+                <th className="text-left px-4 py-3 text-stone-500 font-medium hidden lg:table-cell">
+                  ประเภทสัตว์
+                </th>
                 <th className="text-right px-4 py-3 text-stone-500 font-medium">
                   ราคา
                 </th>
@@ -262,6 +265,13 @@ export default function AdminProductsPage() {
                   </td>
                   <td className="px-4 py-3 text-stone-500 hidden md:table-cell">
                     {product.category.name}
+                  </td>
+                  <td className="px-4 py-3 text-stone-500 hidden lg:table-cell">
+                    {product.petType ? (
+                      <span>{product.petType.icon} {product.petType.name}</span>
+                    ) : (
+                      <span className="text-stone-300">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right font-medium text-stone-800">
                     ฿{product.price.toLocaleString("th-TH")}

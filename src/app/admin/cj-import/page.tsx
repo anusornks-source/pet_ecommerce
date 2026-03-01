@@ -227,22 +227,28 @@ useEffect(() => {
                     <p className="text-xs text-stone-400 mb-1">{item.categoryName}</p>
                     <p className="text-[10px] text-stone-300 font-mono mb-1 select-all break-all">{item.pid}</p>
                     <div className="text-[11px] text-stone-400 space-y-0.5 mb-2">
-                      <div className="flex justify-between">
-                        <span>ต้นทุน</span>
-                        <span>${costUSD.toFixed(2)} (฿{costTHB.toLocaleString()})</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>ค่าส่ง (ประมาณ)</span>
-                        <span>${estShippingUSD.toFixed(2)} (฿{shipTHB.toLocaleString()})</span>
-                      </div>
-                      <div className="flex justify-between font-medium text-orange-600">
-                        <span>ราคาขาย</span>
-                        <span>฿{sellTHB.toLocaleString()}</span>
-                      </div>
-                      <div className={`flex justify-between font-semibold border-t border-stone-100 pt-0.5 ${margin >= 0 ? "text-green-600" : "text-red-500"}`}>
-                        <span>กำไรประมาณ</span>
-                        <span>฿{margin.toLocaleString()} ({pct}%)</span>
-                      </div>
+                      {isNaN(costUSD) || costUSD === 0 ? (
+                        <p className="text-amber-500 text-[10px]">⚠️ CJ ไม่มีราคา (sellPrice null)</p>
+                      ) : (
+                        <>
+                          <div className="flex justify-between">
+                            <span>ต้นทุน</span>
+                            <span>${costUSD.toFixed(2)} (฿{costTHB.toLocaleString()})</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>ค่าส่ง (ประมาณ)</span>
+                            <span>${estShippingUSD.toFixed(2)} (฿{shipTHB.toLocaleString()})</span>
+                          </div>
+                          <div className="flex justify-between font-medium text-orange-600">
+                            <span>ราคาขาย</span>
+                            <span>฿{sellTHB.toLocaleString()}</span>
+                          </div>
+                          <div className={`flex justify-between font-semibold border-t border-stone-100 pt-0.5 ${margin >= 0 ? "text-green-600" : "text-red-500"}`}>
+                            <span>กำไรประมาณ</span>
+                            <span>฿{margin.toLocaleString()} ({pct}%)</span>
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {imported ? (

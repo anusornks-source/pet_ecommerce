@@ -3,6 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 import { searchCJProducts, getCJProductDetail } from "@/lib/cjDropshipping";
 
+// Extract <img src="..."> URLs from HTML and return cleaned text + image URLs
+function extractImgUrls(html: string): { cleaned: string; urls: string[] } {
+  const urls: string[] = [];
+  const cleaned = html.replace(/<img[^>]+src=["']([^"']+)["'][^>]*\/?>/gi, (_, src) => {
+    urls.push(src);
+    return "";
+  });
+  return { cleaned: cleaned.trim(), urls };
+}
+
 // GET /api/admin/cj-products?keyword=xxx&page=1
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -31,7 +41,7 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
-  const { pid, categoryId, petType } = await request.json();
+  const { pid, categoryId, petType, priceFactor = 3, usdToThb = 36 } = await request.json();
 
   if (!pid || !categoryId) {
     return NextResponse.json({ success: false, error: "pid และ categoryId จำเป็น" }, { status: 400 });
@@ -40,36 +50,54 @@ export async function POST(request: NextRequest) {
   try {
     const detail = await getCJProductDetail(pid);
 
-    // Parse variants
+    // Extract images embedded in description HTML, strip <img> tags
+    const { cleaned: description, urls: descImages } = extractImgUrls(detail.description ?? "");
+
+    // Merge CJ productImages + description images (deduplicated)
+    const existingImages = new Set(detail.productImages ?? []);
+    const allImages = [
+      ...(detail.productImages ?? []),
+      ...descImages.filter((u) => !existingImages.has(u)),
+    ];
+
+    // Parse variants — variantPrice from CJ is in USD
     const variants = (detail.variants ?? []).map((v) => {
-      // variantProperty like "Color:Red;Size:M"
       const props: Record<string, string> = {};
       (v.variantProperty ?? "").split(";").forEach((part) => {
         const [key, val] = part.split(":");
         if (key && val) props[key.trim().toLowerCase()] = val.trim();
       });
+      const costUSD = v.variantPrice ?? 0;
       return {
         size: props["size"] ?? null,
         color: props["color"] ?? null,
-        price: v.variantPrice ?? 0,
+        price: Math.ceil(costUSD * usdToThb * priceFactor), // sell price in THB
         stock: v.variantStock ?? 0,
         sku: v.variantSku ?? null,
         cjVid: v.vid,
+        costUSD, // keep for reference (not in schema, just for calculation)
       };
     });
+
+    const costPriceUSD = variants[0]?.costUSD ?? 0;
+    const sellPrice = variants[0]?.price ?? Math.ceil(costPriceUSD * usdToThb * priceFactor);
+
+    const variantData = variants.map(({ costUSD: _c, ...rest }) => rest);
 
     const product = await prisma.product.create({
       data: {
         name: detail.productNameEn,
-        description: detail.description ?? "",
-        price: variants[0]?.price ?? 0,
-        stock: variants.reduce((s, v) => s + v.stock, 0),
-        images: detail.productImages ?? [],
+        description,
+        price: sellPrice,
+        stock: variantData.reduce((s, v) => s + v.stock, 0),
+        images: allImages,
         categoryId,
         petType: petType || null,
-        active: false, // ให้ admin ตรวจสอบ+เปิดเอง
+        active: false,
         cjProductId: detail.pid,
-        variants: variants.length > 0 ? { create: variants } : undefined,
+        costPrice: costPriceUSD,
+        source: "CJ",
+        variants: variantData.length > 0 ? { create: variantData } : undefined,
       },
     });
 

@@ -38,13 +38,19 @@ export default function CJImportPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [importingPid, setImportingPid] = useState<string | null>(null);
   const [importForm, setImportForm] = useState<Record<string, { categoryId: string; petType: string }>>({});
-  const [importedIds, setImportedIds] = useState<Record<string, string>>({}); // pid → product id
+  const [importedIds, setImportedIds] = useState<Record<string, string>>({});
+
+  // Price factor settings
+  const [priceFactor, setPriceFactor] = useState(3);
+  const [usdToThb, setUsdToThb] = useState(36);
 
   useEffect(() => {
     fetch("/api/admin/categories")
       .then((r) => r.json())
       .then((d) => { if (d.success) setCategories(d.data); });
   }, []);
+
+  const calcSellPrice = (usd: number) => Math.ceil(Number(usd) * usdToThb * priceFactor);
 
   const handleSearch = async (p = 1) => {
     if (!keyword.trim()) return;
@@ -67,31 +73,28 @@ export default function CJImportPage() {
   };
 
   const toggleImportPanel = (pid: string) => {
-    if (importingPid === pid) {
-      setImportingPid(null);
-      return;
-    }
+    if (importingPid === pid) { setImportingPid(null); return; }
     setImportingPid(pid);
     if (!importForm[pid]) {
-      setImportForm((f) => ({
-        ...f,
-        [pid]: { categoryId: categories[0]?.id ?? "", petType: "" },
-      }));
+      setImportForm((f) => ({ ...f, [pid]: { categoryId: categories[0]?.id ?? "", petType: "" } }));
     }
   };
 
   const handleImport = async (item: CJItem) => {
     const form = importForm[item.pid];
-    if (!form?.categoryId) {
-      toast.error("กรุณาเลือกหมวดหมู่");
-      return;
-    }
+    if (!form?.categoryId) { toast.error("กรุณาเลือกหมวดหมู่"); return; }
     const toastId = toast.loading("กำลัง import...");
     try {
       const res = await fetch("/api/admin/cj-products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pid: item.pid, categoryId: form.categoryId, petType: form.petType || null }),
+        body: JSON.stringify({
+          pid: item.pid,
+          categoryId: form.categoryId,
+          petType: form.petType || null,
+          priceFactor,
+          usdToThb,
+        }),
       });
       const data = await res.json();
       if (data.success) {
@@ -113,11 +116,33 @@ export default function CJImportPage() {
         <p className="text-stone-500 text-sm mt-1">ค้นหาสินค้าจาก CJDropshipping แล้วนำเข้าสู่ร้านได้เลย</p>
       </div>
 
+      {/* Price factor settings */}
+      <div className="flex flex-wrap items-center gap-4 mb-4 p-4 bg-stone-50 border border-stone-200 rounded-2xl text-sm">
+        <span className="text-stone-500 font-medium">⚙️ การคำนวณราคา:</span>
+        <div className="flex items-center gap-2">
+          <label className="text-stone-500">ตัวคูณราคาขาย</label>
+          <input
+            type="number" min="1" step="0.1" value={priceFactor}
+            onChange={(e) => setPriceFactor(Number(e.target.value))}
+            className="w-16 border border-stone-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-200"
+          />
+          <span className="text-stone-400">x</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-stone-500">USD/THB</label>
+          <input
+            type="number" min="1" step="0.5" value={usdToThb}
+            onChange={(e) => setUsdToThb(Number(e.target.value))}
+            className="w-16 border border-stone-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-200"
+          />
+        </div>
+        <span className="text-stone-400 text-xs">ราคาขาย = ต้นทุน USD × {usdToThb} × {priceFactor}</span>
+      </div>
+
       {/* Search bar */}
       <div className="flex gap-2 mb-6">
         <input
-          type="text"
-          value={keyword}
+          type="text" value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch(1)}
           placeholder="ค้นหาสินค้า เช่น dog collar, cat food..."
@@ -141,25 +166,15 @@ export default function CJImportPage() {
               const imported = importedIds[item.pid];
               const isOpen = importingPid === item.pid;
               const form = importForm[item.pid] ?? { categoryId: categories[0]?.id ?? "", petType: "" };
+              const costUSD = Number(item.sellPrice);
+              const sellTHB = calcSellPrice(costUSD);
 
               return (
-                <div
-                  key={item.pid}
-                  className={`bg-white rounded-2xl border transition-all overflow-hidden ${
-                    isOpen ? "border-orange-300 shadow-md" : "border-stone-100 hover:border-stone-200"
-                  }`}
-                >
+                <div key={item.pid} className={`bg-white rounded-2xl border transition-all overflow-hidden ${isOpen ? "border-orange-300 shadow-md" : "border-stone-100 hover:border-stone-200"}`}>
                   {/* Image */}
                   <div className="relative w-full aspect-square bg-stone-50">
                     {item.productImage ? (
-                      <Image
-                        src={item.productImage}
-                        alt={item.productNameEn}
-                        fill
-                        sizes="(max-width: 768px) 50vw, 20vw"
-                        className="object-contain p-2"
-                        unoptimized
-                      />
+                      <Image src={item.productImage} alt={item.productNameEn} fill sizes="(max-width: 768px) 50vw, 20vw" className="object-contain p-2" unoptimized />
                     ) : (
                       <div className="flex items-center justify-center h-full text-3xl text-stone-300">📦</div>
                     )}
@@ -167,29 +182,21 @@ export default function CJImportPage() {
 
                   {/* Info */}
                   <div className="p-3">
-                    <p className="text-xs font-medium text-stone-800 leading-tight line-clamp-2 mb-1">
-                      {item.productNameEn}
-                    </p>
-                    <p className="text-xs text-stone-400 mb-2">{item.categoryName}</p>
+                    <p className="text-xs font-medium text-stone-800 leading-tight line-clamp-2 mb-1">{item.productNameEn}</p>
+                    <p className="text-xs text-stone-400 mb-1">{item.categoryName}</p>
+                    <p className="text-xs text-stone-400">ต้นทุน: ${costUSD.toFixed(2)}</p>
                     <p className="text-sm font-semibold text-orange-600 mb-2">
-                      ${Number(item.sellPrice)?.toFixed(2) ?? "-"}
+                      ราคาขาย: ฿{sellTHB.toLocaleString("th-TH")}
                     </p>
 
                     {imported ? (
-                      <Link
-                        href={`/admin/products/${imported}`}
-                        className="block text-center text-xs px-3 py-1.5 bg-green-50 text-green-600 border border-green-200 rounded-lg"
-                      >
+                      <Link href={`/admin/products/${imported}`} className="block text-center text-xs px-3 py-1.5 bg-green-50 text-green-600 border border-green-200 rounded-lg">
                         ✅ นำเข้าแล้ว → แก้ไข
                       </Link>
                     ) : (
                       <button
                         onClick={() => toggleImportPanel(item.pid)}
-                        className={`w-full text-xs px-3 py-1.5 rounded-lg border transition-colors ${
-                          isOpen
-                            ? "bg-orange-500 text-white border-orange-500"
-                            : "border-stone-200 text-stone-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600"
-                        }`}
+                        className={`w-full text-xs px-3 py-1.5 rounded-lg border transition-colors ${isOpen ? "bg-orange-500 text-white border-orange-500" : "border-stone-200 text-stone-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600"}`}
                       >
                         {isOpen ? "ยกเลิก" : "นำเข้า"}
                       </button>
@@ -203,15 +210,11 @@ export default function CJImportPage() {
                         <label className="block text-xs text-stone-500 mb-1">หมวดหมู่</label>
                         <select
                           value={form.categoryId}
-                          onChange={(e) =>
-                            setImportForm((f) => ({ ...f, [item.pid]: { ...form, categoryId: e.target.value } }))
-                          }
+                          onChange={(e) => setImportForm((f) => ({ ...f, [item.pid]: { ...form, categoryId: e.target.value } }))}
                           className="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-300"
                         >
                           {categories.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.icon} {c.name}
-                            </option>
+                            <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
                           ))}
                         </select>
                       </div>
@@ -219,21 +222,17 @@ export default function CJImportPage() {
                         <label className="block text-xs text-stone-500 mb-1">ประเภทสัตว์</label>
                         <select
                           value={form.petType}
-                          onChange={(e) =>
-                            setImportForm((f) => ({ ...f, [item.pid]: { ...form, petType: e.target.value } }))
-                          }
+                          onChange={(e) => setImportForm((f) => ({ ...f, [item.pid]: { ...form, petType: e.target.value } }))}
                           className="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-300"
                         >
-                          {PET_TYPES.map((p) => (
-                            <option key={p.value} value={p.value}>{p.label}</option>
-                          ))}
+                          {PET_TYPES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
                         </select>
                       </div>
                       <button
                         onClick={() => handleImport(item)}
                         className="w-full bg-orange-500 hover:bg-orange-600 text-white text-xs py-1.5 rounded-lg font-medium transition-colors"
                       >
-                        ยืนยันนำเข้า
+                        ยืนยันนำเข้า (฿{sellTHB.toLocaleString("th-TH")})
                       </button>
                     </div>
                   )}
@@ -242,14 +241,10 @@ export default function CJImportPage() {
             })}
           </div>
 
-          {/* Load more */}
           {results.length < total && (
             <div className="text-center mt-6">
-              <button
-                onClick={() => handleSearch(page + 1)}
-                disabled={searching}
-                className="px-6 py-2 border border-stone-200 rounded-xl text-sm text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-60"
-              >
+              <button onClick={() => handleSearch(page + 1)} disabled={searching}
+                className="px-6 py-2 border border-stone-200 rounded-xl text-sm text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-60">
                 {searching ? "กำลังโหลด..." : "โหลดเพิ่ม"}
               </button>
             </div>
@@ -257,7 +252,6 @@ export default function CJImportPage() {
         </>
       )}
 
-      {/* Empty state */}
       {!searching && results.length === 0 && keyword && (
         <div className="text-center py-16 text-stone-400 text-sm">ไม่พบสินค้า ลองค้นหาคำอื่น</div>
       )}

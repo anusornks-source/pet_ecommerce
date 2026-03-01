@@ -68,6 +68,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
     ...initialData,
   });
 
+  const [descPreview, setDescPreview] = useState(false);
   const [variants, setVariants] = useState<VariantRow[]>(initialData?.variants ?? []);
   const emptyVariant = (): VariantRow => ({ size: "", color: "", price: "", stock: "", sku: "", cjVid: "", active: true });
   const addVariant = () => setVariants((v) => [...v, emptyVariant()]);
@@ -176,17 +177,28 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
       {field("ชื่อสินค้า", "name", { required: true, placeholder: "เช่น สายจูงหนังแท้" })}
 
       <div>
-        <label className="block text-sm font-medium text-stone-700 mb-1.5">
-          คำอธิบาย
-        </label>
-        <textarea
-          required
-          rows={3}
-          value={form.description}
-          onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-          placeholder="คำอธิบายสินค้า..."
-          className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none"
-        />
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-sm font-medium text-stone-700">คำอธิบาย</label>
+          <button type="button" onClick={() => setDescPreview((v) => !v)}
+            className="text-xs text-stone-400 hover:text-orange-500 transition-colors">
+            {descPreview ? "✏️ แก้ไข" : "👁 ดูตัวอย่าง HTML"}
+          </button>
+        </div>
+        {descPreview ? (
+          <div
+            className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm min-h-20 prose prose-sm max-w-none overflow-auto"
+            dangerouslySetInnerHTML={{ __html: form.description }}
+          />
+        ) : (
+          <textarea
+            required
+            rows={4}
+            value={form.description}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            placeholder="คำอธิบายสินค้า (รองรับ HTML เช่น <b>ตัวหนา</b>)..."
+            className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none"
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">

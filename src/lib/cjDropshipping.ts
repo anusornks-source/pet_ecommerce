@@ -61,18 +61,13 @@ export async function getCJToken(): Promise<string> {
     return settings.cjAccessToken;
   }
 
-  const email = process.env.CJ_EMAIL;
-  // CJ_API_KEY is used as the "password" in the auth endpoint
-  const password = process.env.CJ_API_KEY || process.env.CJ_PASSWORD;
-
-  if (!email || !password) {
-    throw new Error("CJ_EMAIL and CJ_API_KEY are not configured in .env");
-  }
+  const apiKey = process.env.CJ_API_KEY;
+  if (!apiKey) throw new Error("CJ_API_KEY is not configured in .env");
 
   const res = await fetch(`${CJ_BASE}/authentication/getAccessToken`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ apiKey }),
   });
 
   const data = await res.json();
@@ -82,7 +77,7 @@ export async function getCJToken(): Promise<string> {
   }
 
   const token = data.data.accessToken as string;
-  const expiresAt = new Date(Date.now() + 11 * 60 * 60 * 1000); // 11 hours
+  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 days (token valid 15 days)
 
   // Save to DB so all serverless instances share the same token
   await prisma.siteSettings.upsert({

@@ -30,6 +30,10 @@ async function getCategories() {
   });
 }
 
+async function getPetTypes() {
+  return prisma.petType.findMany({ orderBy: { order: "asc" } });
+}
+
 async function getSettings() {
   return prisma.siteSettings.upsert({
     where: { id: "default" },
@@ -41,20 +45,25 @@ async function getSettings() {
 const DEFAULT_HERO_IMAGE = "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=1400";
 
 export default async function HomePage() {
-  const [featuredProducts, highlightProducts, categories, settings] = await Promise.all([
+  const [featuredProducts, highlightProducts, categories, settings, petTypes] = await Promise.all([
     getFeaturedProducts(),
     getHighlightProducts(),
     getCategories(),
     getSettings(),
+    getPetTypes(),
   ]);
 
   const heroImageUrl: string = settings?.heroImageUrl || DEFAULT_HERO_IMAGE;
 
-  const pets = [
-    { emoji: "🐕", label: "สุนัข", slug: "dog", bg: "bg-amber-50", border: "border-amber-200" },
-    { emoji: "🐈", label: "แมว", slug: "cat", bg: "bg-orange-50", border: "border-orange-200" },
-    { emoji: "🐦", label: "นก", slug: "bird", bg: "bg-sky-50", border: "border-sky-200" },
-    { emoji: "🐠", label: "ปลา", slug: "fish", bg: "bg-teal-50", border: "border-teal-200" },
+  const PET_COLORS = [
+    { bg: "bg-amber-50", border: "border-amber-200" },
+    { bg: "bg-orange-50", border: "border-orange-200" },
+    { bg: "bg-sky-50", border: "border-sky-200" },
+    { bg: "bg-teal-50", border: "border-teal-200" },
+    { bg: "bg-violet-50", border: "border-violet-200" },
+    { bg: "bg-pink-50", border: "border-pink-200" },
+    { bg: "bg-green-50", border: "border-green-200" },
+    { bg: "bg-yellow-50", border: "border-yellow-200" },
   ];
 
   return (
@@ -122,21 +131,26 @@ export default async function HomePage() {
       </section>
 
       {/* Pet Types */}
-      <section className="max-w-6xl mx-auto px-4 py-12">
-        <h2 className="text-2xl font-bold text-stone-800 mb-6">เลือกตามประเภทสัตว์เลี้ยง</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {pets.map((pet) => (
-            <Link
-              key={pet.slug}
-              href={`/products?petType=${pet.slug}`}
-              className={`${pet.bg} ${pet.border} border-2 rounded-2xl p-6 flex flex-col items-center gap-3 hover:scale-105 transition-transform cursor-pointer`}
-            >
-              <span className="text-5xl">{pet.emoji}</span>
-              <span className="font-semibold text-stone-700">{pet.label}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
+      {petTypes.length > 0 && (
+        <section className="max-w-6xl mx-auto px-4 py-12">
+          <h2 className="text-2xl font-bold text-stone-800 mb-6">เลือกตามประเภทสัตว์เลี้ยง</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {petTypes.map((pt, i) => {
+              const color = PET_COLORS[i % PET_COLORS.length];
+              return (
+                <Link
+                  key={pt.slug}
+                  href={`/products?petType=${pt.slug}`}
+                  className={`${color.bg} ${color.border} border-2 rounded-2xl p-6 flex flex-col items-center gap-3 hover:scale-105 transition-transform cursor-pointer`}
+                >
+                  <span className="text-5xl">{pt.icon}</span>
+                  <span className="font-semibold text-stone-700">{pt.name}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Categories */}
       <section className="bg-stone-50 py-12">

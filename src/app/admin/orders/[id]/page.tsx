@@ -433,7 +433,11 @@ export default function AdminOrderDetailPage({
                     <p className="text-purple-500 mt-2">รอลูกค้าได้รับสินค้า แล้วกด <span className="font-semibold">ส่งแล้ว</span></p>
                   </>
                 ) : (
-                  <p className="text-purple-600">รอ tracking จาก CJ — กด Sync หากยังไม่อัปเดต</p>
+                  <p className="text-purple-600">
+                    {order.cjOrderId
+                      ? "รอ tracking จาก CJ — กด Sync หากยังไม่อัปเดต"
+                      : "ยังไม่มี tracking number — กรอกเพิ่มเติมหากมี"}
+                  </p>
                 )}
               </div>
             )}

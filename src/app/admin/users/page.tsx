@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 interface User {
   id: string;
@@ -14,22 +14,28 @@ interface User {
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetch("/api/admin/users")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success) setUsers(d.data);
-      })
-      .finally(() => setLoading(false));
+  const pageSize = 50;
+  const totalPages = Math.ceil(total / pageSize);
+
+  const fetchUsers = useCallback(async (p: number) => {
+    setLoading(true);
+    const res = await fetch(`/api/admin/users?page=${p}`);
+    const d = await res.json();
+    if (d.success) { setUsers(d.data); setTotal(d.total); }
+    setLoading(false);
   }, []);
+
+  useEffect(() => { fetchUsers(1); }, [fetchUsers]);
 
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-stone-800">ผู้ใช้งาน</h1>
-        <p className="text-stone-500 text-sm mt-1">{users.length} คน</p>
+        <p className="text-stone-500 text-sm mt-1">{total.toLocaleString()} คน</p>
       </div>
 
       <div className="bg-white rounded-2xl border border-stone-100 overflow-hidden">
@@ -90,6 +96,26 @@ export default function AdminUsersPage() {
           </table>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-1 mt-4">
+          <button disabled={page === 1} onClick={() => { setPage(page - 1); fetchUsers(page - 1); }} className="px-3 py-1.5 rounded-lg text-sm border border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-30 disabled:cursor-not-allowed">←</button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+            .reduce<(number | "...")[]>((acc, p, i, arr) => {
+              if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push("...");
+              acc.push(p);
+              return acc;
+            }, [])
+            .map((p, i) => p === "..." ? (
+              <span key={`e-${i}`} className="px-2 text-stone-300">…</span>
+            ) : (
+              <button key={p} onClick={() => { setPage(p as number); fetchUsers(p as number); }} className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${page === p ? "bg-stone-800 text-white border-stone-800" : "border-stone-200 text-stone-600 hover:bg-stone-50"}`}>{p}</button>
+            ))}
+          <button disabled={page === totalPages} onClick={() => { setPage(page + 1); fetchUsers(page + 1); }} className="px-3 py-1.5 rounded-lg text-sm border border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-30 disabled:cursor-not-allowed">→</button>
+        </div>
+      )}
     </div>
   );
 }

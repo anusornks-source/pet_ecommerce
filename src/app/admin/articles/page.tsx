@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -18,17 +18,22 @@ interface Article {
 
 export default function AdminArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  const fetchArticles = () => {
-    setLoading(true);
-    fetch("/api/admin/articles")
-      .then((r) => r.json())
-      .then((d) => { if (d.success) setArticles(d.data); })
-      .finally(() => setLoading(false));
-  };
+  const pageSize = 20;
+  const totalPages = Math.ceil(total / pageSize);
 
-  useEffect(() => { fetchArticles(); }, []);
+  const fetchArticles = useCallback(async (p: number) => {
+    setLoading(true);
+    const res = await fetch(`/api/admin/articles?page=${p}`);
+    const d = await res.json();
+    if (d.success) { setArticles(d.data); setTotal(d.total); }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchArticles(1); }, [fetchArticles]);
 
   const handleDelete = async (id: string, title: string) => {
     if (!confirm(`ลบบทความ "${title}" ใช่ไหม?`)) return;
@@ -36,7 +41,7 @@ export default function AdminArticlesPage() {
     const data = await res.json();
     if (data.success) {
       toast.success("ลบบทความแล้ว");
-      fetchArticles();
+      fetchArticles(page);
     } else {
       toast.error("ลบไม่สำเร็จ");
     }
@@ -51,7 +56,7 @@ export default function AdminArticlesPage() {
     const data = await res.json();
     if (data.success) {
       toast.success(!published ? "เผยแพร่แล้ว" : "ซ่อนบทความแล้ว");
-      fetchArticles();
+      fetchArticles(page);
     }
   };
 
@@ -65,7 +70,7 @@ export default function AdminArticlesPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-stone-800">บทความ</h1>
-          <p className="text-sm text-stone-500 mt-0.5">{articles.length} บทความ</p>
+          <p className="text-sm text-stone-500 mt-0.5">{total.toLocaleString()} บทความ</p>
         </div>
         <Link
           href="/admin/articles/new"
@@ -149,6 +154,26 @@ export default function AdminArticlesPage() {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-1 mt-4">
+          <button disabled={page === 1} onClick={() => { setPage(page - 1); fetchArticles(page - 1); }} className="px-3 py-1.5 rounded-lg text-sm border border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-30 disabled:cursor-not-allowed">←</button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+            .reduce<(number | "...")[]>((acc, p, i, arr) => {
+              if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push("...");
+              acc.push(p);
+              return acc;
+            }, [])
+            .map((p, i) => p === "..." ? (
+              <span key={`e-${i}`} className="px-2 text-stone-300">…</span>
+            ) : (
+              <button key={p} onClick={() => { setPage(p as number); fetchArticles(p as number); }} className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${page === p ? "bg-stone-800 text-white border-stone-800" : "border-stone-200 text-stone-600 hover:bg-stone-50"}`}>{p}</button>
+            ))}
+          <button disabled={page === totalPages} onClick={() => { setPage(page + 1); fetchArticles(page + 1); }} className="px-3 py-1.5 rounded-lg text-sm border border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-30 disabled:cursor-not-allowed">→</button>
+        </div>
+      )}
     </div>
   );
 }

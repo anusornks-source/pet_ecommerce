@@ -15,22 +15,31 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
-  const articles = await prisma.article.findMany({
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      excerpt: true,
-      coverImage: true,
-      published: true,
-      tags: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
+  const { searchParams } = new URL(request.url);
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
+  const PAGE_SIZE = 20;
 
-  return NextResponse.json({ success: true, data: articles });
+  const [articles, total] = await Promise.all([
+    prisma.article.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        coverImage: true,
+        published: true,
+        tags: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    prisma.article.count(),
+  ]);
+
+  return NextResponse.json({ success: true, data: articles, total, page, pageSize: PAGE_SIZE });
 }
 
 export async function POST(request: NextRequest) {

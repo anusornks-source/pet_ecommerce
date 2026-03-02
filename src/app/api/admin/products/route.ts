@@ -31,13 +31,21 @@ export async function GET(request: NextRequest) {
   if (petType) where.petType = { slug: petType };
   if (tagId) where.tags = { some: { id: tagId } };
 
-  const products = await prisma.product.findMany({
-    where,
-    include: { category: true, petType: true, tags: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
+  const PAGE_SIZE = 50;
 
-  return NextResponse.json({ success: true, data: products });
+  const [products, total] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      include: { category: true, petType: true, tags: true },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    prisma.product.count({ where }),
+  ]);
+
+  return NextResponse.json({ success: true, data: products, total, page, pageSize: PAGE_SIZE });
 }
 
 export async function POST(request: NextRequest) {

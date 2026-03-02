@@ -59,6 +59,8 @@ function formatDate(iso: string) {
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [categories, setCategories] = useState<Category[]>([]);
   const [petTypes, setPetTypes] = useState<PetType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +74,9 @@ export default function AdminProductsPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [filterTag, setFilterTag] = useState("");
 
+  const pageSize = 50;
+  const totalPages = Math.ceil(total / pageSize);
+
   useEffect(() => {
     fetch("/api/admin/categories")
       .then((r) => r.json())
@@ -84,9 +89,9 @@ export default function AdminProductsPage() {
       .then((d) => { if (d.success) setTags(d.data); });
   }, []);
 
-  const fetchProducts = useCallback(async () => {
+  const fetchProducts = useCallback(async (p: number) => {
     setLoading(true);
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({ page: String(p) });
     if (search) params.set("search", search);
     if (filterSource) params.set("source", filterSource);
     if (filterActive) params.set("active", filterActive);
@@ -95,16 +100,23 @@ export default function AdminProductsPage() {
     if (filterTag) params.set("tagId", filterTag);
     const res = await fetch(`/api/admin/products?${params.toString()}`);
     const data = await res.json();
-    if (data.success) setProducts(data.data);
+    if (data.success) { setProducts(data.data); setTotal(data.total); }
     setLoading(false);
   }, [search, filterSource, filterActive, filterCategory, filterPetType, filterTag]);
 
   const activeFilterCount = [filterSource, filterActive, filterCategory, filterPetType, filterTag].filter(Boolean).length;
 
+  // When filters change: reset page to 1 and debounce fetch
   useEffect(() => {
-    const timer = setTimeout(fetchProducts, 300);
+    setPage(1);
+    const timer = setTimeout(() => fetchProducts(1), 300);
     return () => clearTimeout(timer);
   }, [fetchProducts]);
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    fetchProducts(newPage);
+  };
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`ลบสินค้า "${name}" ใช่หรือไม่?`)) return;
@@ -144,7 +156,7 @@ export default function AdminProductsPage() {
         <div>
           <h1 className="text-2xl font-bold text-stone-800">สินค้า</h1>
           <p className="text-stone-500 text-sm mt-1">
-            {products.length} รายการ
+            {total.toLocaleString()} รายการ
           </p>
         </div>
         <Link
@@ -391,6 +403,26 @@ export default function AdminProductsPage() {
           </table>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-1 mt-4">
+          <button disabled={page === 1} onClick={() => handlePageChange(page - 1)} className="px-3 py-1.5 rounded-lg text-sm border border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-30 disabled:cursor-not-allowed">←</button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+            .reduce<(number | "...")[]>((acc, p, i, arr) => {
+              if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push("...");
+              acc.push(p);
+              return acc;
+            }, [])
+            .map((p, i) => p === "..." ? (
+              <span key={`e-${i}`} className="px-2 text-stone-300">…</span>
+            ) : (
+              <button key={p} onClick={() => handlePageChange(p as number)} className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${page === p ? "bg-stone-800 text-white border-stone-800" : "border-stone-200 text-stone-600 hover:bg-stone-50"}`}>{p}</button>
+            ))}
+          <button disabled={page === totalPages} onClick={() => handlePageChange(page + 1)} className="px-3 py-1.5 rounded-lg text-sm border border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-30 disabled:cursor-not-allowed">→</button>
+        </div>
+      )}
     </div>
   );
 }

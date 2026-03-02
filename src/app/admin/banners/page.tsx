@@ -166,8 +166,7 @@ export default function AdminBannersPage() {
             <label className="block text-xs text-stone-500 mb-1.5">รูปภาพ Banner *</label>
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="relative border-2 border-dashed border-stone-200 rounded-xl overflow-hidden cursor-pointer hover:border-orange-300 hover:bg-stone-50 transition-colors"
-              style={{ height: "160px" }}
+              className="relative border-2 border-dashed border-stone-200 rounded-xl overflow-hidden cursor-pointer hover:border-orange-300 hover:bg-stone-50 transition-colors aspect-5/2"
             >
               <input
                 ref={fileInputRef}

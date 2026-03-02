@@ -56,8 +56,16 @@ export default function AdminShelvesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", slug: "", description: "", color: "#0ea5e9", active: true });
 
-  // Product items per shelf
+  // Product items per shelf + expand state (default: all expanded)
   const [shelfItems, setShelfItems] = useState<Record<string, ShelfProduct[]>>({});
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+
+  const toggleCollapse = (id: string) =>
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
   // Drag state for shelf-level reordering
   const [dragId, setDragId] = useState<string | null>(null);
@@ -395,10 +403,16 @@ export default function AdminShelvesPage() {
                       >
                         ลบ
                       </button>
+                      <button
+                        onClick={() => toggleCollapse(shelf.id)}
+                        className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-stone-100 text-stone-400 transition-all"
+                      >
+                        <span className={`text-xs transition-transform duration-200 inline-block ${collapsedIds.has(shelf.id) ? "" : "rotate-180"}`}>▾</span>
+                      </button>
                     </div>
 
-                    {/* Product cards — always visible */}
-                    <div className="px-5 pb-4">
+                    {/* Product cards */}
+                    <div className={`px-5 pb-4 ${collapsedIds.has(shelf.id) ? "hidden" : ""}`}>
                       {loading || !shelfItems[shelf.id] ? (
                         <div className="flex gap-3">
                           {Array.from({ length: 4 }).map((_, i) => (

@@ -74,11 +74,13 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
   const [estShippingUSD, setEstShippingUSD] = useState(2);
   const [importing, setImporting] = useState(false);
 
-  const fetchFreight = useCallback(() => {
+  const fetchFreight = useCallback((firstVid?: string) => {
     setFreightLoading(true);
     setFreightError(null);
     setFreight(null);
-    fetch(`/api/admin/cj-products/freight?pid=${pid}`)
+    const params = new URLSearchParams({ pid });
+    if (firstVid) params.set("vid", firstVid);
+    fetch(`/api/admin/cj-products/freight?${params}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.success) setFreight(d.data);
@@ -89,15 +91,23 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
   }, [pid]);
 
   useEffect(() => {
-    // 1. Fetch product detail immediately
+    // 1. Fetch product detail immediately, then freight after 3s with first vid
+    let firstVid: string | undefined;
     fetch(`/api/admin/cj-products/detail?pid=${pid}`)
       .then((r) => r.json())
-      .then((d) => { if (d.success) setDetail(d.data); else setError(d.error); })
+      .then((d) => {
+        if (d.success) {
+          setDetail(d.data);
+          firstVid = d.data.variants?.[0]?.vid;
+        } else {
+          setError(d.error);
+        }
+      })
       .catch(() => setError("โหลดข้อมูลไม่สำเร็จ"))
       .finally(() => setLoading(false));
 
-    // 2. Fetch freight after 3s delay (avoids CJ rate limit from prior calls)
-    const freightTimer = setTimeout(fetchFreight, 3000);
+    // 2. Fetch freight after 3s delay — pass first vid for CJ products array
+    const freightTimer = setTimeout(() => fetchFreight(firstVid), 3000);
 
     fetch("/api/admin/categories").then((r) => r.json()).then((d) => { if (d.success) setCategories(d.data); });
     fetch("/api/admin/pet-types").then((r) => r.json()).then((d) => { if (d.success) setPetTypes(d.data); });

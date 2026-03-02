@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
   if (isNextResponse(auth)) return auth;
 
   const pid = request.nextUrl.searchParams.get("pid");
+  const vid = request.nextUrl.searchParams.get("vid"); // first variant vid
   if (!pid) return NextResponse.json({ success: false, error: "pid required" }, { status: 400 });
 
   // Retry up to 4 times with 1.5s between attempts
@@ -68,7 +69,8 @@ export async function GET(request: NextRequest) {
           quantity: 1,
           weight: 0.3,
           pid,
-          products: [{ pid, quantity: 1 }],
+          // CJ requires vid or variantSku inside products array
+          ...(vid ? { products: [{ vid, quantity: 1 }] } : {}),
         }),
       });
       const data = await res.json();

@@ -73,7 +73,7 @@ const STATUS_COLORS: Record<string, string> = {
 const STATUS_LABELS: Record<string, string> = {
   PENDING: "รอดำเนินการ",
   CONFIRMED: "ยืนยันแล้ว",
-  SHIPPING: "จัดส่งแล้ว",
+  SHIPPING: "กำลังจัดส่ง",
   DELIVERED: "ส่งแล้ว",
   CANCELLED: "ยกเลิก",
 };

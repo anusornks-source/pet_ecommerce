@@ -21,7 +21,7 @@ interface Stats {
 const statusLabel: Record<string, string> = {
   PENDING: "รอดำเนินการ",
   CONFIRMED: "ยืนยันแล้ว",
-  SHIPPING: "จัดส่งแล้ว",
+  SHIPPING: "กำลังจัดส่ง",
   DELIVERED: "ส่งแล้ว",
   CANCELLED: "ยกเลิก",
 };

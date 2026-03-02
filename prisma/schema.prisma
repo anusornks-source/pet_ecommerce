@@ -65,8 +65,6 @@ model Product {
   petTypeId   String?
   active          Boolean  @default(true)
   featured        Boolean  @default(false)
-  highlight       Boolean  @default(false)
-  highlightOrder  Int?
   cjProductId         String?
   costPrice           Float?
   source              String?

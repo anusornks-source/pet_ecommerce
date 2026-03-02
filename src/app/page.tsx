@@ -15,15 +15,6 @@ async function getFeaturedProducts() {
   return products as unknown as Product[];
 }
 
-async function getHighlightProducts() {
-  const products = await prisma.product.findMany({
-    where: { highlight: true, active: true },
-    include: { category: true, petType: true },
-    orderBy: { highlightOrder: "asc" },
-  });
-  return products as unknown as Product[];
-}
-
 async function getCategories() {
   return prisma.category.findMany({
     include: { _count: { select: { products: true } } },
@@ -60,9 +51,8 @@ async function getActiveShelves() {
 const DEFAULT_HERO_IMAGE = "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=1400";
 
 export default async function HomePage() {
-  const [featuredProducts, highlightProducts, categories, settings, petTypes, activeShelves] = await Promise.all([
+  const [featuredProducts, categories, settings, petTypes, activeShelves] = await Promise.all([
     getFeaturedProducts(),
-    getHighlightProducts(),
     getCategories(),
     getSettings(),
     getPetTypes(),
@@ -189,33 +179,6 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* Highlight Shelf */}
-      {highlightProducts.length > 0 && (
-        <section className="py-12 bg-gradient-to-br from-orange-500 via-amber-500 to-orange-400">
-          <div className="max-w-6xl mx-auto px-4">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <span className="inline-flex items-center gap-1.5 bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full mb-2">
-                  ✨ คัดสรรพิเศษ
-                </span>
-                <h2 className="text-2xl font-bold text-white">สินค้ายอดนิยม</h2>
-              </div>
-              <Link
-                href="/products?highlight=true"
-                className="text-white/80 hover:text-white text-sm font-medium transition-colors"
-              >
-                ดูทั้งหมด →
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {highlightProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Dynamic Product Shelves */}
       {activeShelves.map((shelf) => (

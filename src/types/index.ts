@@ -49,8 +49,6 @@ export interface Product {
   petTypeId?: string | null;
   petType?: PetType | null;
   featured: boolean;
-  highlight: boolean;
-  highlightOrder?: number | null;
   createdAt: string;
   variants?: ProductVariant[];
 }

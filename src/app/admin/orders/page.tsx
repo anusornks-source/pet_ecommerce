@@ -14,34 +14,19 @@ interface Order {
   payment: { method: string; status: string } | null;
 }
 
-const statusLabel: Record<string, string> = {
-  PENDING: "รอดำเนินการ",
-  CONFIRMED: "ยืนยันแล้ว",
-  SHIPPING: "กำลังจัดส่ง",
-  DELIVERED: "ส่งแล้ว",
-  CANCELLED: "ยกเลิก",
+const statusConfig: Record<string, { label: string; icon: string; color: string }> = {
+  PENDING:   { label: "รอดำเนินการ", icon: "⏳", color: "bg-yellow-100 text-yellow-700" },
+  CONFIRMED: { label: "ยืนยันแล้ว",  icon: "✅", color: "bg-blue-100 text-blue-700" },
+  SHIPPING:  { label: "กำลังจัดส่ง", icon: "🚚", color: "bg-purple-100 text-purple-700" },
+  DELIVERED: { label: "ส่งแล้ว",     icon: "📦", color: "bg-green-100 text-green-700" },
+  CANCELLED: { label: "ยกเลิก",      icon: "✕",  color: "bg-red-100 text-red-700" },
 };
 
-const statusColor: Record<string, string> = {
-  PENDING: "bg-yellow-100 text-yellow-700",
-  CONFIRMED: "bg-blue-100 text-blue-700",
-  SHIPPING: "bg-purple-100 text-purple-700",
-  DELIVERED: "bg-green-100 text-green-700",
-  CANCELLED: "bg-red-100 text-red-700",
-};
-
-const paymentStatusLabel: Record<string, string> = {
-  PENDING: "รอชำระ",
-  PAID: "ชำระแล้ว",
-  REFUNDED: "คืนเงินแล้ว",
-  FAILED: "ล้มเหลว",
-};
-
-const paymentStatusColor: Record<string, string> = {
-  PENDING: "bg-yellow-50 text-yellow-600",
-  PAID: "bg-green-50 text-green-600",
-  REFUNDED: "bg-purple-50 text-purple-600",
-  FAILED: "bg-red-50 text-red-600",
+const paymentStatusConfig: Record<string, { label: string; icon: string; color: string }> = {
+  PENDING:  { label: "รอชำระ",     icon: "⏳", color: "bg-yellow-50 text-yellow-600" },
+  PAID:     { label: "ชำระแล้ว",   icon: "✓",  color: "bg-green-50 text-green-600" },
+  REFUNDED: { label: "คืนเงินแล้ว", icon: "↩",  color: "bg-purple-50 text-purple-600" },
+  FAILED:   { label: "ล้มเหลว",    icon: "✕",  color: "bg-red-50 text-red-600" },
 };
 
 const orderStatusTabs = ["ทั้งหมด", "PENDING", "CONFIRMED", "SHIPPING", "DELIVERED", "CANCELLED"];
@@ -93,39 +78,45 @@ export default function AdminOrdersPage() {
         <p className="text-stone-500 text-sm mt-1">{total.toLocaleString()} รายการ</p>
       </div>
 
-      {/* Order Status Tabs */}
-      <div className="flex gap-1 mb-2 overflow-x-auto pb-1">
-        {orderStatusTabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => handleTabChange(tab)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-              activeTab === tab
-                ? "bg-orange-500 text-white"
-                : "bg-white border border-stone-200 text-stone-600 hover:bg-stone-50"
-            }`}
-          >
-            {tab === "ทั้งหมด" ? tab : statusLabel[tab]}
-          </button>
-        ))}
-      </div>
+      {/* Filters — single row */}
+      <div className="flex flex-wrap gap-x-4 gap-y-2 mb-4 items-center overflow-x-auto pb-1">
+        {/* Order status */}
+        <div className="flex gap-1 items-center shrink-0">
+          <span className="text-xs text-stone-400 mr-1 shrink-0">สถานะ:</span>
+          {orderStatusTabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => handleTabChange(tab)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                activeTab === tab
+                  ? "bg-orange-500 text-white"
+                  : "bg-white border border-stone-200 text-stone-600 hover:bg-stone-50"
+              }`}
+            >
+              {tab === "ทั้งหมด" ? tab : `${statusConfig[tab].icon} ${statusConfig[tab].label}`}
+            </button>
+          ))}
+        </div>
 
-      {/* Payment Status Tabs */}
-      <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
-        <span className="text-xs text-stone-400 self-center mr-1 shrink-0">ชำระเงิน:</span>
-        {paymentStatusTabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => handlePaymentTabChange(tab)}
-            className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-              paymentTab === tab
-                ? "bg-stone-700 text-white"
-                : "bg-white border border-stone-200 text-stone-500 hover:bg-stone-50"
-            }`}
-          >
-            {tab === "ทั้งหมด" ? tab : paymentStatusLabel[tab]}
-          </button>
-        ))}
+        <div className="w-px h-6 bg-stone-200 shrink-0 hidden sm:block" />
+
+        {/* Payment status */}
+        <div className="flex gap-1 items-center shrink-0">
+          <span className="text-xs text-stone-400 mr-1 shrink-0">ชำระเงิน:</span>
+          {paymentStatusTabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => handlePaymentTabChange(tab)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                paymentTab === tab
+                  ? "bg-stone-700 text-white"
+                  : "bg-white border border-stone-200 text-stone-600 hover:bg-stone-50"
+              }`}
+            >
+              {tab === "ทั้งหมด" ? tab : `${paymentStatusConfig[tab].icon} ${paymentStatusConfig[tab].label}`}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-stone-100 overflow-hidden">
@@ -160,15 +151,15 @@ export default function AdminOrdersPage() {
                     ฿{order.total.toLocaleString("th-TH")}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusColor[order.status]}`}>
-                      {statusLabel[order.status]}
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusConfig[order.status]?.color}`}>
+                      {statusConfig[order.status]?.icon} {statusConfig[order.status]?.label}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center hidden md:table-cell">
                     {order.payment ? (
                       <div className="flex flex-col items-center gap-0.5">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${paymentStatusColor[order.payment.status]}`}>
-                          {paymentStatusLabel[order.payment.status] ?? order.payment.status}
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${paymentStatusConfig[order.payment.status]?.color}`}>
+                          {paymentStatusConfig[order.payment.status]?.icon} {paymentStatusConfig[order.payment.status]?.label ?? order.payment.status}
                         </span>
                         <span className="text-[10px] text-stone-400">
                           {PAYMENT_METHOD_LABEL[order.payment.method] ?? order.payment.method}

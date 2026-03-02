@@ -5,6 +5,7 @@ import { use } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import { PAYMENT_METHOD_LABEL } from "@/lib/utils";
 
 interface Order {
   id: string;
@@ -113,6 +114,7 @@ export default function AdminOrderDetailPage({
   const [checking, setChecking] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [refunding, setRefunding] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
   const [trackingInput, setTrackingInput] = useState("");
   const [carrierInput, setCarrierInput] = useState("");
   const [savingTracking, setSavingTracking] = useState(false);
@@ -157,6 +159,26 @@ export default function AdminOrderDetailPage({
       toast.error("เกิดข้อผิดพลาด");
     } finally {
       setRefunding(false);
+    }
+  };
+
+  const handleMarkCodPaid = async () => {
+    if (!order || order.payment?.method !== "COD") return;
+    if (!confirm(`ยืนยันรับเงิน COD ฿${order.payment.amount.toLocaleString("th-TH")} แล้ว?`)) return;
+    setMarkingPaid(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${id}/mark-paid`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("บันทึกรับเงิน COD แล้ว");
+        setOrder((o) => o ? { ...o, payment: o.payment ? { ...o.payment, status: "PAID" } : null } : o);
+      } else {
+        toast.error(data.error || "เกิดข้อผิดพลาด");
+      }
+    } catch {
+      toast.error("เกิดข้อผิดพลาด");
+    } finally {
+      setMarkingPaid(false);
     }
   };
 
@@ -397,7 +419,9 @@ export default function AdminOrderDetailPage({
               <div className="bg-yellow-50 border border-yellow-100 rounded-xl px-4 py-3 mb-3 text-xs">
                 <p className="font-semibold text-yellow-700 mb-1">📋 รอดำเนินการ</p>
                 {order.payment ? (
-                  order.payment.status === "PAID" ? (
+                  order.payment.method === "COD" ? (
+                    <p className="text-yellow-600">💵 COD — ลูกค้าจ่ายเงินปลายทาง ตรวจสอบออเดอร์แล้วกด <span className="font-semibold">ยืนยันออเดอร์</span></p>
+                  ) : order.payment.status === "PAID" ? (
                     <p className="text-yellow-600">✓ ลูกค้าชำระเงินแล้ว — กด <span className="font-semibold">ยืนยันออเดอร์</span> เพื่อเริ่มจัดส่ง</p>
                   ) : (
                     <p className="text-yellow-600">⏳ รอการชำระเงิน ({order.payment.method}) — ตรวจสอบก่อนยืนยัน</p>
@@ -500,6 +524,9 @@ export default function AdminOrderDetailPage({
               <div className="bg-green-50 border border-green-100 rounded-xl px-4 py-3 mb-3 text-xs">
                 <p className="font-semibold text-green-700">✓ ออเดอร์เสร็จสมบูรณ์</p>
                 <p className="text-green-600 mt-0.5">ลูกค้าได้รับสินค้าแล้ว</p>
+                {order.payment?.method === "COD" && order.payment.status === "PENDING" && (
+                  <p className="text-amber-600 mt-1.5 font-medium">⚠️ ยังไม่ได้บันทึกรับเงิน — กด <span className="font-semibold">รับเงิน COD แล้ว</span> ด้านล่าง</p>
+                )}
               </div>
             )}
 
@@ -684,7 +711,9 @@ export default function AdminOrderDetailPage({
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="text-stone-400">วิธีชำระ:</span>
-                  <span className="text-stone-700">{order.payment.method}</span>
+                  <span className="text-stone-700">
+                    {PAYMENT_METHOD_LABEL[order.payment.method] ?? order.payment.method}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-stone-400">สถานะ:</span>
@@ -714,6 +743,16 @@ export default function AdminOrderDetailPage({
                   className="mt-4 w-full py-2 rounded-xl border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50"
                 >
                   {refunding ? "กำลังคืนเงิน..." : "↩ คืนเงิน (Stripe Refund)"}
+                </button>
+              )}
+              {/* Mark as Paid — COD only, still pending */}
+              {order.payment.method === "COD" && order.payment.status === "PENDING" && (
+                <button
+                  onClick={handleMarkCodPaid}
+                  disabled={markingPaid}
+                  className="mt-4 w-full py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  {markingPaid ? "กำลังบันทึก..." : "✓ รับเงิน COD แล้ว"}
                 </button>
               )}
             </div>

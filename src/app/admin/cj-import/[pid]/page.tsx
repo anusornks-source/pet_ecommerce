@@ -11,7 +11,7 @@ interface ShippingOption {
   priceUSD: number;
   deliveryTime: string;
   deliveryDays: { min: number; max: number } | null;
-  warehouseType: "CN" | "US" | "LOCAL";
+  warehouseType: "CN" | "US";
   hasTracking: boolean;
 }
 
@@ -30,13 +30,13 @@ interface ProductDetail {
   categoryName: string;
   images: string[];
   variants: VariantRow[];
-  insight: {
-    totalStock: number;
-    shippingOptions: ShippingOption[];
-    badges: { hasStock: boolean; hasFastShipping: boolean; hasTracking: boolean };
-    isRecommended: boolean;
-    bestShipping: ShippingOption | null;
-  };
+  totalStock: number;
+}
+
+interface FreightData {
+  shippingOptions: ShippingOption[];
+  bestShipping: ShippingOption | null;
+  badges: { hasFastShipping: boolean; hasTracking: boolean };
 }
 
 interface Category { id: string; name: string; icon: string | null }
@@ -58,6 +58,10 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
   const [selectedImage, setSelectedImage] = useState(0);
   const [showDesc, setShowDesc] = useState(false);
 
+  // Freight loaded separately after delay
+  const [freight, setFreight] = useState<FreightData | null>(null);
+  const [freightLoading, setFreightLoading] = useState(true);
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [petTypes, setPetTypes] = useState<PetType[]>([]);
   const [categoryId, setCategoryId] = useState("");
@@ -68,11 +72,21 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
   const [importing, setImporting] = useState(false);
 
   useEffect(() => {
+    // 1. Fetch product detail immediately
     fetch(`/api/admin/cj-products/detail?pid=${pid}`)
       .then((r) => r.json())
       .then((d) => { if (d.success) setDetail(d.data); else setError(d.error); })
       .catch(() => setError("โหลดข้อมูลไม่สำเร็จ"))
       .finally(() => setLoading(false));
+
+    // 2. Fetch freight after 3s delay (avoids CJ rate limit from prior calls)
+    const freightTimer = setTimeout(() => {
+      fetch(`/api/admin/cj-products/freight?pid=${pid}`)
+        .then((r) => r.json())
+        .then((d) => { if (d.success) setFreight(d.data); })
+        .catch(() => { /* swallow — freight is optional */ })
+        .finally(() => setFreightLoading(false));
+    }, 3000);
 
     fetch("/api/admin/categories").then((r) => r.json()).then((d) => { if (d.success) setCategories(d.data); });
     fetch("/api/admin/pet-types").then((r) => r.json()).then((d) => { if (d.success) setPetTypes(d.data); });
@@ -82,6 +96,8 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
         setUsdToThb(d.data.usdToThb ?? 36);
       }
     });
+
+    return () => clearTimeout(freightTimer);
   }, [pid]);
 
   useEffect(() => {
@@ -92,12 +108,9 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
     if (!categoryId) { toast.error("กรุณาเลือกหมวดหมู่"); return; }
     setImporting(true);
     try {
-      const best = detail?.insight?.bestShipping ?? null;
+      const best = freight?.bestShipping ?? null;
       const deliveryDays = best?.deliveryDays?.min;
-      const warehouseCountry = best
-        ? (best.warehouseType === "LOCAL" ? "CN" : best.warehouseType)
-        : undefined;
-
+      const warehouseCountry = best?.warehouseType ?? undefined;
       const fallbackCostUSD = detail?.variants?.[0]?.priceUSD ?? 0;
 
       const res = await fetch("/api/admin/cj-products", {
@@ -145,14 +158,14 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
     );
   }
 
-  const { insight } = detail;
-  const best = insight.bestShipping;
+  const best = freight?.bestShipping ?? null;
   const basePrice = detail.variants[0]?.priceUSD ?? 0;
   const sellPrice = Math.ceil(basePrice * usdToThb * priceFactor);
   const costTHB = Math.ceil(basePrice * usdToThb);
   const shipTHB = Math.ceil(estShippingUSD * usdToThb);
   const margin = sellPrice - costTHB - shipTHB;
   const marginPct = sellPrice > 0 ? Math.round((margin / sellPrice) * 100) : 0;
+  const isRecommended = (freight?.badges.hasFastShipping && freight?.badges.hasTracking && detail.totalStock > 100) ?? false;
 
   return (
     <div>
@@ -163,7 +176,7 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
         </Link>
         <span className="text-stone-200">/</span>
         <h1 className="text-lg font-bold text-stone-800 truncate">{detail.productNameEn}</h1>
-        {insight.isRecommended && (
+        {isRecommended && (
           <span className="shrink-0 text-[11px] font-bold px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full">
             ✅ น่าเอามาขาย
           </span>
@@ -227,16 +240,20 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
         {/* Right: Info + Import */}
         <div className="space-y-4">
           {/* Product info */}
-          <div className="bg-white rounded-2xl border border-stone-100 p-4 space-y-2">
+          <div className="bg-white rounded-2xl border border-stone-100 p-4 space-y-3">
             <div>
               <p className="text-xs text-stone-400 font-mono select-all">{detail.pid}</p>
               <p className="text-xs text-stone-500">{detail.categoryName}</p>
             </div>
 
-            {/* Insight: Best shipping */}
-            {best ? (
+            {/* Shipping insight — loads after 3s */}
+            {freightLoading ? (
+              <div className="px-3 py-2 rounded-xl text-sm bg-stone-50 text-stone-400 animate-pulse">
+                กำลังโหลดข้อมูลการจัดส่ง...
+              </div>
+            ) : best ? (
               <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border ${
-                insight.isRecommended
+                isRecommended
                   ? "bg-green-50 border-green-200 text-green-800"
                   : "bg-stone-50 border-stone-200 text-stone-700"
               }`}>
@@ -246,29 +263,33 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
                 {best.hasTracking && <span className="text-green-500 text-xs shrink-0">📍 tracking</span>}
               </div>
             ) : (
-              <div className="px-3 py-2 rounded-xl text-sm bg-stone-50 text-stone-400">ไม่มีข้อมูลการจัดส่ง</div>
+              <div className="px-3 py-2 rounded-xl text-sm bg-stone-50 text-stone-400">ไม่มีข้อมูลการจัดส่ง CN→TH</div>
             )}
 
             {/* Badges */}
             <div className="flex flex-wrap gap-1.5">
-              <span className={`text-xs px-2 py-0.5 rounded-full border ${insight.badges.hasStock ? "bg-green-50 text-green-700 border-green-200" : "bg-stone-50 text-stone-400 border-stone-200"}`}>
-                📦 สต็อก {insight.totalStock.toLocaleString()} ชิ้น
+              <span className={`text-xs px-2 py-0.5 rounded-full border ${detail.totalStock > 100 ? "bg-green-50 text-green-700 border-green-200" : "bg-stone-50 text-stone-400 border-stone-200"}`}>
+                📦 สต็อก {detail.totalStock.toLocaleString()} ชิ้น
               </span>
-              <span className={`text-xs px-2 py-0.5 rounded-full border ${insight.badges.hasFastShipping ? "bg-green-50 text-green-700 border-green-200" : "bg-stone-50 text-stone-400 border-stone-200"}`}>
-                🚢 ส่งเร็ว &lt;10 วัน
-              </span>
-              <span className={`text-xs px-2 py-0.5 rounded-full border ${insight.badges.hasTracking ? "bg-green-50 text-green-700 border-green-200" : "bg-stone-50 text-stone-400 border-stone-200"}`}>
-                📍 มี tracking
-              </span>
+              {!freightLoading && (
+                <>
+                  <span className={`text-xs px-2 py-0.5 rounded-full border ${freight?.badges.hasFastShipping ? "bg-green-50 text-green-700 border-green-200" : "bg-stone-50 text-stone-400 border-stone-200"}`}>
+                    🚢 ส่งเร็ว &lt;10 วัน
+                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full border ${freight?.badges.hasTracking ? "bg-green-50 text-green-700 border-green-200" : "bg-stone-50 text-stone-400 border-stone-200"}`}>
+                    📍 มี tracking
+                  </span>
+                </>
+              )}
             </div>
 
             {/* All shipping options */}
-            {insight.shippingOptions.length > 0 && (
+            {!freightLoading && freight && freight.shippingOptions.length > 0 && (
               <div className="border border-stone-100 rounded-xl overflow-hidden">
                 <div className="grid grid-cols-[20px_1fr_60px_80px] gap-2 px-3 py-1.5 bg-stone-50 text-[10px] text-stone-400 font-medium">
                   <span></span><span>ขนส่ง</span><span className="text-right">ค่าส่ง</span><span className="text-right">ระยะเวลา</span>
                 </div>
-                {insight.shippingOptions.map((opt, i) => (
+                {freight.shippingOptions.map((opt, i) => (
                   <div key={i} className="grid grid-cols-[20px_1fr_60px_80px] gap-2 px-3 py-1.5 border-t border-stone-50 text-xs items-center">
                     <span>{opt.warehouseType === "US" ? "🇺🇸" : "🇨🇳"}</span>
                     <div className="min-w-0">

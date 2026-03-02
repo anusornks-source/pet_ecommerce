@@ -30,11 +30,28 @@ export async function GET(request: NextRequest) {
   const pid = request.nextUrl.searchParams.get("pid");
   if (!pid) return NextResponse.json({ success: false, error: "pid required" }, { status: 400 });
 
+  // Retry helper — CJ enforces QPS 1/sec; retry on rate-limit response
+  async function withRetry<T>(fn: () => Promise<T>, retries = 3, delayMs = 1500): Promise<T> {
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await fn();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (i < retries - 1 && msg.toLowerCase().includes("too many")) {
+          await new Promise((r) => setTimeout(r, delayMs));
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw new Error("Max retries exceeded");
+  }
+
   try {
-    // Sequential calls — CJ rate limit is 1 req/sec; parallel hits the limit
-    const detail = await getCJProductDetail(pid);
+    // Sequential with retry — CJ rate limit is 1 req/sec
+    const detail = await withRetry(() => getCJProductDetail(pid));
     await new Promise((r) => setTimeout(r, 1100));
-    const freight = await getCJFreight(pid, 1);
+    const freight = await withRetry(() => getCJFreight(pid, 1));
 
     // Parse images
     let images: string[] = [];

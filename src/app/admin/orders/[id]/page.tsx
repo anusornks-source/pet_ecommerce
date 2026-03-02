@@ -79,6 +79,15 @@ const statusLabel: Record<string, string> = {
   CANCELLED: "ยกเลิก",
 };
 
+const STEPS = ["PENDING", "CONFIRMED", "SHIPPING", "DELIVERED"];
+const NEXT_STATUS: Record<string, string | null> = {
+  PENDING: "CONFIRMED",
+  CONFIRMED: "SHIPPING",
+  SHIPPING: "DELIVERED",
+  DELIVERED: null,
+  CANCELLED: null,
+};
+
 const statusColor: Record<string, string> = {
   PENDING: "bg-yellow-100 text-yellow-700",
   CONFIRMED: "bg-blue-100 text-blue-700",
@@ -168,17 +177,18 @@ export default function AdminOrderDetailPage({
       .then((d) => { if (d.success) setCjLogs(d.data); });
   }, [id]);
 
-  const handleUpdateStatus = async () => {
-    if (!order || newStatus === order.status) return;
+  const handleUpdateStatus = async (targetStatus?: string) => {
+    const status = targetStatus ?? newStatus;
+    if (!order || status === order.status) return;
 
     // Two-step: if confirming an unconfirmed order, do dry-run stock check + freight first
-    if (newStatus === "CONFIRMED" && order.status !== "CONFIRMED") {
+    if (status === "CONFIRMED" && order.status !== "CONFIRMED") {
       setChecking(true);
       try {
         const res = await fetch(`/api/admin/orders/${id}?dryRun=true`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus }),
+          body: JSON.stringify({ status }),
         });
         const data = await res.json();
         if (data.success && data.dryRun) {
@@ -186,7 +196,7 @@ export default function AdminOrderDetailPage({
             open: true,
             stockCheck: data.stockCheck,
             costEstimate: data.costEstimate ?? null,
-            pendingStatus: newStatus,
+            pendingStatus: status,
           });
           return;
         }
@@ -197,7 +207,7 @@ export default function AdminOrderDetailPage({
       }
     }
 
-    await commitStatus(newStatus);
+    await commitStatus(status);
   };
 
   const commitStatus = async (status: string, force = false) => {
@@ -305,28 +315,164 @@ export default function AdminOrderDetailPage({
         <div className="space-y-4">
           {/* Status Update */}
           <div className="bg-white rounded-2xl border border-stone-100 p-5">
-            <h2 className="font-semibold text-stone-800 mb-3">สถานะคำสั่งซื้อ</h2>
-            <span
-              className={`inline-block text-xs px-3 py-1 rounded-full font-medium mb-3 ${statusColor[order.status]}`}
-            >
-              {statusLabel[order.status]}
-            </span>
-            <select
-              value={newStatus}
-              onChange={(e) => setNewStatus(e.target.value)}
-              className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white mb-3"
-            >
-              {Object.entries(statusLabel).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
-            <button
-              onClick={handleUpdateStatus}
-              disabled={saving || checking || newStatus === order.status}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              {checking ? "กำลังตรวจสต็อกและค่าส่ง..." : saving ? "กำลังบันทึก..." : "อัปเดตสถานะ"}
-            </button>
+            <h2 className="font-semibold text-stone-800 mb-4">สถานะคำสั่งซื้อ</h2>
+
+            {/* Stepper */}
+            {order.status === "CANCELLED" ? (
+              <span className="inline-block text-xs px-3 py-1.5 rounded-full font-medium bg-red-100 text-red-700 mb-4">
+                ✕ ยกเลิกแล้ว
+              </span>
+            ) : (
+              <div className="flex items-start mb-5">
+                {STEPS.map((step, i) => {
+                  const currentIdx = STEPS.indexOf(order.status);
+                  const isPast = i < currentIdx;
+                  const isCurrent = i === currentIdx;
+                  const isLast = i === STEPS.length - 1;
+                  return (
+                    <div key={step} className="flex items-start flex-1">
+                      <div className="flex flex-col items-center flex-1">
+                        <div
+                          className={`w-3 h-3 rounded-full border-2 transition-colors ${
+                            isPast || isCurrent
+                              ? "bg-orange-400 border-orange-400"
+                              : "bg-white border-stone-300"
+                          }`}
+                        />
+                        <p className={`text-[10px] mt-1.5 text-center leading-tight ${
+                          isCurrent ? "font-bold text-orange-600" :
+                          isPast ? "text-stone-500" : "text-stone-300"
+                        }`}>
+                          {statusLabel[step]}
+                        </p>
+                      </div>
+                      {!isLast && (
+                        <div className={`h-0.5 flex-1 mt-1.5 mx-0.5 transition-colors ${
+                          i < currentIdx ? "bg-orange-300" : "bg-stone-200"
+                        }`} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Step Context — what to do at this step */}
+            {order.status === "PENDING" && (
+              <div className="bg-yellow-50 border border-yellow-100 rounded-xl px-4 py-3 mb-3 text-xs">
+                <p className="font-semibold text-yellow-700 mb-1">📋 รอดำเนินการ</p>
+                {order.payment ? (
+                  order.payment.status === "PAID" ? (
+                    <p className="text-yellow-600">✓ ลูกค้าชำระเงินแล้ว — กด <span className="font-semibold">ยืนยันออเดอร์</span> เพื่อเริ่มจัดส่ง</p>
+                  ) : (
+                    <p className="text-yellow-600">⏳ รอการชำระเงิน ({order.payment.method}) — ตรวจสอบก่อนยืนยัน</p>
+                  )
+                ) : (
+                  <p className="text-yellow-600">ตรวจสอบการชำระเงิน แล้วกด <span className="font-semibold">ยืนยันออเดอร์</span></p>
+                )}
+              </div>
+            )}
+
+            {order.status === "CONFIRMED" && (
+              <div className={`rounded-xl px-4 py-3 mb-3 text-xs border ${
+                order.cjOrderId
+                  ? "bg-blue-50 border-blue-100"
+                  : "bg-amber-50 border-amber-100"
+              }`}>
+                {order.cjOrderId ? (
+                  <>
+                    <p className="font-semibold text-blue-700 mb-1">🚚 CJ Order สร้างแล้ว</p>
+                    <p className="font-mono text-blue-800 mb-1">{order.cjOrderId}</p>
+                    {order.cjStatus && (
+                      <p className="text-blue-500 mb-1">สถานะ CJ: <span className="font-medium text-blue-700">{order.cjStatus}</span></p>
+                    )}
+                    <p className="text-blue-600 mb-2">ชำระเงินใน CJ Dashboard → CJ จะส่ง tracking ให้เมื่อจัดส่ง</p>
+                    <a
+                      href="https://app.cjdropshipping.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-blue-600 underline hover:text-blue-800 font-medium"
+                    >
+                      ไปที่ CJ Dashboard →
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-semibold text-amber-700 mb-1">⚠️ ไม่มี CJ Order</p>
+                    <p className="text-amber-600">สินค้านี้ไม่ผ่าน CJ หรือสร้าง order ไม่สำเร็จ — จัดการส่งเอง แล้วกดเปลี่ยนเป็น "จัดส่งแล้ว"</p>
+                  </>
+                )}
+              </div>
+            )}
+
+            {order.status === "SHIPPING" && (
+              <div className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-3 mb-3 text-xs">
+                <p className="font-semibold text-purple-700 mb-1">📦 กำลังจัดส่ง</p>
+                {order.trackingNumber ? (
+                  <>
+                    <p className="font-mono text-purple-900 text-sm font-semibold mb-0.5">{order.trackingNumber}</p>
+                    {order.trackingCarrier && (
+                      <p className="text-purple-500 mb-1">ขนส่ง: {order.trackingCarrier}</p>
+                    )}
+                    <a
+                      href={`https://t.17track.net/th#nums=${order.trackingNumber}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-purple-600 underline hover:text-purple-800 font-medium"
+                    >
+                      ติดตามพัสดุ (17track) →
+                    </a>
+                    <p className="text-purple-500 mt-2">รอลูกค้าได้รับสินค้า แล้วกด <span className="font-semibold">ส่งแล้ว</span></p>
+                  </>
+                ) : (
+                  <p className="text-purple-600">รอ tracking จาก CJ — กด Sync หากยังไม่อัปเดต</p>
+                )}
+              </div>
+            )}
+
+            {order.status === "DELIVERED" && (
+              <div className="bg-green-50 border border-green-100 rounded-xl px-4 py-3 mb-3 text-xs">
+                <p className="font-semibold text-green-700">✓ ออเดอร์เสร็จสมบูรณ์</p>
+                <p className="text-green-600 mt-0.5">ลูกค้าได้รับสินค้าแล้ว</p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            {(() => {
+              const nextStatus = NEXT_STATUS[order.status];
+              const canCancel = ["PENDING", "CONFIRMED"].includes(order.status);
+              return (
+                <div className="space-y-2">
+                  {nextStatus && (
+                    <button
+                      onClick={() => handleUpdateStatus(nextStatus)}
+                      disabled={saving || checking}
+                      className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      {checking
+                        ? "กำลังตรวจสต็อก..."
+                        : saving
+                        ? "กำลังบันทึก..."
+                        : `→ เปลี่ยนเป็น ${statusLabel[nextStatus]}`}
+                    </button>
+                  )}
+                  {canCancel && (
+                    <button
+                      onClick={() => {
+                        if (confirm("ยืนยันยกเลิกออเดอร์นี้?")) commitStatus("CANCELLED");
+                      }}
+                      disabled={saving}
+                      className="w-full border border-red-200 text-red-500 hover:bg-red-50 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      ✕ ยกเลิกออเดอร์
+                    </button>
+                  )}
+                  {!nextStatus && order.status !== "CANCELLED" && (
+                    <p className="text-center text-xs text-stone-400 py-1">ออเดอร์เสร็จสมบูรณ์แล้ว</p>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Customer Info */}

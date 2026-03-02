@@ -26,7 +26,7 @@ interface ShopSettings {
 export default function CheckoutPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { cart, cartCount } = useCart();
+  const { cart, cartCount, clearCart } = useCart();
 
   const [form, setForm] = useState({
     address: user?.address || "",
@@ -154,6 +154,7 @@ export default function CheckoutPage() {
     } else {
       const orderId = await createOrder();
       if (!orderId) return;
+      await clearCart();
       toast.success("สั่งซื้อสำเร็จ! 🎉");
       router.push(`/checkout/success?orderId=${orderId}`);
     }
@@ -379,7 +380,8 @@ export default function CheckoutPage() {
               <StripeCardForm
                 orderId={createdOrderId}
                 total={total}
-                onSuccess={() => {
+                onSuccess={async () => {
+                  await clearCart();
                   toast.success("ชำระเงินสำเร็จ! 🎉");
                   router.push(`/checkout/success?orderId=${createdOrderId}`);
                 }}

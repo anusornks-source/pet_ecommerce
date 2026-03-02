@@ -48,7 +48,10 @@ export default function CheckoutPage() {
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
 
+  useEffect(() => { window.scrollTo(0, 0); }, [step]);
+
   useEffect(() => {
+    window.scrollTo(0, 0);
     fetch("/api/admin/settings")
       .then((r) => r.json())
       .then((d) => { if (d.success) setSettings(d.data); });

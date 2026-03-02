@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -392,23 +393,35 @@ export default function CheckoutPage() {
           <div className="card p-5 sticky top-20">
             <h3 className="font-bold text-stone-800 mb-4">รายการสินค้า ({cartCount})</h3>
             <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
-              {items.map((item) => (
-                <div key={item.id} className="flex items-center gap-3 text-sm">
-                  <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-lg shrink-0">
-                    {item.product.category.icon}
+              {items.map((item) => {
+                const img = item.variant?.variantImage ?? item.product.images?.[0] ?? null;
+                const variantAttrs = [
+                  item.variant?.size ? `ขนาด: ${item.variant.size}` : null,
+                  item.variant?.color ? `สี: ${item.variant.color}` : null,
+                  ...(item.variant?.attributes?.map((a) => `${a.name}: ${a.value}`) ?? []),
+                ].filter(Boolean);
+                return (
+                  <div key={item.id} className="flex items-center gap-3 text-sm">
+                    <div className="relative w-10 h-10 bg-orange-50 rounded-xl overflow-hidden shrink-0 flex items-center justify-center text-lg">
+                      {img ? (
+                        <Image src={img} alt={item.product.name} fill className="object-cover" sizes="40px" />
+                      ) : (
+                        item.product.category.icon
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-stone-700 truncate">{item.product.name}</p>
+                      {variantAttrs.length > 0 && (
+                        <p className="text-xs text-stone-400 truncate">{variantAttrs.join(" · ")}</p>
+                      )}
+                      <p className="text-stone-400">x{item.quantity}</p>
+                    </div>
+                    <span className="font-semibold text-orange-500 shrink-0">
+                      {formatPrice((item.variant?.price ?? item.product.price) * item.quantity)}
+                    </span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-stone-700 truncate">{item.product.name}</p>
-                    {item.variant && (
-                      <p className="text-xs text-stone-400">{[item.variant.size, item.variant.color].filter(Boolean).join(" / ")}</p>
-                    )}
-                    <p className="text-stone-400">x{item.quantity}</p>
-                  </div>
-                  <span className="font-semibold text-orange-500 shrink-0">
-                    {formatPrice((item.variant?.price ?? item.product.price) * item.quantity)}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="border-t border-stone-100 pt-3 mb-1">

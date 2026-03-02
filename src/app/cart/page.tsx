@@ -25,7 +25,8 @@ export default function CartPage() {
   }
 
   const items = cart?.items || [];
-  const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const itemPrice = (item: typeof items[0]) => item.variant?.price ?? item.product.price;
+  const subtotal = items.reduce((sum, item) => sum + itemPrice(item) * item.quantity, 0);
   const shipping = subtotal > 500 ? 0 : 50;
   const total = subtotal + shipping;
 
@@ -60,7 +61,8 @@ export default function CartPage() {
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
             {items.map((item) => {
-              const img = item.product.images?.[0] || `https://placehold.co/200x200/fff7ed/f97316?text=${encodeURIComponent(item.product.name)}`;
+              const img = item.variant?.variantImage ?? item.product.images?.[0] ?? `https://placehold.co/200x200/fff7ed/f97316?text=${encodeURIComponent(item.product.name)}`;
+              const unitPrice = itemPrice(item);
               return (
                 <div key={item.id} className="card p-4 flex gap-4">
                   <div className="relative w-24 h-24 rounded-xl overflow-hidden shrink-0 bg-orange-50">
@@ -76,6 +78,31 @@ export default function CartPage() {
                     <p className="text-sm text-stone-400 mt-0.5">
                       {item.product.category.icon} {item.product.category.name}
                     </p>
+                    {item.variant && (
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {item.variant.size && (
+                          <span className="text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full font-medium">
+                            ขนาด: {item.variant.size}
+                          </span>
+                        )}
+                        {item.variant.color && (
+                          <span className="text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full font-medium">
+                            สี: {item.variant.color}
+                          </span>
+                        )}
+                        {item.variant.attributes?.map((attr, i) => (
+                          <span key={i} className="text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full font-medium">
+                            {attr.name}: {attr.value}
+                          </span>
+                        ))}
+                        {item.variant.sku && (
+                          <span className="text-xs text-stone-400 px-1">SKU: {item.variant.sku}</span>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-xs text-stone-400 mt-1">
+                      {formatPrice(unitPrice)} / ชิ้น
+                    </p>
                     <div className="flex items-center justify-between mt-3">
                       {/* Quantity control */}
                       <div className="flex items-center gap-2">
@@ -89,7 +116,7 @@ export default function CartPage() {
                         <span className="w-8 text-center font-semibold text-stone-800">{item.quantity}</span>
                         <button
                           onClick={() => handleQuantity(item.id, item.quantity + 1)}
-                          disabled={loading || item.quantity >= item.product.stock}
+                          disabled={loading || item.quantity >= (item.variant?.stock ?? item.product.stock)}
                           className="w-8 h-8 rounded-lg border border-stone-200 flex items-center justify-center text-stone-600 hover:bg-orange-50 disabled:opacity-40 transition-colors"
                         >
                           +
@@ -97,7 +124,7 @@ export default function CartPage() {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="font-bold text-orange-500">
-                          {formatPrice(item.product.price * item.quantity)}
+                          {formatPrice(unitPrice * item.quantity)}
                         </span>
                         <button
                           onClick={() => handleRemove(item.id, item.product.name)}

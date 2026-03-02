@@ -10,6 +10,7 @@ const navItems = [
   { href: "/admin/cj-import", label: "นำเข้าจาก CJ", icon: "🚚" },
   { href: "/admin/cj-logs", label: "CJ Logs", icon: "📋" },
   { href: "/admin/highlight", label: "Highlight Shelf", icon: "✨" },
+  { href: "/admin/shelves", label: "Product Shelves", icon: "🗂️" },
   { href: "/admin/categories", label: "หมวดหมู่", icon: "🏷️" },
   { href: "/admin/pet-types", label: "ประเภทสัตว์", icon: "🐾" },
   { href: "/admin/orders", label: "คำสั่งซื้อ", icon: "🛒" },

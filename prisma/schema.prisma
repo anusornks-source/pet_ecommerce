@@ -82,6 +82,7 @@ model Product {
   reviews    Review[]
   wishlists  Wishlist[]
   variants   ProductVariant[]
+  shelfItems ShelfItem[]
 
   @@map("products")
 }
@@ -358,5 +359,33 @@ model ProcessedStripeEvent {
   createdAt DateTime @default(now())
 
   @@map("processed_stripe_events")
+}
+
+model Shelf {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  description String?
+  color       String      @default("#0ea5e9")
+  active      Boolean     @default(true)
+  order       Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  items       ShelfItem[]
+
+  @@map("shelves")
+}
+
+model ShelfItem {
+  id        String  @id @default(cuid())
+  shelfId   String
+  productId String
+  order     Int     @default(0)
+
+  shelf   Shelf   @relation(fields: [shelfId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([shelfId, productId])
+  @@map("shelf_items")
 }
 

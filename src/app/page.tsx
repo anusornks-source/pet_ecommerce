@@ -42,15 +42,31 @@ async function getSettings() {
   });
 }
 
+async function getActiveShelves() {
+  const shelves = await prisma.shelf.findMany({
+    where: { active: true },
+    orderBy: { order: "asc" },
+    include: {
+      items: {
+        orderBy: { order: "asc" },
+        where: { product: { active: true } },
+        include: { product: { include: { category: true, petType: true } } },
+      },
+    },
+  });
+  return shelves.filter((s) => s.items.length > 0);
+}
+
 const DEFAULT_HERO_IMAGE = "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=1400";
 
 export default async function HomePage() {
-  const [featuredProducts, highlightProducts, categories, settings, petTypes] = await Promise.all([
+  const [featuredProducts, highlightProducts, categories, settings, petTypes, activeShelves] = await Promise.all([
     getFeaturedProducts(),
     getHighlightProducts(),
     getCategories(),
     getSettings(),
     getPetTypes(),
+    getActiveShelves(),
   ]);
 
   const heroImageUrl: string = settings?.heroImageUrl || DEFAULT_HERO_IMAGE;
@@ -200,6 +216,39 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      {/* Dynamic Product Shelves */}
+      {activeShelves.map((shelf) => (
+        <section
+          key={shelf.id}
+          className="py-12"
+          style={{ background: `linear-gradient(135deg, ${shelf.color}ee, ${shelf.color}88)` }}
+        >
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                {shelf.description && (
+                  <span className="inline-flex items-center bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full mb-2">
+                    {shelf.description}
+                  </span>
+                )}
+                <h2 className="text-2xl font-bold text-white">{shelf.name}</h2>
+              </div>
+              <Link
+                href={`/products?shelf=${shelf.slug}`}
+                className="text-white/80 hover:text-white text-sm font-medium transition-colors"
+              >
+                ดูทั้งหมด →
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {shelf.items.map(({ product }) => (
+                <ProductCard key={product.id} product={product as unknown as Product} />
+              ))}
+            </div>
+          </div>
+        </section>
+      ))}
 
       {/* Featured Products */}
       <section className="max-w-6xl mx-auto px-4 py-12">

@@ -208,11 +208,11 @@ export default function AddressesPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-1.5">จังหวัด *</label>
-              <input value={form.province} onChange={(e) => setForm((f) => ({ ...f, province: e.target.value }))} placeholder="กรุงเทพมหานคร" className={inputCls} />
+              <input readOnly value={form.province} placeholder="จากการเลือกด้านบน" className={`${inputCls} bg-stone-50 cursor-default select-none`} tabIndex={-1} />
             </div>
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-1.5">รหัสไปรษณีย์ *</label>
-              <input value={form.zipCode} onChange={(e) => setForm((f) => ({ ...f, zipCode: e.target.value.replace(/\D/g, "") }))} placeholder="10110" maxLength={5} className={inputCls} />
+              <input readOnly value={form.zipCode} placeholder="จากการเลือกด้านบน" className={`${inputCls} bg-stone-50 cursor-default select-none`} tabIndex={-1} />
             </div>
           </div>
 

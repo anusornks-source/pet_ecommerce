@@ -283,11 +283,11 @@ export default function CheckoutPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-stone-700 mb-1.5">จังหวัด *</label>
-                  <input type="text" className="input" placeholder="กรุงเทพมหานคร" value={form.province} onChange={(e) => setForm({ ...form, province: e.target.value })} required />
+                  <input readOnly type="text" className="input bg-stone-50 cursor-default select-none" placeholder="จากการเลือกด้านบน" value={form.province} tabIndex={-1} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-stone-700 mb-1.5">รหัสไปรษณีย์ *</label>
-                  <input type="text" className="input" placeholder="10110" maxLength={5} value={form.zipCode} onChange={(e) => setForm({ ...form, zipCode: e.target.value.replace(/\D/g, "") })} required />
+                  <input readOnly type="text" className="input bg-stone-50 cursor-default select-none" placeholder="จากการเลือกด้านบน" value={form.zipCode} tabIndex={-1} />
                 </div>
               </div>
               <div>

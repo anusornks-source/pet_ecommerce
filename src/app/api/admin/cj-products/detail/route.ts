@@ -11,8 +11,22 @@ export async function GET(request: NextRequest) {
   const pid = request.nextUrl.searchParams.get("pid");
   if (!pid) return NextResponse.json({ success: false, error: "pid required" }, { status: 400 });
 
+  // Retry up to 4 times with 1.5s between attempts on CJ rate-limit
+  let detail;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 1500));
+    try {
+      detail = await getCJProductDetail(pid);
+      break;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.toLowerCase().includes("too many") && attempt < 3) continue;
+      return NextResponse.json({ success: false, error: msg }, { status: 500 });
+    }
+  }
+  if (!detail) return NextResponse.json({ success: false, error: "ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่" }, { status: 500 });
+
   try {
-    const detail = await getCJProductDetail(pid);
 
     // Parse images
     let images: string[] = [];
@@ -61,7 +75,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Failed to fetch detail";
+    const msg = err instanceof Error ? err.message : "Failed to parse detail";
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }

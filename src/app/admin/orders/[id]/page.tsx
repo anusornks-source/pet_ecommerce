@@ -402,7 +402,7 @@ export default function AdminOrderDetailPage({
                   </a>
                 )}
                 <a
-                  href="https://app.cjdropshipping.com/order-list.html"
+                  href="https://app.cjdropshipping.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-block text-xs text-blue-600 underline hover:text-blue-800"

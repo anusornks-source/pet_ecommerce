@@ -86,14 +86,24 @@ export async function GET(request: NextRequest) {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rawOptions: any[] = Array.isArray(data.data) ? data.data : [];
+
+      // Log first raw option to help diagnose field names
+      if (rawOptions.length > 0) {
+        console.log("[CJ Freight] first raw option keys:", Object.keys(rawOptions[0]));
+        console.log("[CJ Freight] first raw option:", JSON.stringify(rawOptions[0]));
+      }
+
       const shippingOptions = rawOptions.map((opt) => {
         const warehouseCode = resolveWarehouse(opt);
-        const deliveryTimeStr = opt.logisticTime ?? opt.ageTime ?? "";
+        // CJ uses different field names across API versions — try all known variants
+        const deliveryTimeStr =
+          opt.logisticTime ?? opt.ageTime ?? opt.deliveryTime ??
+          opt.estimatedDeliveryTime ?? opt.shippingTime ?? opt.days ?? "";
         return {
           logisticName: opt.logisticName ?? "",
           priceUSD: Number(opt.logisticPrice ?? 0),
           deliveryTime: deliveryTimeStr,
-          deliveryDays: parseDeliveryDays(deliveryTimeStr),
+          deliveryDays: parseDeliveryDays(String(deliveryTimeStr)),
           warehouseCode,
           warehouseFlag: COUNTRY_FLAG[warehouseCode] ?? "🌐",
           warehouseName: COUNTRY_NAME[warehouseCode] ?? warehouseCode,
@@ -105,11 +115,14 @@ export async function GET(request: NextRequest) {
       const hasTracking = shippingOptions.some((o) => o.hasTracking);
 
       const withDays = shippingOptions.filter((o) => o.deliveryDays !== null);
-      const tracked = withDays.filter((o) => o.hasTracking);
-      const pool = tracked.length > 0 ? tracked : withDays;
-      const bestShipping = pool.length > 0
-        ? pool.reduce((a, b) => (a.deliveryDays!.min <= b.deliveryDays!.min ? a : b))
-        : null;
+      const trackedWithDays = withDays.filter((o) => o.hasTracking);
+      const allTracked = shippingOptions.filter((o) => o.hasTracking);
+      // bestShipping: prefer tracked+days, fallback to any tracked, fallback to any with days
+      const bestShipping =
+        (trackedWithDays.length > 0 ? trackedWithDays.reduce((a, b) => (a.deliveryDays!.min <= b.deliveryDays!.min ? a : b)) : null) ??
+        (allTracked.length > 0 ? allTracked[0] : null) ??
+        (withDays.length > 0 ? withDays.reduce((a, b) => (a.deliveryDays!.min <= b.deliveryDays!.min ? a : b)) : null) ??
+        (shippingOptions.length > 0 ? shippingOptions[0] : null);
 
       return NextResponse.json({
         success: true,

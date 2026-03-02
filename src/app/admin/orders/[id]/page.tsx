@@ -11,6 +11,9 @@ interface Order {
   status: string;
   total: number;
   address: string;
+  city: string | null;
+  province: string | null;
+  zipCode: string | null;
   phone: string;
   note: string | null;
   cjOrderId: string | null;
@@ -498,7 +501,12 @@ export default function AdminOrderDetailPage({
               </div>
               <div>
                 <span className="text-stone-400">ที่อยู่: </span>
-                <span className="text-stone-700">{order.address}</span>
+                <span className="text-stone-700">
+                  {order.address}
+                  {order.city && ` แขวง/ตำบล ${order.city}`}
+                  {order.province && ` ${order.province}`}
+                  {order.zipCode && ` ${order.zipCode}`}
+                </span>
               </div>
               {order.note && (
                 <div>

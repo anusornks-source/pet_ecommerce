@@ -386,7 +386,12 @@ export default function AdminOrderDetailPage({
                     {order.cjStatus && (
                       <p className="text-blue-500 mb-1">สถานะ CJ: <span className="font-medium text-blue-700">{order.cjStatus}</span></p>
                     )}
-                    <p className="text-blue-600 mb-2">ชำระเงินใน CJ Dashboard → CJ จะส่ง tracking ให้เมื่อจัดส่ง</p>
+                    <ol className="text-blue-600 space-y-1 mb-2 list-none">
+                      <li>1. ไปที่ CJ Dashboard → เลือก order นี้ → <span className="font-semibold">ชำระเงิน</span> (tick checkbox แล้วกด Pay)</li>
+                      <li>2. รอ CJ เปลี่ยนสถานะ: Picking → Processing → <span className="font-semibold">Dispatched</span></li>
+                      <li>3. กลับมาหน้านี้ → กด <span className="font-semibold">🔄 Sync จาก CJ</span> เพื่อรับ tracking number</li>
+                      <li>4. เมื่อได้ tracking แล้ว → กด <span className="font-semibold">→ จัดส่งแล้ว</span></li>
+                    </ol>
                     <a
                       href="https://app.cjdropshipping.com"
                       target="_blank"

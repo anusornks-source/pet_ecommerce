@@ -3,7 +3,7 @@ import Stripe from "stripe";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2025-01-27.acacia" });
+const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-02-25.clover" });
 
 // POST /api/checkout/stripe
 // Creates a Stripe Checkout Session for an existing PENDING order
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL!;
 
-  const checkoutSession = await stripe.checkout.sessions.create({
+  const checkoutSession = await getStripe().checkout.sessions.create({
     payment_method_types: ["card"],
     mode: "payment",
     line_items: order.items.map((item) => ({
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
         currency: "thb",
         product_data: {
           name: item.variant
-            ? `${item.product.name} (${item.variant.name ?? ""})`
+            ? `${item.product.name} (${[item.variant.size, item.variant.color].filter(Boolean).join(" / ")})`
             : item.product.name,
         },
         unit_amount: Math.round((item.variant?.price ?? item.product.price) * 100),

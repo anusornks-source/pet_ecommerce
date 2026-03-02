@@ -3,8 +3,8 @@ import Stripe from "stripe";
 import { Client } from "@upstash/qstash";
 import { prisma } from "@/lib/prisma";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2025-01-27.acacia" });
-const qstash = new Client({ token: process.env.QSTASH_TOKEN! });
+const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-02-25.clover" });
+const getQStash = () => new Client({ token: process.env.QSTASH_TOKEN! });
 
 export async function POST(request: NextRequest) {
   const sig = request.headers.get("stripe-signature");
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+    event = getStripe().webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET!);
   } catch (err) {
     console.error("[Stripe Webhook] signature verification failed:", err);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       // Push CJ order creation job to QStash
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL!;
       try {
-        await qstash.publishJSON({
+        await getQStash().publishJSON({
           url: `${baseUrl}/api/jobs/cj-order`,
           body: { orderId },
           retries: 3,

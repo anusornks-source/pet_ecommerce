@@ -3,10 +3,12 @@ import { Receiver } from "@upstash/qstash";
 import { prisma } from "@/lib/prisma";
 import { createCJOrder, getCJInventory } from "@/lib/cjDropshipping";
 
-const receiver = new Receiver({
-  currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
-  nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!,
-});
+function getReceiver() {
+  return new Receiver({
+    currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
+    nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!,
+  });
+}
 
 // POST /api/jobs/cj-order
 // Called by QStash after Stripe payment — creates CJ order for CJ products
@@ -16,7 +18,7 @@ export async function POST(request: NextRequest) {
   const rawBody = await request.text();
 
   try {
-    const isValid = await receiver.verify({ signature, body: rawBody });
+    const isValid = await getReceiver().verify({ signature, body: rawBody });
     if (!isValid) {
       return NextResponse.json({ error: "Invalid QStash signature" }, { status: 401 });
     }

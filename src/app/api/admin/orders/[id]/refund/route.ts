@@ -3,7 +3,7 @@ import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2025-01-27.acacia" });
+const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-02-25.clover" });
 
 // POST /api/admin/orders/[id]/refund
 // Issues a full Stripe refund for the order's payment
@@ -43,7 +43,7 @@ export async function POST(
 
   let refund: Stripe.Refund;
   try {
-    refund = await stripe.refunds.create({ payment_intent: order.payment.ref });
+    refund = await getStripe().refunds.create({ payment_intent: order.payment.ref });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Stripe refund failed";
     return NextResponse.json({ success: false, error: msg }, { status: 502 });

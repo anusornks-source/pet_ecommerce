@@ -177,11 +177,12 @@ export default function ShelfDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* Products in shelf */}
       <div className="bg-white rounded-2xl border border-stone-100 overflow-hidden">
-        <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-stone-100">
           <h2 className="font-semibold text-stone-800">
             สินค้าใน Shelf
             <span className="ml-2 text-sm font-normal text-stone-400">({items.length} รายการ)</span>
           </h2>
+          <p className="text-xs text-stone-400 mt-0.5">ลาก ⠿ เพื่อเรียงลำดับ</p>
         </div>
 
         {loading ? (
@@ -189,55 +190,62 @@ export default function ShelfDetailPage({ params }: { params: Promise<{ id: stri
         ) : items.length === 0 ? (
           <div className="p-8 text-center text-stone-300 text-sm">ยังไม่มีสินค้าใน Shelf นี้</div>
         ) : (
-          <div className="divide-y divide-stone-50">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-5">
             {items.map((item, idx) => {
-              const img = item.product.images?.[0] || `https://placehold.co/64x64/fff7ed/f97316?text=🐾`;
+              const img = item.product.images?.[0] || `https://placehold.co/400x300/fff7ed/f97316?text=${encodeURIComponent(item.product.name)}`;
               return (
                 <div
                   key={item.id}
-                  className={`flex items-center gap-3 px-5 py-3 transition-colors cursor-grab ${dragOverId === item.id ? "bg-orange-50" : ""} ${dragId === item.id ? "opacity-40" : ""}`}
+                  className={`relative rounded-2xl border bg-white overflow-hidden transition-all cursor-grab active:cursor-grabbing select-none ${
+                    dragOverId === item.id ? "border-orange-400 ring-2 ring-orange-200 scale-[1.02]" : "border-stone-100 hover:shadow-md hover:-translate-y-0.5"
+                  } ${dragId === item.id ? "opacity-40 scale-95" : ""}`}
                   draggable
                   onDragStart={() => handleDragStart(item.id)}
                   onDragOver={(e) => handleDragOver(e, item.id)}
                   onDrop={() => handleDrop(item.id)}
                   onDragEnd={() => { setDragId(null); setDragOverId(null); }}
                 >
-                  {/* Drag handle */}
-                  <span className="text-stone-300 select-none text-lg shrink-0">⠿</span>
-
-                  {/* Order badge */}
-                  <span className="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center text-white shrink-0"
-                    style={{ backgroundColor: shelf?.color || "#0ea5e9" }}>
-                    {idx + 1}
-                  </span>
-
                   {/* Image */}
-                  <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-orange-50">
-                    <Image src={img} alt={item.product.name} fill className="object-cover" sizes="48px" />
+                  <div className="relative h-36 bg-orange-50 overflow-hidden">
+                    <Image src={img} alt={item.product.name} fill className="object-cover" sizes="200px" />
+                    {/* Drag handle overlay */}
+                    <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-black/30 flex items-center justify-center text-white text-xs">
+                      ⠿
+                    </div>
+                    {/* Order badge */}
+                    <div
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center text-white shadow"
+                      style={{ backgroundColor: shelf?.color || "#f97316" }}
+                    >
+                      {idx + 1}
+                    </div>
+                    {/* Stock badge */}
+                    {item.product.stock === 0 && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <span className="bg-white text-stone-700 font-bold px-2 py-0.5 rounded-full text-xs">สินค้าหมด</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-stone-700 text-sm truncate">{item.product.name}</p>
-                    <p className="text-xs text-stone-400">
-                      {item.product.category.icon} {item.product.category.name} · {formatPrice(item.product.price)} · stock {item.product.stock}
+                  <div className="p-3">
+                    <span className="text-xs text-orange-500 font-medium bg-orange-50 px-1.5 py-0.5 rounded-full">
+                      {item.product.category.icon} {item.product.category.name}
+                    </span>
+                    <p className="font-semibold text-stone-800 text-sm mt-1.5 line-clamp-2 leading-snug">
+                      {item.product.name}
                     </p>
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-stone-50">
+                      <span className="text-sm font-bold text-orange-500">{formatPrice(item.product.price)}</span>
+                      <button
+                        onClick={() => handleRemove(item.productId)}
+                        disabled={toggling === item.productId}
+                        className="text-xs px-2 py-1 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors disabled:opacity-40"
+                      >
+                        นำออก
+                      </button>
+                    </div>
                   </div>
-
-                  {/* Arrow buttons */}
-                  <div className="flex flex-col gap-0.5 shrink-0">
-                    <button onClick={() => moveItem(idx, -1)} disabled={idx === 0} className="text-stone-300 hover:text-stone-600 disabled:opacity-20 text-xs leading-none">▲</button>
-                    <button onClick={() => moveItem(idx, 1)} disabled={idx === items.length - 1} className="text-stone-300 hover:text-stone-600 disabled:opacity-20 text-xs leading-none">▼</button>
-                  </div>
-
-                  {/* Remove */}
-                  <button
-                    onClick={() => handleRemove(item.productId)}
-                    disabled={toggling === item.productId}
-                    className="shrink-0 text-xs px-3 py-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
-                  >
-                    นำออก
-                  </button>
                 </div>
               );
             })}

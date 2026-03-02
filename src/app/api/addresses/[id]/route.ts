@@ -8,7 +8,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const { label, name, phone, address, isDefault } = await req.json();
+  const { label, name, phone, address, city, province, zipCode, isDefault } = await req.json();
 
   const existing = await prisma.address.findFirst({ where: { id, userId: session.userId } });
   if (!existing) return NextResponse.json({ success: false, error: "ไม่พบที่อยู่" }, { status: 404 });
@@ -22,7 +22,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const updated = await prisma.address.update({
     where: { id },
-    data: { label, name, phone, address, isDefault },
+    data: { label, name, phone, address, city, province, zipCode, isDefault },
   });
 
   return NextResponse.json({ success: true, data: updated });

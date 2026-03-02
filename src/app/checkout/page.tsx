@@ -30,6 +30,9 @@ export default function CheckoutPage() {
 
   const [form, setForm] = useState({
     address: user?.address || "",
+    city: "",
+    province: "",
+    zipCode: "",
     phone: user?.phone || "",
     note: "",
     paymentMethod: "PROMPTPAY" as PaymentMethod,
@@ -56,7 +59,7 @@ export default function CheckoutPage() {
           // Pre-select default address
           const def = d.data.find((a: Address) => a.isDefault) ?? d.data[0];
           setSelectedAddressId(def.id);
-          setForm((f) => ({ ...f, address: def.address, phone: def.phone }));
+          setForm((f) => ({ ...f, address: def.address, city: def.city || "", province: def.province || "", zipCode: def.zipCode || "", phone: def.phone }));
         }
       });
   }, []);
@@ -123,6 +126,9 @@ export default function CheckoutPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           address: form.address,
+          city: form.city,
+          province: form.province,
+          zipCode: form.zipCode,
           phone: form.phone,
           note: form.note,
           paymentMethod: form.paymentMethod,
@@ -141,8 +147,8 @@ export default function CheckoutPage() {
   };
 
   const handleSubmit = async () => {
-    if (!form.address.trim() || !form.phone.trim()) {
-      toast.error("กรุณากรอกที่อยู่และเบอร์โทรศัพท์");
+    if (!form.address.trim() || !form.phone.trim() || !form.city.trim() || !form.province.trim() || !form.zipCode.trim()) {
+      toast.error("กรุณากรอกที่อยู่ให้ครบถ้วน");
       return;
     }
 
@@ -214,7 +220,7 @@ export default function CheckoutPage() {
                         type="button"
                         onClick={() => {
                           setSelectedAddressId(addr.id);
-                          setForm((f) => ({ ...f, phone: addr.phone, address: addr.address }));
+                          setForm((f) => ({ ...f, phone: addr.phone, address: addr.address, city: addr.city || "", province: addr.province || "", zipCode: addr.zipCode || "" }));
                         }}
                         className={`w-full text-left p-3 rounded-xl border-2 transition-all ${
                           selectedAddressId === addr.id
@@ -235,7 +241,7 @@ export default function CheckoutPage() {
                       type="button"
                       onClick={() => {
                         setSelectedAddressId(null);
-                        setForm((f) => ({ ...f, phone: "", address: "" }));
+                        setForm((f) => ({ ...f, phone: "", address: "", city: "", province: "", zipCode: "" }));
                       }}
                       className={`w-full text-left p-3 rounded-xl border-2 transition-all ${
                         selectedAddressId === null
@@ -259,14 +265,28 @@ export default function CheckoutPage() {
                 <input type="tel" className="input" placeholder="081-234-5678" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1.5">ที่อยู่จัดส่ง *</label>
-                <textarea className="input resize-none" rows={3} placeholder="บ้านเลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} required />
+                <label className="block text-sm font-medium text-stone-700 mb-1.5">ที่อยู่ (บ้านเลขที่ / ถนน / แขวง) *</label>
+                <textarea className="input resize-none" rows={2} placeholder="เช่น 123/4 ถนนสุขุมวิท แขวงคลองเตย" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} required />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1.5">เขต/อำเภอ *</label>
+                  <input type="text" className="input" placeholder="เขตคลองเตย" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1.5">จังหวัด *</label>
+                  <input type="text" className="input" placeholder="กรุงเทพมหานคร" value={form.province} onChange={(e) => setForm({ ...form, province: e.target.value })} required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1.5">รหัสไปรษณีย์ *</label>
+                  <input type="text" className="input" placeholder="10110" maxLength={5} value={form.zipCode} onChange={(e) => setForm({ ...form, zipCode: e.target.value.replace(/\D/g, "") })} required />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-stone-700 mb-1.5">หมายเหตุ (ถ้ามี)</label>
                 <input type="text" className="input" placeholder="ระบุหมายเหตุพิเศษ เช่น ฝากไว้กับรปภ." value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
               </div>
-              <button onClick={() => setStep("payment")} disabled={!form.address || !form.phone} className="w-full btn-primary py-3">
+              <button onClick={() => setStep("payment")} disabled={!form.address || !form.phone || !form.city || !form.province || !form.zipCode} className="w-full btn-primary py-3">
                 ถัดไป: เลือกวิธีชำระเงิน →
               </button>
             </div>
@@ -339,8 +359,11 @@ export default function CheckoutPage() {
               <h2 className="font-bold text-stone-800 text-lg">ยืนยันคำสั่งซื้อ</h2>
               <div className="bg-orange-50 rounded-2xl p-4 space-y-2 text-sm">
                 <div className="flex gap-2">
-                  <span className="text-stone-500 w-28">ที่อยู่จัดส่ง:</span>
-                  <span className="text-stone-800 flex-1">{form.address}</span>
+                  <span className="text-stone-500 w-28 shrink-0">ที่อยู่จัดส่ง:</span>
+                  <span className="text-stone-800 flex-1">
+                    {form.address}<br />
+                    {form.city} {form.province} {form.zipCode}
+                  </span>
                 </div>
                 <div className="flex gap-2">
                   <span className="text-stone-500 w-28">เบอร์โทร:</span>

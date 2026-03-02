@@ -138,6 +138,9 @@ export interface Address {
   name: string;
   phone: string;
   address: string;
+  city?: string | null;
+  province?: string | null;
+  zipCode?: string | null;
   isDefault: boolean;
   createdAt: string;
   updatedAt: string;

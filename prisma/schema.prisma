@@ -117,6 +117,9 @@ model Address {
   name      String
   phone     String
   address   String
+  city      String?
+  province  String?
+  zipCode   String?
   isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -189,6 +192,9 @@ model Order {
   discount      Float       @default(0)
   couponCode    String?
   address       String
+  city          String?
+  province      String?
+  zipCode       String?
   phone         String
   note          String?
   statusHistory    Json?

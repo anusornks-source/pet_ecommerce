@@ -29,9 +29,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const { address, phone, note, paymentMethod, couponCode } = await request.json();
+  const { address, city, province, zipCode, phone, note, paymentMethod, couponCode } = await request.json();
 
-  if (!address || !phone || !paymentMethod) {
+  if (!address || !phone || !paymentMethod || !city || !province || !zipCode) {
     return NextResponse.json(
       { success: false, error: "กรุณากรอกข้อมูลให้ครบถ้วน" },
       { status: 400 }
@@ -108,6 +108,9 @@ export async function POST(request: NextRequest) {
       data: {
         userId: session.userId,
         address,
+        city,
+        province,
+        zipCode,
         phone,
         note,
         total,

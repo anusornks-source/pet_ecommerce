@@ -20,8 +20,8 @@ export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
-  const { label, name, phone, address, isDefault } = await req.json();
-  if (!name || !phone || !address) {
+  const { label, name, phone, address, city, province, zipCode, isDefault } = await req.json();
+  if (!name || !phone || !address || !city || !province || !zipCode) {
     return NextResponse.json({ success: false, error: "กรุณากรอกข้อมูลให้ครบ" }, { status: 400 });
   }
 
@@ -41,6 +41,9 @@ export async function POST(req: NextRequest) {
       name,
       phone,
       address,
+      city,
+      province,
+      zipCode,
       isDefault: isDefault || count === 0,
     },
   });

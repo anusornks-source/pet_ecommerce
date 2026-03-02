@@ -8,7 +8,7 @@ import type { Address } from "@/types";
 
 const LABEL_OPTIONS = ["บ้าน", "ที่ทำงาน", "อื่นๆ"];
 
-const emptyForm = { label: "บ้าน", name: "", phone: "", address: "", isDefault: false };
+const emptyForm = { label: "บ้าน", name: "", phone: "", address: "", city: "", province: "", zipCode: "", isDefault: false };
 
 export default function AddressesPage() {
   const { user, loading: authLoading } = useAuth();
@@ -43,12 +43,12 @@ export default function AddressesPage() {
 
   const openEdit = (addr: Address) => {
     setEditId(addr.id);
-    setForm({ label: addr.label, name: addr.name, phone: addr.phone, address: addr.address, isDefault: addr.isDefault });
+    setForm({ label: addr.label, name: addr.name, phone: addr.phone, address: addr.address, city: addr.city || "", province: addr.province || "", zipCode: addr.zipCode || "", isDefault: addr.isDefault });
     setShowForm(true);
   };
 
   const handleSave = async () => {
-    if (!form.name.trim() || !form.phone.trim() || !form.address.trim()) {
+    if (!form.name.trim() || !form.phone.trim() || !form.address.trim() || !form.city.trim() || !form.province.trim() || !form.zipCode.trim()) {
       toast.error("กรุณากรอกข้อมูลให้ครบ"); return;
     }
     setSaving(true);
@@ -125,6 +125,9 @@ export default function AddressesPage() {
                   <p className="font-semibold text-stone-800">{addr.name}</p>
                   <p className="text-sm text-stone-500">{addr.phone}</p>
                   <p className="text-sm text-stone-600 mt-1 leading-relaxed">{addr.address}</p>
+                  {(addr.city || addr.province || addr.zipCode) && (
+                    <p className="text-sm text-stone-500">{[addr.city, addr.province, addr.zipCode].filter(Boolean).join(" ")}</p>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-1.5 shrink-0">
@@ -180,14 +183,29 @@ export default function AddressesPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1.5">ที่อยู่ *</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1.5">ที่อยู่ (บ้านเลขที่ / ถนน / แขวง) *</label>
             <textarea
               value={form.address}
               onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-              placeholder="บ้านเลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์"
-              rows={3}
+              placeholder="เช่น 123/4 ถนนสุขุมวิท แขวงคลองเตย"
+              rows={2}
               className={`${inputCls} resize-none`}
             />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">เขต/อำเภอ *</label>
+              <input value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} placeholder="เขตคลองเตย" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">จังหวัด *</label>
+              <input value={form.province} onChange={(e) => setForm((f) => ({ ...f, province: e.target.value }))} placeholder="กรุงเทพมหานคร" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">รหัสไปรษณีย์ *</label>
+              <input value={form.zipCode} onChange={(e) => setForm((f) => ({ ...f, zipCode: e.target.value.replace(/\D/g, "") }))} placeholder="10110" maxLength={5} className={inputCls} />
+            </div>
           </div>
 
           <label className="flex items-center gap-2 cursor-pointer">

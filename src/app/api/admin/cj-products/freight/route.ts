@@ -12,9 +12,30 @@ function parseDeliveryDays(s: string): { min: number; max: number } | null {
   return { min, max };
 }
 
-function inferWarehouseType(name: string): "CN" | "US" {
-  const n = name.toLowerCase();
-  if (n.includes("us") || n.includes("usa")) return "US";
+const COUNTRY_FLAG: Record<string, string> = {
+  CN: "🇨🇳", US: "🇺🇸", HK: "🇭🇰", DE: "🇩🇪", GB: "🇬🇧",
+  AU: "🇦🇺", JP: "🇯🇵", KR: "🇰🇷", FR: "🇫🇷", CA: "🇨🇦",
+};
+const COUNTRY_NAME: Record<string, string> = {
+  CN: "China", US: "USA", HK: "Hong Kong", DE: "Germany", GB: "UK",
+  AU: "Australia", JP: "Japan", KR: "Korea", FR: "France", CA: "Canada",
+};
+
+// Resolve warehouse country code from CJ response fields, fallback to name inference
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function resolveWarehouse(opt: any): string {
+  // CJ may return startCountryCode, warehouseType, or warehouse info in logisticName
+  const code: string =
+    opt.startCountryCode ??
+    opt.warehouseCode ??
+    opt.warehouseType ??
+    "";
+  if (code && code.length === 2) return code.toUpperCase();
+  // Fallback: infer from logistic name
+  const n = (opt.logisticName ?? "").toLowerCase();
+  if (n.includes("us ") || n.includes("usa") || n.startsWith("us")) return "US";
+  if (n.includes("hk") || n.includes("hong kong")) return "HK";
+  if (n.includes("de") || n.includes("germany")) return "DE";
   return "CN";
 }
 
@@ -56,14 +77,20 @@ export async function GET(request: NextRequest) {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rawOptions: any[] = Array.isArray(data.data) ? data.data : [];
-      const shippingOptions = rawOptions.map((opt) => ({
-        logisticName: opt.logisticName ?? "",
-        priceUSD: Number(opt.logisticPrice ?? 0),
-        deliveryTime: opt.logisticTime ?? opt.ageTime ?? "",
-        deliveryDays: parseDeliveryDays(opt.logisticTime ?? opt.ageTime ?? ""),
-        warehouseType: inferWarehouseType(opt.logisticName ?? ""),
-        hasTracking: isTracked(opt.logisticName ?? ""),
-      }));
+      const shippingOptions = rawOptions.map((opt) => {
+        const warehouseCode = resolveWarehouse(opt);
+        const deliveryTimeStr = opt.logisticTime ?? opt.ageTime ?? "";
+        return {
+          logisticName: opt.logisticName ?? "",
+          priceUSD: Number(opt.logisticPrice ?? 0),
+          deliveryTime: deliveryTimeStr,
+          deliveryDays: parseDeliveryDays(deliveryTimeStr),
+          warehouseCode,
+          warehouseFlag: COUNTRY_FLAG[warehouseCode] ?? "🌐",
+          warehouseName: COUNTRY_NAME[warehouseCode] ?? warehouseCode,
+          hasTracking: isTracked(opt.logisticName ?? ""),
+        };
+      });
 
       const hasFastShipping = shippingOptions.some((o) => o.deliveryDays !== null && o.deliveryDays.min < 10);
       const hasTracking = shippingOptions.some((o) => o.hasTracking);

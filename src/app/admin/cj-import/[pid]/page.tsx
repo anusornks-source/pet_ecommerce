@@ -11,7 +11,9 @@ interface ShippingOption {
   priceUSD: number;
   deliveryTime: string;
   deliveryDays: { min: number; max: number } | null;
-  warehouseType: "CN" | "US";
+  warehouseCode: string;
+  warehouseFlag: string;
+  warehouseName: string;
   hasTracking: boolean;
 }
 
@@ -110,7 +112,7 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
     try {
       const best = freight?.bestShipping ?? null;
       const deliveryDays = best?.deliveryDays?.min;
-      const warehouseCountry = best?.warehouseType ?? undefined;
+      const warehouseCountry = best?.warehouseCode ?? undefined;
       const fallbackCostUSD = detail?.variants?.[0]?.priceUSD ?? 0;
 
       const res = await fetch("/api/admin/cj-products", {
@@ -257,10 +259,11 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
                   ? "bg-green-50 border-green-200 text-green-800"
                   : "bg-stone-50 border-stone-200 text-stone-700"
               }`}>
-                <span>{best.warehouseType === "US" ? "🇺🇸" : "🇨🇳"}</span>
+                <span>{best.warehouseFlag}</span>
+                <span className="text-stone-500 font-normal text-xs">{best.warehouseName}</span>
                 <span>🚚 {daysLabel(best)}</span>
                 <span className="text-stone-400 font-normal text-xs truncate">({best.logisticName})</span>
-                {best.hasTracking && <span className="text-green-500 text-xs shrink-0">📍 tracking</span>}
+                {best.hasTracking && <span className="text-green-500 text-xs shrink-0">📍</span>}
               </div>
             ) : (
               <div className="px-3 py-2 rounded-xl text-sm bg-stone-50 text-stone-400">ไม่มีข้อมูลการจัดส่ง CN→TH</div>
@@ -291,7 +294,7 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
                 </div>
                 {freight.shippingOptions.map((opt, i) => (
                   <div key={i} className="grid grid-cols-[20px_1fr_60px_80px] gap-2 px-3 py-1.5 border-t border-stone-50 text-xs items-center">
-                    <span>{opt.warehouseType === "US" ? "🇺🇸" : "🇨🇳"}</span>
+                    <span title={opt.warehouseName}>{opt.warehouseFlag}</span>
                     <div className="min-w-0">
                       <span className="text-stone-600 truncate block">{opt.logisticName}</span>
                       {opt.hasTracking && <span className="text-green-500 text-[10px]">📍 tracking</span>}

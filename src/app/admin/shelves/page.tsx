@@ -56,21 +56,8 @@ export default function AdminShelvesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", slug: "", description: "", color: "#0ea5e9", active: true });
 
-  // Expanded product preview
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Product items per shelf
   const [shelfItems, setShelfItems] = useState<Record<string, ShelfProduct[]>>({});
-  const [loadingItems, setLoadingItems] = useState<string | null>(null);
-
-  const toggleExpand = async (shelfId: string) => {
-    if (expandedId === shelfId) { setExpandedId(null); return; }
-    setExpandedId(shelfId);
-    if (shelfItems[shelfId]) return; // already cached
-    setLoadingItems(shelfId);
-    const res = await fetch(`/api/admin/shelves/${shelfId}/items`);
-    const data = await res.json();
-    if (data.success) setShelfItems((prev) => ({ ...prev, [shelfId]: data.data.items }));
-    setLoadingItems(null);
-  };
 
   // Drag state for shelf-level reordering
   const [dragId, setDragId] = useState<string | null>(null);
@@ -80,7 +67,18 @@ export default function AdminShelvesPage() {
   const fetchShelves = useCallback(async () => {
     const res = await fetch("/api/admin/shelves");
     const data = await res.json();
-    if (data.success) setShelves(data.data);
+    if (data.success) {
+      setShelves(data.data);
+      // Fetch items for all shelves in parallel
+      const results = await Promise.all(
+        data.data.map((s: Shelf) =>
+          fetch(`/api/admin/shelves/${s.id}/items`).then((r) => r.json()).then((d) => ({ id: s.id, items: d.success ? d.data.items : [] }))
+        )
+      );
+      const map: Record<string, ShelfProduct[]> = {};
+      results.forEach(({ id, items }) => { map[id] = items; });
+      setShelfItems(map);
+    }
     setLoading(false);
   }, []);
 
@@ -360,36 +358,22 @@ export default function AdminShelvesPage() {
                     onDragEnd={() => { setDragId(null); setDragOverId(null); }}
                   >
                     {/* Row */}
-                    <div className="flex items-center gap-3 px-5 py-4">
-                      {/* Drag handle */}
+                    <div className="flex items-center gap-3 px-5 py-3">
                       <span className="text-stone-300 cursor-grab text-lg select-none shrink-0">⠿</span>
-
-                      {/* Color dot */}
-                      <div className="w-5 h-5 rounded-full shrink-0 border border-stone-200" style={{ backgroundColor: shelf.color }} />
-
-                      {/* Name + slug — clickable to expand */}
-                      <button
-                        onClick={() => toggleExpand(shelf.id)}
-                        className="flex-1 min-w-0 text-left"
-                      >
-                        <p className="font-medium text-stone-800 text-sm">{shelf.name}</p>
+                      <div className="w-4 h-4 rounded-full shrink-0 border border-stone-200" style={{ backgroundColor: shelf.color }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-stone-800 text-sm">{shelf.name}</p>
                         <p className="text-xs text-stone-400 font-mono">{shelf.slug}</p>
-                      </button>
-
-                      {/* Item count */}
-                      <span className="shrink-0 text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full">
+                      </div>
+                      <span className="shrink-0 text-xs bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">
                         {shelf._count.items} สินค้า
                       </span>
-
-                      {/* Active toggle */}
                       <button
                         onClick={() => handleToggle(shelf)}
                         className={`shrink-0 text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${shelf.active ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-400"}`}
                       >
                         {shelf.active ? "แสดง" : "ซ่อน"}
                       </button>
-
-                      {/* Actions */}
                       <Link
                         href={`/admin/shelves/${shelf.id}`}
                         className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
@@ -411,54 +395,48 @@ export default function AdminShelvesPage() {
                       >
                         ลบ
                       </button>
-
-                      {/* Expand chevron */}
-                      <button
-                        onClick={() => toggleExpand(shelf.id)}
-                        className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-stone-100 text-stone-400 transition-all"
-                      >
-                        <span className={`text-xs transition-transform duration-200 inline-block ${expandedId === shelf.id ? "rotate-180" : ""}`}>▾</span>
-                      </button>
                     </div>
 
-                    {/* Expanded product cards */}
-                    {expandedId === shelf.id && (
-                      <div className="px-5 pb-4 border-t border-stone-50">
-                        {loadingItems === shelf.id ? (
-                          <div className="py-4 text-center text-stone-400 text-xs">กำลังโหลดสินค้า...</div>
-                        ) : !shelfItems[shelf.id] || shelfItems[shelf.id].length === 0 ? (
-                          <div className="py-4 text-center text-stone-300 text-xs">ยังไม่มีสินค้าใน shelf นี้</div>
-                        ) : (
-                          <div className="flex gap-3 overflow-x-auto pb-1 pt-3 scrollbar-thin">
-                            {shelfItems[shelf.id].map((item, idx) => {
-                              const img = item.product.images?.[0] || `https://placehold.co/200x150/fff7ed/f97316?text=${encodeURIComponent(item.product.name)}`;
-                              return (
-                                <div key={item.id} className="shrink-0 w-36 rounded-xl border border-stone-100 bg-white overflow-hidden hover:shadow-sm transition-shadow">
-                                  <div className="relative h-24 bg-orange-50">
-                                    <Image src={img} alt={item.product.name} fill className="object-cover" sizes="144px" />
-                                    <div
-                                      className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white shadow"
-                                      style={{ backgroundColor: shelf.color }}
-                                    >
-                                      {idx + 1}
+                    {/* Product cards — always visible */}
+                    <div className="px-5 pb-4">
+                      {loading || !shelfItems[shelf.id] ? (
+                        <div className="flex gap-3">
+                          {Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className="shrink-0 w-36 h-32 rounded-xl bg-stone-100 animate-pulse" />
+                          ))}
+                        </div>
+                      ) : shelfItems[shelf.id].length === 0 ? (
+                        <p className="text-xs text-stone-300 py-2">ยังไม่มีสินค้า</p>
+                      ) : (
+                        <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-thin">
+                          {shelfItems[shelf.id].map((item, idx) => {
+                            const img = item.product.images?.[0] || `https://placehold.co/200x150/fff7ed/f97316?text=${encodeURIComponent(item.product.name)}`;
+                            return (
+                              <div key={item.id} className="shrink-0 w-36 rounded-xl border border-stone-100 overflow-hidden hover:shadow-sm transition-shadow bg-white">
+                                <div className="relative h-24 bg-orange-50">
+                                  <Image src={img} alt={item.product.name} fill className="object-cover" sizes="144px" />
+                                  <div
+                                    className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white shadow"
+                                    style={{ backgroundColor: shelf.color }}
+                                  >
+                                    {idx + 1}
+                                  </div>
+                                  {item.product.stock === 0 && (
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                      <span className="text-white text-xs font-bold">หมด</span>
                                     </div>
-                                    {item.product.stock === 0 && (
-                                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                        <span className="text-white text-xs font-bold">หมด</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="p-2">
-                                    <p className="text-xs font-medium text-stone-700 line-clamp-2 leading-snug mb-1">{item.product.name}</p>
-                                    <p className="text-xs font-bold text-orange-500">{formatPrice(item.product.price)}</p>
-                                  </div>
+                                  )}
                                 </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                                <div className="p-2">
+                                  <p className="text-xs font-medium text-stone-700 line-clamp-2 leading-snug mb-0.5">{item.product.name}</p>
+                                  <p className="text-xs font-bold text-orange-500">{formatPrice(item.product.price)}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

@@ -10,7 +10,7 @@ export async function GET() {
         orderBy: { order: "asc" },
         where: { product: { active: true } },
         include: {
-          product: { include: { category: true, petType: true } },
+          product: { include: { category: true, petType: true, tags: true, variants: true } },
         },
       },
     },

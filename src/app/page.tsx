@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 async function getFeaturedProducts() {
   const products = await prisma.product.findMany({
     where: { featured: true, active: true },
-    include: { category: true, petType: true },
+    include: { category: true, petType: true, tags: true, variants: true },
     orderBy: { createdAt: "desc" },
   });
   return products as unknown as Product[];
@@ -40,7 +40,7 @@ async function getActiveShelves() {
       items: {
         orderBy: { order: "asc" },
         where: { product: { active: true } },
-        include: { product: { include: { category: true, petType: true } } },
+        include: { product: { include: { category: true, petType: true, tags: true, variants: true } } },
       },
     },
   });

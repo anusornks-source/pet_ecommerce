@@ -5,6 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
 
+interface Tag {
+  id: string;
+  name: string;
+  color: string;
+  icon: string | null;
+}
+
 interface Product {
   id: string;
   name: string;
@@ -18,6 +25,7 @@ interface Product {
   petTypeId: string | null;
   petType: { id: string; name: string; slug: string; icon: string | null } | null;
   category: { id: string; name: string };
+  tags: Tag[];
 }
 
 interface Category {
@@ -31,6 +39,15 @@ interface PetType {
   slug: string;
   icon: string | null;
 }
+
+const TAG_COLORS: Record<string, string> = {
+  orange: "bg-orange-100 text-orange-700",
+  red:    "bg-red-100 text-red-700",
+  green:  "bg-green-100 text-green-700",
+  blue:   "bg-blue-100 text-blue-700",
+  purple: "bg-purple-100 text-purple-700",
+  yellow: "bg-yellow-100 text-yellow-800",
+};
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -50,8 +67,10 @@ export default function AdminProductsPage() {
   const [filterActive, setFilterActive] = useState("true");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterPetType, setFilterPetType] = useState("");
+  const [tags, setTags] = useState<Tag[]>([]);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [filterTag, setFilterTag] = useState("");
 
   useEffect(() => {
     fetch("/api/admin/categories")
@@ -60,6 +79,9 @@ export default function AdminProductsPage() {
     fetch("/api/admin/pet-types")
       .then((r) => r.json())
       .then((d) => { if (d.success) setPetTypes(d.data); });
+    fetch("/api/admin/tags")
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setTags(d.data); });
   }, []);
 
   const fetchProducts = useCallback(async () => {
@@ -70,13 +92,14 @@ export default function AdminProductsPage() {
     if (filterActive) params.set("active", filterActive);
     if (filterCategory) params.set("categoryId", filterCategory);
     if (filterPetType) params.set("petType", filterPetType);
+    if (filterTag) params.set("tagId", filterTag);
     const res = await fetch(`/api/admin/products?${params.toString()}`);
     const data = await res.json();
     if (data.success) setProducts(data.data);
     setLoading(false);
-  }, [search, filterSource, filterActive, filterCategory, filterPetType]);
+  }, [search, filterSource, filterActive, filterCategory, filterPetType, filterTag]);
 
-  const activeFilterCount = [filterSource, filterActive, filterCategory, filterPetType].filter(Boolean).length;
+  const activeFilterCount = [filterSource, filterActive, filterCategory, filterPetType, filterTag].filter(Boolean).length;
 
   useEffect(() => {
     const timer = setTimeout(fetchProducts, 300);
@@ -180,9 +203,27 @@ export default function AdminProductsPage() {
               <option key={p.slug} value={p.slug}>{p.icon} {p.name}</option>
             ))}
           </select>
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 items-center">
+              {tags.map((tag) => (
+                <button
+                  key={tag.id}
+                  onClick={() => setFilterTag(filterTag === tag.id ? "" : tag.id)}
+                  className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                    filterTag === tag.id
+                      ? TAG_COLORS[tag.color] + " border-current font-medium"
+                      : "border-stone-200 text-stone-500 hover:border-stone-300"
+                  }`}
+                >
+                  {tag.icon && <span>{tag.icon}</span>}
+                  {tag.name}
+                </button>
+              ))}
+            </div>
+          )}
           {activeFilterCount > 0 && (
             <button
-              onClick={() => { setFilterSource(""); setFilterActive(""); setFilterCategory(""); setFilterPetType(""); }}
+              onClick={() => { setFilterSource(""); setFilterActive(""); setFilterCategory(""); setFilterPetType(""); setFilterTag(""); }}
               className="flex items-center gap-1.5 border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-500 hover:bg-stone-50 transition-colors"
             >
               ล้าง
@@ -258,9 +299,24 @@ export default function AdminProductsPage() {
                           </div>
                         )}
                       </div>
-                      <span className="font-medium text-stone-800 line-clamp-1">
-                        {product.name}
-                      </span>
+                      <div>
+                        <span className="font-medium text-stone-800 line-clamp-1">
+                          {product.name}
+                        </span>
+                        {product.tags && product.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            {product.tags.map((tag) => (
+                              <span
+                                key={tag.id}
+                                className={`inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full ${TAG_COLORS[tag.color]}`}
+                              >
+                                {tag.icon && <span>{tag.icon}</span>}
+                                {tag.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-stone-500 hidden md:table-cell">

@@ -31,8 +31,15 @@ export default function ProductCard({ product }: Props) {
   const { isWishlisted, toggle: toggleWishlist } = useWishlist();
   const [adding, setAdding] = useState(false);
 
+  const hasVariants = product.variants && product.variants.length > 0;
+
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
+    // If product has variants, user must select one on the detail page first
+    if (hasVariants) {
+      router.push(`/products/${product.id}`);
+      return;
+    }
     if (!user) {
       toast.error("กรุณาเข้าสู่ระบบก่อน");
       router.push("/login");
@@ -141,13 +148,18 @@ export default function ProductCard({ product }: Props) {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
+              ) : hasVariants ? (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
               ) : (
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               )}
-              ใส่ตะกร้า
+              {hasVariants ? "เลือกตัวเลือก" : "ใส่ตะกร้า"}
             </button>
           </div>
         </div>

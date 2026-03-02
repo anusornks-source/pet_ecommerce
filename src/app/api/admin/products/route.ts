@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
   const active = searchParams.get("active") || "";       // "true" | "false" | ""
   const categoryId = searchParams.get("categoryId") || "";
   const petType = searchParams.get("petType") || "";     // slug e.g. "dog"
+  const tagId = searchParams.get("tagId") || "";
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {};
@@ -28,6 +29,7 @@ export async function GET(request: NextRequest) {
   if (active === "false") where.active = false;
   if (categoryId) where.categoryId = categoryId;
   if (petType) where.petType = { slug: petType };
+  if (tagId) where.tags = { some: { id: tagId } };
 
   const products = await prisma.product.findMany({
     where,

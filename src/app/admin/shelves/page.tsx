@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { formatPrice } from "@/lib/utils";
 
 interface Shelf {
   id: string;
@@ -13,6 +15,20 @@ interface Shelf {
   active: boolean;
   order: number;
   _count: { items: number };
+}
+
+interface ShelfProduct {
+  id: string;
+  productId: string;
+  order: number;
+  product: {
+    id: string;
+    name: string;
+    price: number;
+    stock: number;
+    images: string[];
+    category: { name: string; icon: string | null };
+  };
 }
 
 const COLOR_PRESETS = [
@@ -39,6 +55,22 @@ export default function AdminShelvesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", slug: "", description: "", color: "#0ea5e9", active: true });
+
+  // Expanded product preview
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [shelfItems, setShelfItems] = useState<Record<string, ShelfProduct[]>>({});
+  const [loadingItems, setLoadingItems] = useState<string | null>(null);
+
+  const toggleExpand = async (shelfId: string) => {
+    if (expandedId === shelfId) { setExpandedId(null); return; }
+    setExpandedId(shelfId);
+    if (shelfItems[shelfId]) return; // already cached
+    setLoadingItems(shelfId);
+    const res = await fetch(`/api/admin/shelves/${shelfId}/items`);
+    const data = await res.json();
+    if (data.success) setShelfItems((prev) => ({ ...prev, [shelfId]: data.data.items }));
+    setLoadingItems(null);
+  };
 
   // Drag state for shelf-level reordering
   const [dragId, setDragId] = useState<string | null>(null);
@@ -320,60 +352,113 @@ export default function AdminShelvesPage() {
                 ) : (
                   /* Normal row */
                   <div
-                    className={`flex items-center gap-3 px-5 py-4 transition-colors ${dragOverId === shelf.id ? "bg-orange-50" : ""} ${dragId === shelf.id ? "opacity-40" : ""}`}
+                    className={`transition-colors ${dragOverId === shelf.id ? "bg-orange-50" : ""} ${dragId === shelf.id ? "opacity-40" : ""}`}
                     draggable
                     onDragStart={() => handleDragStart(shelf.id)}
                     onDragOver={(e) => handleDragOver(e, shelf.id)}
                     onDrop={() => handleDrop(shelf.id)}
                     onDragEnd={() => { setDragId(null); setDragOverId(null); }}
                   >
-                    {/* Drag handle */}
-                    <span className="text-stone-300 cursor-grab text-lg select-none shrink-0">⠿</span>
+                    {/* Row */}
+                    <div className="flex items-center gap-3 px-5 py-4">
+                      {/* Drag handle */}
+                      <span className="text-stone-300 cursor-grab text-lg select-none shrink-0">⠿</span>
 
-                    {/* Color dot */}
-                    <div className="w-5 h-5 rounded-full shrink-0 border border-stone-200" style={{ backgroundColor: shelf.color }} />
+                      {/* Color dot */}
+                      <div className="w-5 h-5 rounded-full shrink-0 border border-stone-200" style={{ backgroundColor: shelf.color }} />
 
-                    {/* Name + slug */}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-stone-800 text-sm">{shelf.name}</p>
-                      <p className="text-xs text-stone-400 font-mono">{shelf.slug}</p>
+                      {/* Name + slug — clickable to expand */}
+                      <button
+                        onClick={() => toggleExpand(shelf.id)}
+                        className="flex-1 min-w-0 text-left"
+                      >
+                        <p className="font-medium text-stone-800 text-sm">{shelf.name}</p>
+                        <p className="text-xs text-stone-400 font-mono">{shelf.slug}</p>
+                      </button>
+
+                      {/* Item count */}
+                      <span className="shrink-0 text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full">
+                        {shelf._count.items} สินค้า
+                      </span>
+
+                      {/* Active toggle */}
+                      <button
+                        onClick={() => handleToggle(shelf)}
+                        className={`shrink-0 text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${shelf.active ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-400"}`}
+                      >
+                        {shelf.active ? "แสดง" : "ซ่อน"}
+                      </button>
+
+                      {/* Actions */}
+                      <Link
+                        href={`/admin/shelves/${shelf.id}`}
+                        className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                      >
+                        จัดการสินค้า
+                      </Link>
+                      <button
+                        onClick={() => {
+                          setEditingId(shelf.id);
+                          setEditForm({ name: shelf.name, slug: shelf.slug, description: shelf.description || "", color: shelf.color, active: shelf.active });
+                        }}
+                        className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-stone-50 text-stone-600 hover:bg-stone-100 transition-colors"
+                      >
+                        แก้ไข
+                      </button>
+                      <button
+                        onClick={() => handleDelete(shelf.id, shelf.name)}
+                        className="shrink-0 text-xs px-3 py-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
+                      >
+                        ลบ
+                      </button>
+
+                      {/* Expand chevron */}
+                      <button
+                        onClick={() => toggleExpand(shelf.id)}
+                        className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-stone-100 text-stone-400 transition-all"
+                      >
+                        <span className={`text-xs transition-transform duration-200 inline-block ${expandedId === shelf.id ? "rotate-180" : ""}`}>▾</span>
+                      </button>
                     </div>
 
-                    {/* Item count */}
-                    <span className="shrink-0 text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full">
-                      {shelf._count.items} สินค้า
-                    </span>
-
-                    {/* Active toggle */}
-                    <button
-                      onClick={() => handleToggle(shelf)}
-                      className={`shrink-0 text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${shelf.active ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-400"}`}
-                    >
-                      {shelf.active ? "แสดง" : "ซ่อน"}
-                    </button>
-
-                    {/* Actions */}
-                    <Link
-                      href={`/admin/shelves/${shelf.id}`}
-                      className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                    >
-                      จัดการสินค้า
-                    </Link>
-                    <button
-                      onClick={() => {
-                        setEditingId(shelf.id);
-                        setEditForm({ name: shelf.name, slug: shelf.slug, description: shelf.description || "", color: shelf.color, active: shelf.active });
-                      }}
-                      className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-stone-50 text-stone-600 hover:bg-stone-100 transition-colors"
-                    >
-                      แก้ไข
-                    </button>
-                    <button
-                      onClick={() => handleDelete(shelf.id, shelf.name)}
-                      className="shrink-0 text-xs px-3 py-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
-                    >
-                      ลบ
-                    </button>
+                    {/* Expanded product cards */}
+                    {expandedId === shelf.id && (
+                      <div className="px-5 pb-4 border-t border-stone-50">
+                        {loadingItems === shelf.id ? (
+                          <div className="py-4 text-center text-stone-400 text-xs">กำลังโหลดสินค้า...</div>
+                        ) : !shelfItems[shelf.id] || shelfItems[shelf.id].length === 0 ? (
+                          <div className="py-4 text-center text-stone-300 text-xs">ยังไม่มีสินค้าใน shelf นี้</div>
+                        ) : (
+                          <div className="flex gap-3 overflow-x-auto pb-1 pt-3 scrollbar-thin">
+                            {shelfItems[shelf.id].map((item, idx) => {
+                              const img = item.product.images?.[0] || `https://placehold.co/200x150/fff7ed/f97316?text=${encodeURIComponent(item.product.name)}`;
+                              return (
+                                <div key={item.id} className="shrink-0 w-36 rounded-xl border border-stone-100 bg-white overflow-hidden hover:shadow-sm transition-shadow">
+                                  <div className="relative h-24 bg-orange-50">
+                                    <Image src={img} alt={item.product.name} fill className="object-cover" sizes="144px" />
+                                    <div
+                                      className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white shadow"
+                                      style={{ backgroundColor: shelf.color }}
+                                    >
+                                      {idx + 1}
+                                    </div>
+                                    {item.product.stock === 0 && (
+                                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                        <span className="text-white text-xs font-bold">หมด</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="p-2">
+                                    <p className="text-xs font-medium text-stone-700 line-clamp-2 leading-snug mb-1">{item.product.name}</p>
+                                    <p className="text-xs font-bold text-orange-500">{formatPrice(item.product.price)}</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

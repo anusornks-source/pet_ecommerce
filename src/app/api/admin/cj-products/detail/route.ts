@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCJProductDetail, getCJFreight } from "@/lib/cjDropshipping";
+import { getCJProductDetail, getCJToken } from "@/lib/cjDropshipping";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+
+const CJ_BASE = "https://developers.cjdropshipping.com/api2.0/v1";
+
+// Direct freight fetch that THROWS on error (unlike getCJFreight which swallows)
+async function fetchFreightOrThrow(pid: string) {
+  const token = await getCJToken();
+  const res = await fetch(`${CJ_BASE}/logistic/freightCalculate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "CJ-Access-Token": token },
+    body: JSON.stringify({ startCountryCode: "CN", endCountryCode: "TH", quantity: 1, weight: 0.3, pid }),
+  });
+  const data = await res.json();
+  if (!data.result) throw new Error(data.message || "CJ freight failed");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (Array.isArray(data.data) ? data.data : []) as any[];
+}
 
 function parseDeliveryDays(s: string): { min: number; max: number } | null {
   const match = s.match(/(\d+)(?:\s*[-~]\s*(\d+))?/);
@@ -51,7 +67,13 @@ export async function GET(request: NextRequest) {
     // Sequential with retry — CJ rate limit is 1 req/sec
     const detail = await withRetry(() => getCJProductDetail(pid));
     await new Promise((r) => setTimeout(r, 1100));
-    const freight = await withRetry(() => getCJFreight(pid, 1));
+    // Use fetchFreightOrThrow so retry catches rate-limit errors (getCJFreight swallows them)
+    const freightRaw = await withRetry(() => fetchFreightOrThrow(pid)).catch(() => []);
+    const freight = freightRaw.map((opt) => ({
+      logisticName: opt.logisticName ?? "",
+      logisticPrice: Number(opt.logisticPrice ?? 0),
+      deliveryTime: opt.logisticTime ?? opt.ageTime ?? "",
+    }));
 
     // Parse images
     let images: string[] = [];

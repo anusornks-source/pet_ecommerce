@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import type { Address } from "@/types";
+import ThaiAddressInput from "@/components/ThaiAddressInput";
 
 const LABEL_OPTIONS = ["บ้าน", "ที่ทำงาน", "อื่นๆ"];
 
@@ -193,11 +194,18 @@ export default function AddressesPage() {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1.5">เขต/อำเภอ *</label>
-              <input value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} placeholder="เขตคลองเตย" className={inputCls} />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1.5">เขต/อำเภอ * <span className="text-stone-400 font-normal text-xs">(พิมพ์เพื่อค้นหา)</span></label>
+            <ThaiAddressInput
+              value={form.city}
+              onChange={(v) => setForm((f) => ({ ...f, city: v }))}
+              onSelect={(addr) => setForm((f) => ({ ...f, city: addr.amphoe, province: addr.province, zipCode: addr.zipcode }))}
+              placeholder="พิมพ์แขวง/เขต/จังหวัด หรือรหัสไปรษณีย์"
+              className={inputCls}
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-1.5">จังหวัด *</label>
               <input value={form.province} onChange={(e) => setForm((f) => ({ ...f, province: e.target.value }))} placeholder="กรุงเทพมหานคร" className={inputCls} />

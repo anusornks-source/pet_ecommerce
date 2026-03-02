@@ -10,6 +10,7 @@ import { useCart } from "@/context/CartContext";
 import { formatPrice, PAYMENT_METHOD_LABEL } from "@/lib/utils";
 import toast from "react-hot-toast";
 import type { Address } from "@/types";
+import ThaiAddressInput from "@/components/ThaiAddressInput";
 
 // Load Stripe form lazily — avoids bundle bloat when not used
 const StripeCardForm = dynamic(() => import("@/components/StripeCardForm"), { ssr: false });
@@ -268,11 +269,18 @@ export default function CheckoutPage() {
                 <label className="block text-sm font-medium text-stone-700 mb-1.5">ที่อยู่ (บ้านเลขที่ / ถนน / แขวง) *</label>
                 <textarea className="input resize-none" rows={2} placeholder="เช่น 123/4 ถนนสุขุมวิท แขวงคลองเตย" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} required />
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1.5">เขต/อำเภอ *</label>
-                  <input type="text" className="input" placeholder="เขตคลองเตย" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} required />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1.5">เขต/อำเภอ * <span className="text-stone-400 font-normal text-xs">(พิมพ์เพื่อค้นหา)</span></label>
+                <ThaiAddressInput
+                  value={form.city}
+                  onChange={(v) => setForm({ ...form, city: v })}
+                  onSelect={(addr) => setForm((f) => ({ ...f, city: addr.amphoe, province: addr.province, zipCode: addr.zipcode }))}
+                  placeholder="พิมพ์แขวง/เขต/จังหวัด หรือรหัสไปรษณีย์"
+                  className="input w-full"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-stone-700 mb-1.5">จังหวัด *</label>
                   <input type="text" className="input" placeholder="กรุงเทพมหานคร" value={form.province} onChange={(e) => setForm({ ...form, province: e.target.value })} required />

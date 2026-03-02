@@ -31,10 +31,10 @@ export async function GET(request: NextRequest) {
   if (!pid) return NextResponse.json({ success: false, error: "pid required" }, { status: 400 });
 
   try {
-    const [detail, freight] = await Promise.all([
-      getCJProductDetail(pid),
-      getCJFreight(pid, 1),
-    ]);
+    // Sequential calls — CJ rate limit is 1 req/sec; parallel hits the limit
+    const detail = await getCJProductDetail(pid);
+    await new Promise((r) => setTimeout(r, 1100));
+    const freight = await getCJFreight(pid, 1);
 
     // Parse images
     let images: string[] = [];

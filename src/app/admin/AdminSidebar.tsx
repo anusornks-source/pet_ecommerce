@@ -50,7 +50,7 @@ const navEntries: NavEntry[] = [
 
 export default function AdminSidebar() {
   const pathname = usePathname();
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(["นำเข้าสินค้า"]));
 
   // Auto-expand group containing the active path
   useEffect(() => {

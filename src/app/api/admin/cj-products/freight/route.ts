@@ -62,7 +62,14 @@ export async function GET(request: NextRequest) {
       const res = await fetch(`${CJ_BASE}/logistic/freightCalculate`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "CJ-Access-Token": token },
-        body: JSON.stringify({ startCountryCode: "CN", endCountryCode: "TH", quantity: 1, weight: 0.3, pid }),
+        body: JSON.stringify({
+          startCountryCode: "CN",
+          endCountryCode: "TH",
+          quantity: 1,
+          weight: 0.3,
+          pid,
+          products: [{ pid, quantity: 1 }],
+        }),
       });
       const data = await res.json();
 
@@ -70,9 +77,9 @@ export async function GET(request: NextRequest) {
         const msg: string = data.message ?? "";
         // Rate limit — retry
         if (msg.toLowerCase().includes("too many") && attempt < 3) continue;
-        // Other error or final attempt — return empty
+        // Other API error (not rate limit) — return failure
         console.warn(`[CJ Freight] pid=${pid} attempt=${attempt} error: ${msg}`);
-        return NextResponse.json({ success: true, data: { shippingOptions: [], bestShipping: null, badges: { hasStock: false, hasFastShipping: false, hasTracking: false } } });
+        return NextResponse.json({ success: false, error: msg || "CJ freight API error" }, { status: 502 });
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -116,5 +123,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ success: true, data: { shippingOptions: [], bestShipping: null, badges: { hasFastShipping: false, hasTracking: false } } });
+  // All retries exhausted (rate limit persisted) — return explicit failure
+  return NextResponse.json({ success: false, error: "CJ rate limit — ลองอีกครั้ง" }, { status: 429 });
 }

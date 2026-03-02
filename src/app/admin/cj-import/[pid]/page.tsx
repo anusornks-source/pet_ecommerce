@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -63,6 +63,7 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
   // Freight loaded separately after delay
   const [freight, setFreight] = useState<FreightData | null>(null);
   const [freightLoading, setFreightLoading] = useState(true);
+  const [freightError, setFreightError] = useState<string | null>(null);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [petTypes, setPetTypes] = useState<PetType[]>([]);
@@ -73,6 +74,20 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
   const [estShippingUSD, setEstShippingUSD] = useState(2);
   const [importing, setImporting] = useState(false);
 
+  const fetchFreight = useCallback(() => {
+    setFreightLoading(true);
+    setFreightError(null);
+    setFreight(null);
+    fetch(`/api/admin/cj-products/freight?pid=${pid}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setFreight(d.data);
+        else setFreightError(d.error || "โหลดข้อมูลการจัดส่งไม่สำเร็จ");
+      })
+      .catch(() => setFreightError("เชื่อมต่อ API ไม่สำเร็จ"))
+      .finally(() => setFreightLoading(false));
+  }, [pid]);
+
   useEffect(() => {
     // 1. Fetch product detail immediately
     fetch(`/api/admin/cj-products/detail?pid=${pid}`)
@@ -82,13 +97,7 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
       .finally(() => setLoading(false));
 
     // 2. Fetch freight after 3s delay (avoids CJ rate limit from prior calls)
-    const freightTimer = setTimeout(() => {
-      fetch(`/api/admin/cj-products/freight?pid=${pid}`)
-        .then((r) => r.json())
-        .then((d) => { if (d.success) setFreight(d.data); })
-        .catch(() => { /* swallow — freight is optional */ })
-        .finally(() => setFreightLoading(false));
-    }, 3000);
+    const freightTimer = setTimeout(fetchFreight, 3000);
 
     fetch("/api/admin/categories").then((r) => r.json()).then((d) => { if (d.success) setCategories(d.data); });
     fetch("/api/admin/pet-types").then((r) => r.json()).then((d) => { if (d.success) setPetTypes(d.data); });
@@ -100,7 +109,7 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
     });
 
     return () => clearTimeout(freightTimer);
-  }, [pid]);
+  }, [pid, fetchFreight]);
 
   useEffect(() => {
     if (categories.length > 0 && !categoryId) setCategoryId(categories[0].id);
@@ -167,7 +176,7 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
   const shipTHB = Math.ceil(estShippingUSD * usdToThb);
   const margin = sellPrice - costTHB - shipTHB;
   const marginPct = sellPrice > 0 ? Math.round((margin / sellPrice) * 100) : 0;
-  const isRecommended = (freight?.badges.hasFastShipping && freight?.badges.hasTracking && detail.totalStock > 100) ?? false;
+  const isRecommended = !!(freight?.badges.hasFastShipping && freight?.badges.hasTracking && detail.totalStock > 100);
 
   return (
     <div>
@@ -248,52 +257,82 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
               <p className="text-xs text-stone-500">{detail.categoryName}</p>
             </div>
 
-            {/* Shipping insight — loads after 3s */}
-            {freightLoading ? (
-              <div className="px-3 py-2 rounded-xl text-sm bg-stone-50 text-stone-400 animate-pulse">
-                กำลังโหลดข้อมูลการจัดส่ง...
+            {/* ── Key stats grid ── */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* Stock */}
+              <div className="bg-stone-50 rounded-xl px-3 py-2.5">
+                <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wide mb-0.5">📦 สต็อกรวม</p>
+                <p className={`text-sm font-bold ${detail.totalStock > 0 ? "text-stone-800" : "text-stone-400"}`}>
+                  {detail.totalStock.toLocaleString()} ชิ้น
+                </p>
               </div>
-            ) : best ? (
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border ${
-                isRecommended
-                  ? "bg-green-50 border-green-200 text-green-800"
-                  : "bg-stone-50 border-stone-200 text-stone-700"
-              }`}>
-                <span>{best.warehouseFlag}</span>
-                <span className="text-stone-500 font-normal text-xs">{best.warehouseName}</span>
-                <span>🚚 {daysLabel(best)}</span>
-                <span className="text-stone-400 font-normal text-xs truncate">({best.logisticName})</span>
-                {best.hasTracking && <span className="text-green-500 text-xs shrink-0">📍</span>}
-              </div>
-            ) : (
-              <div className="px-3 py-2 rounded-xl text-sm bg-stone-50 text-stone-400">ไม่มีข้อมูลการจัดส่ง CN→TH</div>
-            )}
 
-            {/* Badges */}
-            <div className="flex flex-wrap gap-1.5">
-              <span className={`text-xs px-2 py-0.5 rounded-full border ${detail.totalStock > 100 ? "bg-green-50 text-green-700 border-green-200" : "bg-stone-50 text-stone-400 border-stone-200"}`}>
-                📦 สต็อก {detail.totalStock.toLocaleString()} ชิ้น
-              </span>
-              {!freightLoading && (
-                <>
-                  <span className={`text-xs px-2 py-0.5 rounded-full border ${freight?.badges.hasFastShipping ? "bg-green-50 text-green-700 border-green-200" : "bg-stone-50 text-stone-400 border-stone-200"}`}>
-                    🚢 ส่งเร็ว &lt;10 วัน
-                  </span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full border ${freight?.badges.hasTracking ? "bg-green-50 text-green-700 border-green-200" : "bg-stone-50 text-stone-400 border-stone-200"}`}>
-                    📍 มี tracking
-                  </span>
-                </>
-              )}
+              {/* Warehouse */}
+              <div className="bg-stone-50 rounded-xl px-3 py-2.5">
+                <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wide mb-0.5">🌍 Warehouse</p>
+                {freightLoading ? (
+                  <div className="h-5 w-20 bg-stone-200 rounded animate-pulse" />
+                ) : freightError ? (
+                  <p className="text-xs text-red-400">API Error</p>
+                ) : best ? (
+                  <p className="text-sm font-bold text-stone-800">{best.warehouseFlag} {best.warehouseName}</p>
+                ) : (
+                  <p className="text-xs text-stone-400">ไม่มีข้อมูล</p>
+                )}
+              </div>
+
+              {/* Delivery days */}
+              <div className="bg-stone-50 rounded-xl px-3 py-2.5">
+                <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wide mb-0.5">🚚 ระยะเวลาจัดส่ง</p>
+                {freightLoading ? (
+                  <div className="h-5 w-16 bg-stone-200 rounded animate-pulse" />
+                ) : freightError ? (
+                  <p className="text-xs text-red-400">API Error</p>
+                ) : best ? (
+                  <p className="text-sm font-bold text-stone-800">{daysLabel(best)}</p>
+                ) : (
+                  <p className="text-xs text-stone-400">ไม่มีข้อมูล</p>
+                )}
+              </div>
+
+              {/* Tracking */}
+              <div className="bg-stone-50 rounded-xl px-3 py-2.5">
+                <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wide mb-0.5">📍 Tracking</p>
+                {freightLoading ? (
+                  <div className="h-5 w-12 bg-stone-200 rounded animate-pulse" />
+                ) : freightError ? (
+                  <p className="text-xs text-red-400">API Error</p>
+                ) : freight ? (
+                  <p className={`text-sm font-bold ${freight.badges.hasTracking ? "text-green-600" : "text-stone-400"}`}>
+                    {freight.badges.hasTracking ? "✓ มี" : "✗ ไม่มี"}
+                  </p>
+                ) : (
+                  <p className="text-xs text-stone-400">ไม่มีข้อมูล</p>
+                )}
+              </div>
             </div>
 
-            {/* All shipping options */}
-            {!freightLoading && freight && freight.shippingOptions.length > 0 && (
+            {/* Freight error + retry */}
+            {!freightLoading && freightError && (
+              <div className="flex items-center justify-between gap-3 px-3 py-2 bg-red-50 border border-red-100 rounded-xl text-xs text-red-500">
+                <span>⚠️ {freightError}</span>
+                <button
+                  onClick={fetchFreight}
+                  className="shrink-0 px-2 py-1 bg-white border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors font-medium"
+                >
+                  ลองใหม่
+                </button>
+              </div>
+            )}
+
+            {/* All shipping options table */}
+            {!freightLoading && !freightError && freight && freight.shippingOptions.length > 0 && (
               <div className="border border-stone-100 rounded-xl overflow-hidden">
                 <div className="grid grid-cols-[20px_1fr_60px_80px] gap-2 px-3 py-1.5 bg-stone-50 text-[10px] text-stone-400 font-medium">
                   <span></span><span>ขนส่ง</span><span className="text-right">ค่าส่ง</span><span className="text-right">ระยะเวลา</span>
                 </div>
                 {freight.shippingOptions.map((opt, i) => (
-                  <div key={i} className="grid grid-cols-[20px_1fr_60px_80px] gap-2 px-3 py-1.5 border-t border-stone-50 text-xs items-center">
+                  <div key={i} className={`grid grid-cols-[20px_1fr_60px_80px] gap-2 px-3 py-1.5 border-t border-stone-50 text-xs items-center ${opt === best ? "bg-green-50" : ""}`}>
                     <span title={opt.warehouseName}>{opt.warehouseFlag}</span>
                     <div className="min-w-0">
                       <span className="text-stone-600 truncate block">{opt.logisticName}</span>
@@ -305,13 +344,23 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
                 ))}
               </div>
             )}
+
+            {/* No shipping options (genuine, not error) */}
+            {!freightLoading && !freightError && freight && freight.shippingOptions.length === 0 && (
+              <p className="text-xs text-stone-400 text-center py-1">ไม่พบ shipping option CN→TH สำหรับสินค้านี้</p>
+            )}
           </div>
 
-          {/* Variants */}
+          {/* Variants with stock */}
           {detail.variants.length > 0 && (
             <div className="bg-white rounded-2xl border border-stone-100 p-4">
-              <p className="text-sm font-medium text-stone-700 mb-2">Variants ({detail.variants.length})</p>
-              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium text-stone-700">Variants ({detail.variants.length})</p>
+                <p className="text-xs text-stone-400">
+                  {detail.variants.filter((v) => v.stock > 0).length} / {detail.variants.length} มีสต็อก
+                </p>
+              </div>
+              <div className="space-y-1.5 max-h-56 overflow-y-auto">
                 {detail.variants.map((v) => (
                   <div key={v.vid} className="flex items-center gap-2 text-xs">
                     {v.variantImage && (
@@ -319,10 +368,10 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
                         <Image src={v.variantImage} alt={v.label} fill className="object-cover" sizes="32px" unoptimized />
                       </div>
                     )}
-                    <span className="flex-1 text-stone-700 font-medium">{v.label}</span>
-                    <span className="text-orange-500 font-medium">${v.priceUSD.toFixed(2)}</span>
-                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${v.stock > 0 ? "bg-green-50 text-green-600" : "bg-stone-50 text-stone-400"}`}>
-                      {v.stock.toLocaleString()} ชิ้น
+                    <span className="flex-1 text-stone-700 font-medium truncate">{v.label}</span>
+                    <span className="text-orange-500 font-medium shrink-0">${v.priceUSD.toFixed(2)}</span>
+                    <span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${v.stock > 0 ? "bg-green-50 text-green-600 border border-green-100" : "bg-stone-50 text-stone-400 border border-stone-100"}`}>
+                      {v.stock > 0 ? `${v.stock.toLocaleString()} ชิ้น` : "หมด"}
                     </span>
                   </div>
                 ))}

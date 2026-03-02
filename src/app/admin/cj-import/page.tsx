@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -30,18 +30,8 @@ interface InsightData {
   isRecommended: boolean;
 }
 
-interface Category {
-  id: string;
-  name: string;
-  icon: string | null;
-}
-
-interface PetType {
-  id: string;
-  name: string;
-  slug: string;
-  icon: string | null;
-}
+interface Category { id: string; name: string; icon: string | null }
+interface PetType { id: string; name: string; slug: string; icon: string | null }
 
 export default function CJImportPage() {
   const [keyword, setKeyword] = useState("");
@@ -57,19 +47,9 @@ export default function CJImportPage() {
   const [importedIds, setImportedIds] = useState<Record<string, string>>({});
   const [insights, setInsights] = useState<Record<string, InsightData | "loading" | "error">>({});
 
-  // Price factor settings
   const [priceFactor, setPriceFactor] = useState(3);
   const [usdToThb, setUsdToThb] = useState(36);
   const [estShippingUSD, setEstShippingUSD] = useState(2.0);
-
-useEffect(() => {
-    fetch("/api/admin/categories")
-      .then((r) => r.json())
-      .then((d) => { if (d.success) setCategories(d.data); });
-    fetch("/api/admin/pet-types")
-      .then((r) => r.json())
-      .then((d) => { if (d.success) setPetTypes(d.data); });
-  }, []);
 
   const calcSellPrice = (usd: number) => Math.ceil(Number(usd) * usdToThb * priceFactor);
   const calcMargin = (costUSD: number) => {
@@ -85,6 +65,11 @@ useEffect(() => {
     if (!keyword.trim()) return;
     setSearching(true);
     setResults([]);
+    // Fetch categories/pet types once
+    if (categories.length === 0) {
+      fetch("/api/admin/categories").then((r) => r.json()).then((d) => { if (d.success) setCategories(d.data); });
+      fetch("/api/admin/pet-types").then((r) => r.json()).then((d) => { if (d.success) setPetTypes(d.data); });
+    }
     try {
       const url = searchMode === "pid"
         ? `/api/admin/cj-products?pid=${encodeURIComponent(keyword.trim())}`
@@ -180,63 +165,47 @@ useEffect(() => {
         <span className="text-stone-500 font-medium">⚙️ การคำนวณราคา:</span>
         <div className="flex items-center gap-2">
           <label className="text-stone-500">ตัวคูณราคาขาย</label>
-          <input
-            type="number" min="1" step="0.1" value={priceFactor}
+          <input type="number" min="1" step="0.1" value={priceFactor}
             onChange={(e) => setPriceFactor(Number(e.target.value))}
-            className="w-16 border border-stone-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-200"
-          />
+            className="w-16 border border-stone-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-200" />
           <span className="text-stone-400">x</span>
         </div>
         <div className="flex items-center gap-2">
           <label className="text-stone-500">USD/THB</label>
-          <input
-            type="number" min="1" step="0.5" value={usdToThb}
+          <input type="number" min="1" step="0.5" value={usdToThb}
             onChange={(e) => setUsdToThb(Number(e.target.value))}
-            className="w-16 border border-stone-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-200"
-          />
+            className="w-16 border border-stone-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-200" />
         </div>
         <div className="flex items-center gap-2">
           <label className="text-stone-500">ค่าส่ง CJ (ประมาณ)</label>
           <span className="text-stone-400">$</span>
-          <input
-            type="number" min="0" step="0.5" value={estShippingUSD}
+          <input type="number" min="0" step="0.5" value={estShippingUSD}
             onChange={(e) => setEstShippingUSD(Number(e.target.value))}
-            className="w-16 border border-stone-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-200"
-          />
+            className="w-16 border border-stone-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-200" />
         </div>
         <span className="text-stone-400 text-xs">ราคาขาย = ต้นทุน × {usdToThb} × {priceFactor} | กำไร = ราคาขาย − ต้นทุน − ค่าส่ง</span>
       </div>
 
       {/* Search bar */}
       <div className="flex gap-2 mb-6">
-        {/* Mode toggle */}
         <div className="flex rounded-xl border border-stone-200 overflow-hidden shrink-0 text-sm">
-          <button
-            onClick={() => { setSearchMode("name"); setResults([]); setKeyword(""); }}
-            className={`px-3 py-2 font-medium transition-colors ${searchMode === "name" ? "bg-stone-800 text-white" : "bg-white text-stone-500 hover:bg-stone-50"}`}
-          >
+          <button onClick={() => { setSearchMode("name"); setResults([]); setKeyword(""); }}
+            className={`px-3 py-2 font-medium transition-colors ${searchMode === "name" ? "bg-stone-800 text-white" : "bg-white text-stone-500 hover:bg-stone-50"}`}>
             ชื่อสินค้า
           </button>
-          <button
-            onClick={() => { setSearchMode("pid"); setResults([]); setKeyword(""); }}
-            className={`px-3 py-2 font-medium transition-colors ${searchMode === "pid" ? "bg-stone-800 text-white" : "bg-white text-stone-500 hover:bg-stone-50"}`}
-          >
+          <button onClick={() => { setSearchMode("pid"); setResults([]); setKeyword(""); }}
+            className={`px-3 py-2 font-medium transition-colors ${searchMode === "pid" ? "bg-stone-800 text-white" : "bg-white text-stone-500 hover:bg-stone-50"}`}>
             PID
           </button>
         </div>
-
-        <input
-          type="text" value={keyword}
+        <input type="text" value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch(1)}
           placeholder={searchMode === "pid" ? "วาง CJ Product ID เช่น 17392847591..." : "ค้นหาสินค้า เช่น dog collar, cat food..."}
           className="flex-1 border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 font-mono placeholder:font-sans"
         />
-        <button
-          onClick={() => handleSearch(1)}
-          disabled={searching || !keyword.trim()}
-          className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-60"
-        >
+        <button onClick={() => handleSearch(1)} disabled={searching || !keyword.trim()}
+          className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-60">
           {searching ? "กำลังค้นหา..." : "🔍 ค้นหา"}
         </button>
       </div>
@@ -299,16 +268,24 @@ useEffect(() => {
                         ✅ นำเข้าแล้ว → แก้ไข
                       </Link>
                     ) : (
-                      <button
-                        onClick={() => toggleImportPanel(item.pid)}
-                        className={`w-full text-xs px-3 py-1.5 rounded-lg border transition-colors ${isOpen ? "bg-orange-500 text-white border-orange-500" : "border-stone-200 text-stone-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600"}`}
-                      >
-                        {isOpen ? "ยกเลิก" : "นำเข้า"}
-                      </button>
+                      <div className="flex gap-1.5">
+                        <Link
+                          href={`/admin/cj-import/${item.pid}`}
+                          className="flex-1 text-center text-xs px-2 py-1.5 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 hover:text-stone-700 transition-colors"
+                        >
+                          🔍 รายละเอียด
+                        </Link>
+                        <button
+                          onClick={() => toggleImportPanel(item.pid)}
+                          className={`flex-1 text-xs px-2 py-1.5 rounded-lg border transition-colors ${isOpen ? "bg-orange-500 text-white border-orange-500" : "border-stone-200 text-stone-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600"}`}
+                        >
+                          {isOpen ? "ยกเลิก" : "นำเข้า"}
+                        </button>
+                      </div>
                     )}
                   </div>
 
-                  {/* Import form */}
+                  {/* Inline import panel */}
                   {isOpen && !imported && (
                     <div className="px-3 pb-3 border-t border-orange-100 pt-3 space-y-2">
                       {/* Insight panel */}
@@ -318,6 +295,15 @@ useEffect(() => {
                           <div className="bg-stone-50 rounded-xl p-2 text-[10px] text-stone-400 animate-pulse">กำลังโหลดข้อมูลคลัง + ค่าส่ง...</div>
                         );
                         if (!insight || insight === "error") return null;
+
+                        // Best shipping summary
+                        const withDays = insight.shippingOptions.filter((o) => o.deliveryDays !== null);
+                        const tracked = withDays.filter((o) => o.hasTracking);
+                        const pool = tracked.length > 0 ? tracked : withDays;
+                        const best = pool.length > 0
+                          ? pool.reduce((a, b) => (a.deliveryDays!.min <= b.deliveryDays!.min ? a : b))
+                          : null;
+
                         return (
                           <div className="bg-stone-50 rounded-xl p-2 space-y-1.5">
                             {insight.isRecommended && (
@@ -325,12 +311,23 @@ useEffect(() => {
                                 ✅ น่าเอามาขาย
                               </div>
                             )}
+                            {best && (() => {
+                              const flag = best.warehouseType === "US" ? "🇺🇸" : "🇨🇳";
+                              const days = best.deliveryDays!.min === best.deliveryDays!.max
+                                ? `${best.deliveryDays!.min} วัน`
+                                : `${best.deliveryDays!.min}–${best.deliveryDays!.max} วัน`;
+                              return (
+                                <div className="flex items-center gap-1.5 text-xs font-medium text-stone-700 bg-white border border-stone-200 rounded-lg px-2 py-1">
+                                  <span>{flag}</span>
+                                  <span>🚚 {days}</span>
+                                  <span className="text-stone-400 font-normal truncate">({best.logisticName})</span>
+                                  {best.hasTracking && <span className="text-green-500 text-[10px] shrink-0">📍</span>}
+                                </div>
+                              );
+                            })()}
                             <div className="flex flex-wrap gap-1">
                               <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${insight.badges.hasStock ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
                                 📦 {insight.totalStock.toLocaleString()} ชิ้น
-                              </span>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${insight.badges.hasFastShipping ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
-                                🚢 &lt;10 วัน
                               </span>
                               <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${insight.badges.hasTracking ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
                                 📍 tracking
@@ -342,12 +339,14 @@ useEffect(() => {
                                   <div key={i} className="flex items-center justify-between text-[10px]">
                                     <div className="flex items-center gap-1 min-w-0">
                                       <span>{opt.warehouseType === "US" ? "🇺🇸" : "🇨🇳"}</span>
-                                      <span className="text-stone-600 truncate max-w-[110px]">{opt.logisticName}</span>
+                                      <span className="text-stone-600 truncate max-w-25">{opt.logisticName}</span>
                                       {opt.hasTracking && <span className="text-green-500 shrink-0">✓</span>}
                                     </div>
                                     <div className="flex items-center gap-1.5 shrink-0 text-stone-400">
                                       <span>${opt.priceUSD.toFixed(2)}</span>
-                                      {opt.deliveryTime && <span>{opt.deliveryTime}วัน</span>}
+                                      {opt.deliveryDays && (
+                                        <span>{opt.deliveryDays.min === opt.deliveryDays.max ? opt.deliveryDays.min : `${opt.deliveryDays.min}–${opt.deliveryDays.max}`} วัน</span>
+                                      )}
                                     </div>
                                   </div>
                                 ))}
@@ -356,13 +355,12 @@ useEffect(() => {
                           </div>
                         );
                       })()}
+
                       <div>
                         <label className="block text-xs text-stone-500 mb-1">หมวดหมู่</label>
-                        <select
-                          value={form.categoryId}
+                        <select value={form.categoryId}
                           onChange={(e) => setImportForm((f) => ({ ...f, [item.pid]: { ...form, categoryId: e.target.value } }))}
-                          className="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-300"
-                        >
+                          className="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-300">
                           {categories.map((c) => (
                             <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
                           ))}
@@ -370,19 +368,15 @@ useEffect(() => {
                       </div>
                       <div>
                         <label className="block text-xs text-stone-500 mb-1">ประเภทสัตว์</label>
-                        <select
-                          value={form.petTypeId}
+                        <select value={form.petTypeId}
                           onChange={(e) => setImportForm((f) => ({ ...f, [item.pid]: { ...form, petTypeId: e.target.value } }))}
-                          className="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-300"
-                        >
+                          className="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-300">
                           <option value="">ไม่ระบุ</option>
                           {petTypes.map((p) => <option key={p.id} value={p.id}>{p.icon} {p.name}</option>)}
                         </select>
                       </div>
-                      <button
-                        onClick={() => handleImport(item)}
-                        className="w-full bg-orange-500 hover:bg-orange-600 text-white text-xs py-1.5 rounded-lg font-medium transition-colors"
-                      >
+                      <button onClick={() => handleImport(item)}
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white text-xs py-1.5 rounded-lg font-medium transition-colors">
                         ยืนยันนำเข้า (฿{sellTHB.toLocaleString("th-TH")})
                       </button>
                     </div>
@@ -406,38 +400,20 @@ useEffect(() => {
             }
             return (
               <div className="flex items-center justify-center gap-1 mt-8">
-                <button
-                  onClick={() => handleSearch(page - 1)}
-                  disabled={page <= 1 || searching}
-                  className="px-3 py-2 rounded-xl border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 disabled:opacity-40 transition-colors"
-                >
-                  ←
-                </button>
+                <button onClick={() => handleSearch(page - 1)} disabled={page <= 1 || searching}
+                  className="px-3 py-2 rounded-xl border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 disabled:opacity-40 transition-colors">←</button>
                 {pages.map((p, i) =>
                   p === "..." ? (
                     <span key={`ellipsis-${i}`} className="px-2 text-stone-400 text-sm">…</span>
                   ) : (
-                    <button
-                      key={p}
-                      onClick={() => p !== page && handleSearch(p)}
-                      disabled={searching}
-                      className={`w-9 h-9 rounded-xl text-sm font-medium transition-colors ${
-                        p === page
-                          ? "bg-orange-500 text-white"
-                          : "border border-stone-200 text-stone-600 hover:bg-stone-50"
-                      }`}
-                    >
+                    <button key={p} onClick={() => p !== page && handleSearch(p)} disabled={searching}
+                      className={`w-9 h-9 rounded-xl text-sm font-medium transition-colors ${p === page ? "bg-orange-500 text-white" : "border border-stone-200 text-stone-600 hover:bg-stone-50"}`}>
                       {p}
                     </button>
                   )
                 )}
-                <button
-                  onClick={() => handleSearch(page + 1)}
-                  disabled={page >= totalPages || searching}
-                  className="px-3 py-2 rounded-xl border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 disabled:opacity-40 transition-colors"
-                >
-                  →
-                </button>
+                <button onClick={() => handleSearch(page + 1)} disabled={page >= totalPages || searching}
+                  className="px-3 py-2 rounded-xl border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 disabled:opacity-40 transition-colors">→</button>
                 <span className="ml-3 text-xs text-stone-400">หน้า {page}/{totalPages} ({total.toLocaleString()} รายการ)</span>
               </div>
             );

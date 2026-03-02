@@ -44,6 +44,8 @@ interface ProductFormProps {
     petTypeId: string;
     active: boolean;
     featured: boolean;
+    deliveryDays?: string;
+    warehouseCountry?: string;
     variants?: VariantRow[];
   };
 }
@@ -69,6 +71,8 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
     petTypeId: "",
     active: true,
     featured: false,
+    deliveryDays: "2",
+    warehouseCountry: "",
     ...initialData,
   });
 
@@ -152,6 +156,8 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
       stock: parseInt(form.stock),
       images: imageList,
       petTypeId: form.petTypeId || null,
+      deliveryDays: parseInt(form.deliveryDays) || 2,
+      warehouseCountry: form.warehouseCountry || null,
       variants,
     };
 
@@ -279,6 +285,11 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
       <div className="grid grid-cols-2 gap-4">
         {field("ราคา (บาท)", "price", { required: true, type: "number", min: "0", step: "0.01", placeholder: "0.00" })}
         {field("จำนวนสต็อก", "stock", { required: true, type: "number", min: "0", placeholder: "0" })}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        {field("ระยะเวลาจัดส่ง (วัน)", "deliveryDays", { type: "number", min: "1", placeholder: "2" })}
+        {field("คลังสินค้า (admin)", "warehouseCountry", { placeholder: "CN, US, ฯลฯ" })}
       </div>
 
       <div className="grid grid-cols-2 gap-4">

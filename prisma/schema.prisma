@@ -70,6 +70,8 @@ model Product {
   source              String?
   sourceDescription   String?   // original CJ description (HTML) — for admin reference
   sourceData          Json?
+  deliveryDays        Int       @default(2)
+  warehouseCountry    String?
   createdAt       DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

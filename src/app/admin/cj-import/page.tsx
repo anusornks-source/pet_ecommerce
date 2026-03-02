@@ -124,6 +124,22 @@ useEffect(() => {
     const form = importForm[item.pid];
     if (!form?.categoryId) { toast.error("กรุณาเลือกหมวดหมู่"); return; }
     const toastId = toast.loading("กำลัง import...");
+
+    // Extract delivery info from insight
+    let deliveryDays: number | undefined;
+    let warehouseCountry: string | undefined;
+    const insight = insights[item.pid];
+    if (insight && insight !== "loading" && insight !== "error") {
+      const withDays = insight.shippingOptions.filter((o) => o.deliveryDays !== null);
+      const tracked = withDays.filter((o) => o.hasTracking);
+      const pool = tracked.length > 0 ? tracked : withDays;
+      if (pool.length > 0) {
+        const fastest = pool.reduce((a, b) => (a.deliveryDays!.min <= b.deliveryDays!.min ? a : b));
+        deliveryDays = fastest.deliveryDays!.min;
+        warehouseCountry = fastest.warehouseType === "LOCAL" ? "CN" : fastest.warehouseType;
+      }
+    }
+
     try {
       const res = await fetch("/api/admin/cj-products", {
         method: "POST",
@@ -135,6 +151,8 @@ useEffect(() => {
           priceFactor,
           usdToThb,
           fallbackCostUSD: Number(item.sellPrice),
+          ...(deliveryDays !== undefined && { deliveryDays }),
+          ...(warehouseCountry && { warehouseCountry }),
         }),
       });
       const data = await res.json();

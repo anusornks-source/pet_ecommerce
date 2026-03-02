@@ -45,6 +45,8 @@ export async function PUT(
     petTypeId,
     active,
     featured,
+    deliveryDays,
+    warehouseCountry,
     variants,
   } = body;
 
@@ -88,6 +90,8 @@ export async function PUT(
       ...(petTypeId !== undefined && { petTypeId: petTypeId || null }),
       ...(active !== undefined && { active: !!active }),
       ...(featured !== undefined && { featured: !!featured }),
+      ...(deliveryDays !== undefined && { deliveryDays: parseInt(deliveryDays) }),
+      ...(warehouseCountry !== undefined && { warehouseCountry: warehouseCountry || null }),
     },
     include: { category: true, petType: true, variants: { orderBy: { createdAt: "asc" } } },
   });

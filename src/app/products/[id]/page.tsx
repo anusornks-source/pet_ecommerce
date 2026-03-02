@@ -304,6 +304,14 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             )}
           </div>
 
+          {/* Delivery time */}
+          {product.deliveryDays && (
+            <div className="flex items-center gap-1.5 text-sm text-stone-500">
+              <span>🚚</span>
+              <span>จัดส่งภายใน <span className="font-medium text-stone-700">{product.deliveryDays} วัน</span></span>
+            </div>
+          )}
+
           {/* Variant selector */}
           {hasVariants && (
             <div id="variant-selector" className={`transition-all duration-300 rounded-xl ${variantError ? "ring-2 ring-orange-400 ring-offset-2 p-3 bg-orange-50" : ""}`}>

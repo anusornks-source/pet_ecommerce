@@ -32,6 +32,8 @@ interface Product {
   petTypeId: string | null;
   active: boolean;
   featured: boolean;
+  deliveryDays: number;
+  warehouseCountry: string | null;
   variants: ProductVariant[];
 }
 
@@ -138,6 +140,8 @@ export default function EditProductPage({
             petTypeId: product.petTypeId || "",
             active: product.active,
             featured: product.featured,
+            deliveryDays: product.deliveryDays.toString(),
+            warehouseCountry: product.warehouseCountry ?? "",
             variants: product.variants.map((v) => ({
               id: v.id,
               size: v.size ?? "",

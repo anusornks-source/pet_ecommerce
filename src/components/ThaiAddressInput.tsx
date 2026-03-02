@@ -22,8 +22,9 @@ let cachedDB: AddressRecord[] | null = null;
 
 async function loadDB(): Promise<AddressRecord[]> {
   if (cachedDB) return cachedDB;
-  const res = await fetch("/data/thai-address.json");
-  cachedDB = await res.json();
+  const res = await fetch("/api/thai-address");
+  const json = await res.json();
+  cachedDB = json.data ?? json;
   return cachedDB!;
 }
 

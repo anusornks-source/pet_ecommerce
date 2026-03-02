@@ -3,11 +3,14 @@ import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 import { getCJToken, searchCJProducts } from "@/lib/cjDropshipping";
 import nodemailer from "nodemailer";
+import fs from "fs";
+import path from "path";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
+  const thaiAddressPath = path.join(process.cwd(), "public", "data", "thai-address.json");
   return NextResponse.json({
     success: true,
     data: {
@@ -17,6 +20,7 @@ export async function GET(request: NextRequest) {
       facebook: !!(process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET),
       line: !!(process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET),
       stripe: !!process.env.STRIPE_SECRET_KEY,
+      thaiAddress: fs.existsSync(thaiAddressPath),
     },
   });
 }
@@ -142,6 +146,31 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           message: `Stripe เชื่อมต่อสำเร็จ — Balance: ${balanceStr}`,
+          ms: Date.now() - startTime,
+        });
+      }
+
+      case "thai-address": {
+        const filePath = path.join(process.cwd(), "public", "data", "thai-address.json");
+        if (!fs.existsSync(filePath)) {
+          return NextResponse.json({ success: false, error: "ไม่พบไฟล์ thai-address.json ใน public/data/" });
+        }
+        const raw = fs.readFileSync(filePath, "utf-8");
+        const data = JSON.parse(raw) as Array<{ district: string; amphoe: string; province: string; zipcode: string }>;
+        const count = data.length;
+        const sample = data.slice(0, 5);
+
+        await prisma.siteSettings.upsert({
+          where: { id: "default" },
+          create: { id: "default", thaiAddressUpdatedAt: new Date() },
+          update: { thaiAddressUpdatedAt: new Date() },
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: `โหลดข้อมูลที่อยู่ไทยสำเร็จ — ${count.toLocaleString("th-TH")} รายการ`,
+          count,
+          sample,
           ms: Date.now() - startTime,
         });
       }

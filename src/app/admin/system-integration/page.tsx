@@ -9,6 +9,12 @@ interface ConfigStatus {
   facebook: boolean;
   line: boolean;
   stripe: boolean;
+  thaiAddress: boolean;
+}
+
+interface ThaiAddressMeta {
+  count: number;
+  updatedAt: string | null;
 }
 
 interface TestResult {
@@ -16,6 +22,8 @@ interface TestResult {
   message?: string;
   error?: string;
   ms?: number;
+  count?: number;
+  sample?: Array<{ district: string; amphoe: string; province: string; zipcode: string }>;
 }
 
 interface TestState {
@@ -103,12 +111,18 @@ export default function SystemIntegrationPage() {
   const [config, setConfig] = useState<ConfigStatus | null>(null);
   const [tests, setTests] = useState<Record<string, TestState>>({});
   const [testEmail, setTestEmail] = useState("");
+  const [thaiAddrMeta, setThaiAddrMeta] = useState<ThaiAddressMeta | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/system-integration")
       .then((r) => r.json())
       .then((d) => {
         if (d.success) setConfig(d.data);
+      });
+    fetch("/api/thai-address")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setThaiAddrMeta({ count: d.count, updatedAt: d.updatedAt });
       });
   }, []);
 
@@ -122,6 +136,9 @@ export default function SystemIntegrationPage() {
       });
       const data = await res.json();
       setTests((prev) => ({ ...prev, [testId]: { loading: false, result: data } }));
+      if (testId === "thai-address" && data.success) {
+        setThaiAddrMeta({ count: data.count, updatedAt: new Date().toISOString() });
+      }
     } catch {
       setTests((prev) => ({
         ...prev,
@@ -175,6 +192,7 @@ export default function SystemIntegrationPage() {
               { key: "facebook", label: "Facebook" },
               { key: "line", label: "LINE" },
               { key: "stripe", label: "Stripe" },
+              { key: "thaiAddress", label: "Thai Addr" },
             ].map(({ key, label }) => (
               <span
                 key={key}
@@ -327,6 +345,62 @@ export default function SystemIntegrationPage() {
 
           {!config?.stripe && (
             <p className="mt-3 text-xs text-stone-400">ต้องตั้งค่า STRIPE_SECRET_KEY ใน .env</p>
+          )}
+        </div>
+
+        {/* ── Thai Address Data ── */}
+        <div className="bg-white rounded-2xl border border-stone-100 p-5">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">📍</span>
+              <div>
+                <h2 className="font-semibold text-stone-800">ข้อมูลที่อยู่ไทย</h2>
+                <p className="text-xs text-stone-400 mt-0.5">public/data/thai-address.json</p>
+              </div>
+            </div>
+            <StatusBadge configured={config?.thaiAddress ?? false} />
+          </div>
+
+          {thaiAddrMeta && (
+            <div className="mb-3 flex items-center gap-4 text-sm text-stone-600">
+              <span className="flex items-center gap-1.5">
+                <span className="text-emerald-500 font-semibold">{thaiAddrMeta.count.toLocaleString("th-TH")}</span>
+                <span className="text-stone-400">รายการ</span>
+              </span>
+              {thaiAddrMeta.updatedAt && (
+                <span className="text-stone-400 text-xs">
+                  อัปเดต {new Date(thaiAddrMeta.updatedAt).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <TestButton
+              onClick={() => runTest("thai-address")}
+              loading={tests["thai-address"]?.loading ?? false}
+              label="โหลดใหม่ / ตรวจสอบ"
+            />
+          </div>
+          <ResultBox state={tests["thai-address"]} />
+
+          {tests["thai-address"]?.result?.success && tests["thai-address"].result.sample && (
+            <div className="mt-3">
+              <p className="text-xs font-medium text-stone-400 mb-1.5">ตัวอย่างข้อมูล 5 รายการแรก</p>
+              <div className="rounded-xl border border-stone-100 overflow-hidden divide-y divide-stone-50">
+                {tests["thai-address"].result.sample.map((row, i) => (
+                  <div key={i} className="flex items-center gap-2 px-3 py-1.5 text-xs font-mono text-stone-600 bg-stone-50/50">
+                    <span className="text-stone-400 w-3">{i + 1}</span>
+                    <span>{row.district}</span>
+                    <span className="text-stone-300">/</span>
+                    <span>{row.amphoe}</span>
+                    <span className="text-stone-300">/</span>
+                    <span>{row.province}</span>
+                    <span className="ml-auto text-stone-400">{row.zipcode}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 

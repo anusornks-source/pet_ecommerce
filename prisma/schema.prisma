@@ -292,9 +292,10 @@ model SiteSettings {
   cjTokenExpiresAt DateTime?
   cjPriceFactor    Float    @default(3)
   usdToThb         Float    @default(36)
-  displayStockMin  Int      @default(50)
-  displayStockMax  Int      @default(100)
-  updatedAt        DateTime @updatedAt
+  displayStockMin       Int       @default(50)
+  displayStockMax       Int       @default(100)
+  thaiAddressUpdatedAt  DateTime?
+  updatedAt             DateTime  @updatedAt
 
   @@map("site_settings")
 }

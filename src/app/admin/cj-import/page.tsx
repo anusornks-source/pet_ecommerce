@@ -13,6 +13,23 @@ interface CJItem {
   categoryName: string;
 }
 
+interface ShippingOption {
+  logisticName: string;
+  priceUSD: number;
+  deliveryTime: string;
+  deliveryDays: { min: number; max: number } | null;
+  warehouseType: "CN" | "US" | "LOCAL";
+  hasTracking: boolean;
+}
+
+interface InsightData {
+  totalStock: number;
+  variantCount: number;
+  shippingOptions: ShippingOption[];
+  badges: { hasStock: boolean; hasFastShipping: boolean; hasTracking: boolean };
+  isRecommended: boolean;
+}
+
 interface Category {
   id: string;
   name: string;
@@ -38,6 +55,7 @@ export default function CJImportPage() {
   const [importingPid, setImportingPid] = useState<string | null>(null);
   const [importForm, setImportForm] = useState<Record<string, { categoryId: string; petTypeId: string }>>({});
   const [importedIds, setImportedIds] = useState<Record<string, string>>({});
+  const [insights, setInsights] = useState<Record<string, InsightData | "loading" | "error">>({});
 
   // Price factor settings
   const [priceFactor, setPriceFactor] = useState(3);
@@ -92,6 +110,13 @@ useEffect(() => {
     setImportingPid(pid);
     if (!importForm[pid]) {
       setImportForm((f) => ({ ...f, [pid]: { categoryId: categories[0]?.id ?? "", petTypeId: "" } }));
+    }
+    if (!insights[pid]) {
+      setInsights((prev) => ({ ...prev, [pid]: "loading" }));
+      fetch(`/api/admin/cj-products/insight?pid=${pid}`)
+        .then((r) => r.json())
+        .then((d) => setInsights((prev) => ({ ...prev, [pid]: d.success ? d.data : "error" })))
+        .catch(() => setInsights((prev) => ({ ...prev, [pid]: "error" })));
     }
   };
 
@@ -268,6 +293,51 @@ useEffect(() => {
                   {/* Import form */}
                   {isOpen && !imported && (
                     <div className="px-3 pb-3 border-t border-orange-100 pt-3 space-y-2">
+                      {/* Insight panel */}
+                      {(() => {
+                        const insight = insights[item.pid];
+                        if (insight === "loading") return (
+                          <div className="bg-stone-50 rounded-xl p-2 text-[10px] text-stone-400 animate-pulse">กำลังโหลดข้อมูลคลัง + ค่าส่ง...</div>
+                        );
+                        if (!insight || insight === "error") return null;
+                        return (
+                          <div className="bg-stone-50 rounded-xl p-2 space-y-1.5">
+                            {insight.isRecommended && (
+                              <div className="inline-flex items-center gap-1 bg-green-50 border border-green-200 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                ✅ น่าเอามาขาย
+                              </div>
+                            )}
+                            <div className="flex flex-wrap gap-1">
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${insight.badges.hasStock ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
+                                📦 {insight.totalStock.toLocaleString()} ชิ้น
+                              </span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${insight.badges.hasFastShipping ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
+                                🚢 &lt;10 วัน
+                              </span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${insight.badges.hasTracking ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
+                                📍 tracking
+                              </span>
+                            </div>
+                            {insight.shippingOptions.length > 0 && (
+                              <div className="space-y-0.5 pt-0.5 border-t border-stone-200">
+                                {insight.shippingOptions.slice(0, 5).map((opt, i) => (
+                                  <div key={i} className="flex items-center justify-between text-[10px]">
+                                    <div className="flex items-center gap-1 min-w-0">
+                                      <span>{opt.warehouseType === "US" ? "🇺🇸" : "🇨🇳"}</span>
+                                      <span className="text-stone-600 truncate max-w-[110px]">{opt.logisticName}</span>
+                                      {opt.hasTracking && <span className="text-green-500 shrink-0">✓</span>}
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0 text-stone-400">
+                                      <span>${opt.priceUSD.toFixed(2)}</span>
+                                      {opt.deliveryTime && <span>{opt.deliveryTime}วัน</span>}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                       <div>
                         <label className="block text-xs text-stone-500 mb-1">หมวดหมู่</label>
                         <select

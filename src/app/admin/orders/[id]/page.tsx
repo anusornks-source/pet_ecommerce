@@ -67,6 +67,7 @@ interface CostEstimate {
   usdToThb: number;
   freightItems: { name: string; priceUSD: number; logistic: string }[];
   freightApiAvailable: boolean;
+  freightFallback: boolean;
   logistic: string;
 }
 
@@ -586,23 +587,17 @@ export default function AdminOrderDetailPage({
                     <div className="flex justify-between text-stone-600">
                       <span>
                         ค่าส่ง ({stockModal.costEstimate.logistic})
-                        {!stockModal.costEstimate.freightApiAvailable && (
+                        {stockModal.costEstimate.freightFallback && (
                           <span className="text-xs text-amber-500 ml-1">*ประมาณ</span>
                         )}
                       </span>
                       <span className="font-medium">
-                        {stockModal.costEstimate.freightApiAvailable ? (
-                          <>
-                            ฿{stockModal.costEstimate.freightTHB.toLocaleString()}
-                            <span className="text-xs text-stone-400 ml-1">(~${stockModal.costEstimate.freightTotalUSD})</span>
-                          </>
-                        ) : (
-                          <span className="text-amber-500 text-xs font-normal">ดูใน CJ Dashboard</span>
-                        )}
+                        ฿{stockModal.costEstimate.freightTHB.toLocaleString()}
+                        <span className="text-xs text-stone-400 ml-1">(~${stockModal.costEstimate.freightTotalUSD})</span>
                       </span>
                     </div>
                     <div className="flex justify-between font-semibold text-stone-700 border-t border-stone-200 pt-1.5">
-                      <span>รวมต้นทุน{!stockModal.costEstimate.freightApiAvailable && <span className="text-amber-500 font-normal text-xs ml-1">(ไม่รวมค่าส่ง)</span>}</span>
+                      <span>รวมต้นทุน{stockModal.costEstimate.freightFallback && <span className="text-amber-500 font-normal text-xs ml-1">*ประมาณ</span>}</span>
                       <span>฿{stockModal.costEstimate.totalCostTHB.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-stone-600">
@@ -612,16 +607,16 @@ export default function AdminOrderDetailPage({
                     <div className={`flex justify-between font-bold border-t border-stone-200 pt-1.5 ${
                       stockModal.costEstimate.estimatedMarginTHB >= 0 ? "text-green-600" : "text-red-600"
                     }`}>
-                      <span>กำไรประมาณ{!stockModal.costEstimate.freightApiAvailable && <span className="text-amber-500 font-normal text-xs ml-1">(ก่อนหักค่าส่ง)</span>}</span>
+                      <span>กำไรประมาณ{stockModal.costEstimate.freightFallback && <span className="text-amber-500 font-normal text-xs ml-1">*ประมาณ</span>}</span>
                       <span>
                         {stockModal.costEstimate.estimatedMarginTHB >= 0 ? "+" : ""}
                         ฿{stockModal.costEstimate.estimatedMarginTHB.toLocaleString()}
                       </span>
                     </div>
                   </div>
-                  {!stockModal.costEstimate.freightApiAvailable && (
-                    <p className="text-xs text-amber-600 mt-2 bg-amber-50 rounded-lg px-3 py-2">
-                      ⚠️ ไม่สามารถดึงค่าส่งจาก CJ API ได้ — กำไรที่แสดงยังไม่รวมค่าส่ง กรุณาตรวจสอบใน CJ Dashboard
+                  {stockModal.costEstimate.freightFallback && (
+                    <p className="text-xs text-stone-400 mt-2">
+                      * ค่าส่งเป็นประมาณการ (0.3 kg/ชิ้น × $3/kg) เนื่องจาก CJ API ไม่ตอบ — ดูราคาจริงใน CJ Dashboard
                     </p>
                   )}
                 </div>

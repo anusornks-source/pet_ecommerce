@@ -144,6 +144,12 @@ export async function PUT(
       }
 
       // 4. Cost estimate
+      // If freight API returned nothing, fallback: 0.3 kg/unit × $3 USD/kg (CJPACKET rough rate CN→TH)
+      const freightFallback = !freightApiAvailable && cjItems.length > 0;
+      if (freightFallback) {
+        const totalUnits = cjItems.reduce((sum, item) => sum + item.quantity, 0);
+        freightTotalUSD = Math.round(totalUnits * 0.3 * 3 * 100) / 100; // 0.3kg × $3/kg per unit
+      }
       const itemsCostUSD = cjItems.reduce(
         (sum, item) => sum + (item.product.costPrice ?? 0) * item.quantity,
         0
@@ -170,6 +176,7 @@ export async function PUT(
           usdToThb,
           freightItems,
           freightApiAvailable,
+          freightFallback,
           logistic: logisticName,
         } : null,
       });

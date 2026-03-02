@@ -429,3 +429,25 @@ model Tag {
   @@map("tags")
 }
 
+model ApiLog {
+  id         String   @id @default(cuid())
+  type       String   // "API" | "WEBHOOK"
+  source     String?  // "STRIPE" | "CJ" | "INTERNAL"
+  method     String?  // GET | POST | PUT | DELETE
+  path       String
+  statusCode Int?
+  userId     String?
+  eventType  String?  // webhook: "payment_intent.succeeded"
+  eventId    String?  // webhook: Stripe event ID (evt_xxx)
+  request    Json?
+  response   Json?
+  duration   Int?     // ms
+  success    Boolean  @default(true)
+  error      String?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@map("api_logs")
+}
+
+

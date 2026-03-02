@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 import { createCJOrder, getCJInventory, getCJFreight, cancelCJOrder } from "@/lib/cjDropshipping";
+import { logApi } from "@/lib/apiLogger";
 
 export async function GET(
   request: NextRequest,
@@ -293,6 +294,13 @@ export async function PUT(
   const order = await prisma.order.update({
     where: { id },
     data: updateData,
+  });
+
+  await logApi({
+    type: "API", source: "ADMIN", method: "PUT", path: `/api/admin/orders/${id}`,
+    statusCode: 200, userId: auth.userId, success: true,
+    request: { orderId: id, fromStatus: current.status, toStatus: status, note, trackingNumber, trackingCarrier },
+    response: { status: order.status, cjOrderId: order.cjOrderId },
   });
 
   return NextResponse.json({ success: true, data: order });

@@ -27,7 +27,7 @@ export default function CartPage() {
   const items = cart?.items || [];
   const itemPrice = (item: typeof items[0]) => item.variant?.price ?? item.product.price;
   const subtotal = items.reduce((sum, item) => sum + itemPrice(item) * item.quantity, 0);
-  const shipping = subtotal > 500 ? 0 : 50;
+  const shipping = 0;
   const total = subtotal + shipping;
 
   const handleRemove = async (itemId: string, name: string) => {

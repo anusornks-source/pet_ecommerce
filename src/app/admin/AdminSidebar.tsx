@@ -45,6 +45,7 @@ const navEntries: NavEntry[] = [
     items: [
       { href: "/admin/settings", label: "ตั้งค่าร้าน", icon: "⚙️" },
       { href: "/admin/system-integration", label: "System Integration", icon: "🔌" },
+      { href: "/admin/api-logs", label: "API & Webhook Logs", icon: "🗂️" },
       { href: "/admin/cj-logs", label: "CJ Logs", icon: "📋" },
     ],
   },

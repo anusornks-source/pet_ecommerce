@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { Client } from "@upstash/qstash";
 import { prisma } from "@/lib/prisma";
+import { logApi } from "@/lib/apiLogger";
 
 const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-02-25.clover" });
 const getQStash = () => new Client({ token: process.env.QSTASH_TOKEN! });
@@ -9,6 +10,7 @@ const getQStash = () => new Client({ token: process.env.QSTASH_TOKEN! });
 export async function POST(request: NextRequest) {
   const sig = request.headers.get("stripe-signature");
   if (!sig) {
+    await logApi({ type: "WEBHOOK", source: "STRIPE", method: "POST", path: "/api/webhooks/stripe", statusCode: 400, success: false, error: "Missing stripe-signature" });
     return NextResponse.json({ error: "Missing stripe-signature" }, { status: 400 });
   }
 
@@ -19,6 +21,7 @@ export async function POST(request: NextRequest) {
     event = getStripe().webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET!);
   } catch (err) {
     console.error("[Stripe Webhook] signature verification failed:", err);
+    await logApi({ type: "WEBHOOK", source: "STRIPE", method: "POST", path: "/api/webhooks/stripe", statusCode: 400, success: false, error: "Invalid signature" });
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -38,11 +41,15 @@ export async function POST(request: NextRequest) {
 
       if (!orderId) {
         console.error("[Stripe Webhook] no orderId in metadata", session.id);
+        await logApi({ type: "WEBHOOK", source: "STRIPE", method: "POST", path: "/api/webhooks/stripe", eventType: event.type, eventId: event.id, statusCode: 400, success: false, error: "no orderId in session metadata", request: { sessionId: session.id } });
         break;
       }
 
       const order = await prisma.order.findUnique({ where: { id: orderId } });
-      if (!order || order.status !== "PENDING") break;
+      if (!order || order.status !== "PENDING") {
+        await logApi({ type: "WEBHOOK", source: "STRIPE", method: "POST", path: "/api/webhooks/stripe", eventType: event.type, eventId: event.id, statusCode: 200, success: false, error: `order not found or not PENDING (status: ${order?.status})`, request: { sessionId: session.id, orderId } });
+        break;
+      }
 
       const history = (Array.isArray(order.statusHistory) ? order.statusHistory : []) as Array<{
         status: string; timestamp: string; note?: string;
@@ -76,6 +83,13 @@ export async function POST(request: NextRequest) {
         }),
       ]);
 
+      await logApi({
+        type: "WEBHOOK", source: "STRIPE", method: "POST", path: "/api/webhooks/stripe",
+        eventType: event.type, eventId: event.id, statusCode: 200, success: true,
+        request: { sessionId: session.id, orderId, amountTotal: session.amount_total },
+        response: { orderStatus: "CONFIRMED" },
+      });
+
       // Push CJ order creation job to QStash
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL!;
       try {
@@ -94,10 +108,16 @@ export async function POST(request: NextRequest) {
     case "charge.refunded": {
       const charge = event.data.object as Stripe.Charge;
       const paymentIntentId = charge.payment_intent as string;
-      if (!paymentIntentId) break;
+      if (!paymentIntentId) {
+        await logApi({ type: "WEBHOOK", source: "STRIPE", method: "POST", path: "/api/webhooks/stripe", eventType: event.type, eventId: event.id, statusCode: 400, success: false, error: "no payment_intent on charge" });
+        break;
+      }
 
       const payment = await prisma.payment.findFirst({ where: { ref: paymentIntentId } });
-      if (!payment) break;
+      if (!payment) {
+        await logApi({ type: "WEBHOOK", source: "STRIPE", method: "POST", path: "/api/webhooks/stripe", eventType: event.type, eventId: event.id, statusCode: 404, success: false, error: `payment not found for paymentIntent ${paymentIntentId}` });
+        break;
+      }
 
       const order = await prisma.order.findUnique({ where: { id: payment.orderId } });
       if (!order) break;
@@ -121,11 +141,18 @@ export async function POST(request: NextRequest) {
           data: { status: "CANCELLED", statusHistory: history },
         }),
       ]);
+
+      await logApi({
+        type: "WEBHOOK", source: "STRIPE", method: "POST", path: "/api/webhooks/stripe",
+        eventType: event.type, eventId: event.id, statusCode: 200, success: true,
+        request: { chargeId: charge.id, paymentIntentId, amountRefunded: charge.amount_refunded },
+        response: { orderId: order.id, orderStatus: "CANCELLED", paymentStatus: "REFUNDED" },
+      });
       break;
     }
 
     default:
-      // Unhandled event — just acknowledge
+      await logApi({ type: "WEBHOOK", source: "STRIPE", method: "POST", path: "/api/webhooks/stripe", eventType: event.type, eventId: event.id, statusCode: 200, success: true, response: { note: "unhandled event" } });
       break;
   }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendOrderNotification, sendCustomerOrderConfirmation } from "@/lib/email";
+import { logApi } from "@/lib/apiLogger";
 
 // GET user orders
 export async function GET() {
@@ -214,6 +215,13 @@ export async function POST(request: NextRequest) {
   } catch {
     // ignore — never block the order
   }
+
+  await logApi({
+    type: "API", source: "INTERNAL", method: "POST", path: "/api/orders",
+    statusCode: 201, userId: session.userId, success: true,
+    request: { paymentMethod, couponCode, itemCount: cart.items.length, subtotal, total, discount },
+    response: { orderId: order.id, status: order.status },
+  });
 
   return NextResponse.json({ success: true, data: order }, { status: 201 });
 }

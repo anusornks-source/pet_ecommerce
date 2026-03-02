@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { logApi } from "@/lib/apiLogger";
 
 const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-02-25.clover" });
 
@@ -69,6 +70,13 @@ export async function POST(
       data: { status: "CANCELLED", statusHistory: history },
     }),
   ]);
+
+  await logApi({
+    type: "API", source: "ADMIN", method: "POST", path: `/api/admin/orders/${id}/refund`,
+    statusCode: 200, userId: auth.userId, success: true,
+    request: { orderId: id, paymentIntentRef: order.payment.ref, amount: order.payment.amount },
+    response: { refundId: refund.id },
+  });
 
   return NextResponse.json({ success: true, refundId: refund.id });
 }

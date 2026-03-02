@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 import { getCJTrackingInfo } from "@/lib/cjDropshipping";
+import { logApi } from "@/lib/apiLogger";
 
 export async function POST(
   request: NextRequest,
@@ -35,6 +36,13 @@ export async function POST(
       ...(tracking.trackingNumber && { trackingNumber: tracking.trackingNumber }),
       ...(tracking.trackingCarrier && { trackingCarrier: tracking.trackingCarrier }),
     },
+  });
+
+  await logApi({
+    type: "API", source: "ADMIN", method: "POST", path: `/api/admin/orders/${id}/sync-tracking`,
+    statusCode: 200, userId: auth.userId, success: true,
+    request: { orderId: id, cjOrderId: order.cjOrderId },
+    response: { cjStatus: updated.cjStatus, trackingNumber: updated.trackingNumber, trackingCarrier: updated.trackingCarrier },
   });
 
   return NextResponse.json({

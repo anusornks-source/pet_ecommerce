@@ -87,7 +87,7 @@ export default function CheckoutPage() {
   }
 
   const subtotal = items.reduce((sum, item) => sum + (item.variant?.price ?? item.product.price) * item.quantity, 0);
-  const shipping = subtotal > 500 ? 0 : 50;
+  const shipping = 0;
   const discount = couponApplied?.discount ?? 0;
   const total = subtotal + shipping - discount;
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
-import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import ProductCard from "@/components/ProductCard";
+import HeroSlider from "@/components/HeroSlider";
 import type { Product } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -25,11 +25,10 @@ async function getPetTypes() {
   return prisma.petType.findMany({ orderBy: { order: "asc" } });
 }
 
-async function getSettings() {
-  return prisma.siteSettings.upsert({
-    where: { id: "default" },
-    create: { id: "default", storeName: "PetShop" },
-    update: {},
+async function getActiveBanners() {
+  return prisma.heroBanner.findMany({
+    where: { active: true },
+    orderBy: { order: "asc" },
   });
 }
 
@@ -48,18 +47,14 @@ async function getActiveShelves() {
   return shelves.filter((s) => s.items.length > 0);
 }
 
-const DEFAULT_HERO_IMAGE = "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=1400";
-
 export default async function HomePage() {
-  const [featuredProducts, categories, settings, petTypes, activeShelves] = await Promise.all([
+  const [featuredProducts, categories, petTypes, activeShelves, activeBanners] = await Promise.all([
     getFeaturedProducts(),
     getCategories(),
-    getSettings(),
     getPetTypes(),
     getActiveShelves(),
+    getActiveBanners(),
   ]);
-
-  const heroImageUrl: string = settings?.heroImageUrl || DEFAULT_HERO_IMAGE;
 
   const PET_COLORS = [
     { bg: "bg-amber-50", border: "border-amber-200" },
@@ -74,67 +69,7 @@ export default async function HomePage() {
 
   return (
     <div>
-      {/* Hero Section — full-width background image */}
-      <section className="relative overflow-hidden h-120 md:h-140">
-        {/* Background image */}
-        <Image
-          src={heroImageUrl}
-          alt="Hero"
-          fill
-          className="object-cover"
-          priority
-          sizes="100vw"
-        />
-        {/* Gradient overlay: dark on left for text, fades to transparent on right */}
-        <div className="absolute inset-0 bg-linear-to-r from-black/65 via-black/30 to-transparent" />
-
-        {/* Content */}
-        <div className="relative z-10 max-w-6xl mx-auto px-4 h-full flex items-center">
-          <div className="max-w-lg space-y-6">
-            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium border border-white/30">
-              🎉 ยินดีต้อนรับสู่ PetShop
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight drop-shadow-md">
-              ทุกสิ่งที่{" "}
-              <span className="text-orange-300">น้องรัก</span>
-              <br />ต้องการ ที่นี่ครบ!
-            </h1>
-            <p className="text-white/85 text-lg leading-relaxed">
-              คัดสรรสัตว์เลี้ยงคุณภาพ พร้อมอาหาร ของเล่น และอุปกรณ์ครบครัน จัดส่งถึงบ้านทั่วประเทศ
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Link href="/products" className="btn-primary px-8 py-3 text-base">
-                ช้อปเลย 🛒
-              </Link>
-              <Link
-                href="/products?category=dogs"
-                className="bg-white/20 backdrop-blur-sm border border-white/40 text-white hover:bg-white/30 transition-colors px-8 py-3 text-base rounded-xl font-medium"
-              >
-                ดูสัตว์เลี้ยง
-              </Link>
-            </div>
-            <div className="flex items-center gap-6 text-sm text-white/80">
-              <div className="flex items-center gap-1.5">✅ สินค้าคุณภาพ</div>
-              <div className="flex items-center gap-1.5">🚚 จัดส่งทั่วไทย</div>
-              <div className="flex items-center gap-1.5">💬 ดูแลหลังขาย</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Floating badges */}
-        <div className="absolute bottom-6 right-6 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-3 flex items-center gap-2 z-10">
-          <span className="text-2xl">⭐</span>
-          <div>
-            <p className="text-xs text-stone-500">ความพึงพอใจ</p>
-            <p className="font-bold text-stone-800">4.9/5.0</p>
-          </div>
-        </div>
-        <div className="absolute top-6 right-6 bg-orange-500/90 backdrop-blur-sm text-white rounded-2xl shadow-lg p-3 z-10 text-center">
-          <p className="text-xs font-medium">สินค้ามากกว่า</p>
-          <p className="text-2xl font-bold">500+</p>
-          <p className="text-xs">รายการ</p>
-        </div>
-      </section>
+      <HeroSlider banners={activeBanners} />
 
       {/* Pet Types */}
       {petTypes.length > 0 && (

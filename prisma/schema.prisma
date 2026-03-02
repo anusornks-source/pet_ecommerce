@@ -293,6 +293,24 @@ model SiteSettings {
   @@map("site_settings")
 }
 
+model HeroBanner {
+  id                String   @id @default(cuid())
+  imageUrl          String
+  badge             String?
+  title             String?
+  titleHighlight    String?
+  subtitle          String?
+  ctaLabel          String?
+  ctaUrl            String?
+  secondaryCtaLabel String?
+  secondaryCtaUrl   String?
+  order             Int      @default(0)
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+
+  @@map("hero_banners")
+}
+
 model Article {
   id         String   @id @default(cuid())
   title      String

@@ -26,6 +26,7 @@ const navEntries: NavEntry[] = [
   },
   { href: "/admin/orders", label: "คำสั่งซื้อ", icon: "🛒" },
   { href: "/admin/coupons", label: "คูปอง", icon: "🎟️" },
+  { href: "/admin/banners", label: "Hero Banner", icon: "🖼️" },
   { href: "/admin/articles", label: "บทความ", icon: "📝" },
   { href: "/admin/stores", label: "สาขา", icon: "📍" },
   {

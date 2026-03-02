@@ -113,6 +113,9 @@ export default function AdminOrderDetailPage({
   const [checking, setChecking] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [refunding, setRefunding] = useState(false);
+  const [trackingInput, setTrackingInput] = useState("");
+  const [carrierInput, setCarrierInput] = useState("");
+  const [savingTracking, setSavingTracking] = useState(false);
   const [cjLogs, setCjLogs] = useState<CjApiLog[]>([]);
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
 
@@ -154,6 +157,35 @@ export default function AdminOrderDetailPage({
       toast.error("เกิดข้อผิดพลาด");
     } finally {
       setRefunding(false);
+    }
+  };
+
+  const handleSaveTracking = async () => {
+    if (!order || !trackingInput.trim()) return;
+    setSavingTracking(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: order.status,
+          trackingNumber: trackingInput.trim(),
+          trackingCarrier: carrierInput.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("บันทึก tracking แล้ว");
+        setOrder((o) => o ? { ...o, trackingNumber: trackingInput.trim(), trackingCarrier: carrierInput.trim() || null } : o);
+        setTrackingInput("");
+        setCarrierInput("");
+      } else {
+        toast.error(data.error || "เกิดข้อผิดพลาด");
+      }
+    } catch {
+      toast.error("ไม่สามารถบันทึกได้");
+    } finally {
+      setSavingTracking(false);
     }
   };
 
@@ -433,11 +465,33 @@ export default function AdminOrderDetailPage({
                     <p className="text-purple-500 mt-2">รอลูกค้าได้รับสินค้า แล้วกด <span className="font-semibold">ส่งแล้ว</span></p>
                   </>
                 ) : (
-                  <p className="text-purple-600">
-                    {order.cjOrderId
-                      ? "รอ tracking จาก CJ — กด Sync หากยังไม่อัปเดต"
-                      : "ยังไม่มี tracking number — กรอกเพิ่มเติมหากมี"}
-                  </p>
+                  <div>
+                    {order.cjOrderId ? (
+                      <p className="text-purple-600 mb-2">รอ tracking จาก CJ — กด Sync หากยังไม่อัปเดต</p>
+                    ) : null}
+                    <p className="text-purple-500 mb-2">กรอก tracking number ด้านล่าง:</p>
+                    <input
+                      type="text"
+                      value={trackingInput}
+                      onChange={(e) => setTrackingInput(e.target.value)}
+                      placeholder="Tracking number"
+                      className="w-full border border-purple-200 rounded-lg px-3 py-1.5 text-xs text-stone-700 bg-white focus:outline-none focus:ring-2 focus:ring-purple-200 mb-1.5"
+                    />
+                    <input
+                      type="text"
+                      value={carrierInput}
+                      onChange={(e) => setCarrierInput(e.target.value)}
+                      placeholder="ชื่อขนส่ง เช่น CJPACKET, Kerry, Flash (ถ้ามี)"
+                      className="w-full border border-purple-200 rounded-lg px-3 py-1.5 text-xs text-stone-700 bg-white focus:outline-none focus:ring-2 focus:ring-purple-200 mb-2"
+                    />
+                    <button
+                      onClick={handleSaveTracking}
+                      disabled={savingTracking || !trackingInput.trim()}
+                      className="w-full bg-purple-500 hover:bg-purple-600 text-white rounded-lg py-1.5 text-xs font-medium transition-colors disabled:opacity-40"
+                    >
+                      {savingTracking ? "กำลังบันทึก..." : "💾 บันทึก Tracking"}
+                    </button>
+                  </div>
                 )}
               </div>
             )}

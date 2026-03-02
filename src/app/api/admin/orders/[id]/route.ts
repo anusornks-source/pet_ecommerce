@@ -41,7 +41,7 @@ export async function PUT(
   const dryRun = request.nextUrl.searchParams.get("dryRun") === "true";
   const force = request.nextUrl.searchParams.get("force") === "true";
   const body = await request.json();
-  const { status, note } = body;
+  const { status, note, trackingNumber, trackingCarrier } = body;
 
   const validStatuses = ["PENDING", "CONFIRMED", "SHIPPING", "DELIVERED", "CANCELLED"];
   if (!validStatuses.includes(status)) {
@@ -238,13 +238,20 @@ export async function PUT(
     status: string; timestamp: string; note?: string;
   }>;
 
-  history.push({ status, timestamp: new Date().toISOString(), ...(note ? { note } : {}) });
+  // Only push to history when status actually changes
+  if (status !== current.status) {
+    history.push({ status, timestamp: new Date().toISOString(), ...(note ? { note } : {}) });
+  }
 
   // Append CJ cancel result to history if applicable
   if (cjCancelHistoryEntry) history.push(cjCancelHistoryEntry);
 
   // Build update data
   const updateData: Record<string, unknown> = { status, statusHistory: history };
+
+  // Allow tracking fields update (manual or after CJ sync)
+  if (trackingNumber !== undefined) updateData.trackingNumber = trackingNumber || null;
+  if (trackingCarrier !== undefined) updateData.trackingCarrier = trackingCarrier || null;
 
   // Auto-create CJ order when CONFIRMED (only once, only if items have cjVid)
   if (status === "CONFIRMED" && !current?.cjOrderId && current?.items) {

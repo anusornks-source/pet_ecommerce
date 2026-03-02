@@ -35,6 +35,7 @@ interface Product {
   deliveryDays: number;
   warehouseCountry: string | null;
   variants: ProductVariant[];
+  tags: { id: string }[];
 }
 
 export default function EditProductPage({
@@ -155,6 +156,7 @@ export default function EditProductPage({
               attributes: v.attributes ?? null,
               active: v.active,
             })),
+            tagIds: product.tags.map((t) => t.id),
           }}
         />
       </div>

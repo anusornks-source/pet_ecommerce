@@ -87,17 +87,11 @@ export async function GET(request: NextRequest) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rawOptions: any[] = Array.isArray(data.data) ? data.data : [];
 
-      // Log first raw option to help diagnose field names
-      if (rawOptions.length > 0) {
-        console.log("[CJ Freight] first raw option keys:", Object.keys(rawOptions[0]));
-        console.log("[CJ Freight] first raw option:", JSON.stringify(rawOptions[0]));
-      }
-
       const shippingOptions = rawOptions.map((opt) => {
         const warehouseCode = resolveWarehouse(opt);
         // CJ uses different field names across API versions — try all known variants
         const deliveryTimeStr =
-          opt.logisticTime ?? opt.ageTime ?? opt.deliveryTime ??
+          opt.logisticAging ?? opt.logisticTime ?? opt.ageTime ?? opt.deliveryTime ??
           opt.estimatedDeliveryTime ?? opt.shippingTime ?? opt.days ?? "";
         return {
           logisticName: opt.logisticName ?? "",

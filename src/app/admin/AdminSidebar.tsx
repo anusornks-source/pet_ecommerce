@@ -34,6 +34,7 @@ const navEntries: NavEntry[] = [
     items: [
       { href: "/admin/categories", label: "หมวดหมู่", icon: "🏷️" },
       { href: "/admin/pet-types", label: "ประเภทสัตว์", icon: "🐾" },
+      { href: "/admin/tags", label: "แท็กสินค้า", icon: "🔖" },
     ],
   },
   { href: "/admin/users", label: "ผู้ใช้งาน", icon: "👥" },

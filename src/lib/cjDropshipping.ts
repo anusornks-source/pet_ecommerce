@@ -89,7 +89,6 @@ export async function getCJInventory(vids: string[]): Promise<Record<string, num
       }
       await new Promise((r) => setTimeout(r, 150)); // base delay between vids
     }
-    console.log("[CJ Inventory] map:", map);
   } catch (err) {
     console.error("[CJ Inventory] error:", err);
   }

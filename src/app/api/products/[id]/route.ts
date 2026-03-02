@@ -10,7 +10,9 @@ export async function GET(
     where: { id, active: true },
     include: {
       category: true,
+      petType: true,
       variants: { where: { active: true }, orderBy: { createdAt: "asc" } },
+      tags: true,
     },
   });
 

@@ -12,7 +12,7 @@ export async function GET(
   const { id } = await params;
   const product = await prisma.product.findUnique({
     where: { id },
-    include: { category: true, petType: true, variants: { orderBy: { createdAt: "asc" } } },
+    include: { category: true, petType: true, variants: { orderBy: { createdAt: "asc" } }, tags: true },
   });
 
   if (!product) {
@@ -48,6 +48,7 @@ export async function PUT(
     deliveryDays,
     warehouseCountry,
     variants,
+    tagIds,
   } = body;
 
   type VariantInput = {
@@ -92,8 +93,9 @@ export async function PUT(
       ...(featured !== undefined && { featured: !!featured }),
       ...(deliveryDays !== undefined && { deliveryDays: parseInt(deliveryDays) }),
       ...(warehouseCountry !== undefined && { warehouseCountry: warehouseCountry || null }),
+      ...(tagIds !== undefined && { tags: { set: (tagIds as string[]).map((tid) => ({ id: tid })) } }),
     },
-    include: { category: true, petType: true, variants: { orderBy: { createdAt: "asc" } } },
+    include: { category: true, petType: true, variants: { orderBy: { createdAt: "asc" } }, tags: true },
   });
 
   return NextResponse.json({ success: true, data: product });

@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    const totalStock = (detail.variants ?? []).reduce((sum, v) => sum + (v.inventoryNum ?? 0), 0);
+    const totalStock = variants.reduce((sum, v) => sum + v.stock, 0);
 
     return NextResponse.json({
       success: true,

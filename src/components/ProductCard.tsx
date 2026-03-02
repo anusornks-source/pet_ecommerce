@@ -9,6 +9,15 @@ import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { formatPrice } from "@/lib/utils";
 import type { Product } from "@/types";
+
+const TAG_COLORS: Record<string, string> = {
+  orange: "bg-orange-100 text-orange-700",
+  red:    "bg-red-100 text-red-700",
+  green:  "bg-green-100 text-green-700",
+  blue:   "bg-blue-100 text-blue-700",
+  purple: "bg-purple-100 text-purple-700",
+  yellow: "bg-yellow-100 text-yellow-800",
+};
 import toast from "react-hot-toast";
 
 interface Props {
@@ -59,11 +68,20 @@ export default function ProductCard({ product }: Props) {
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
-          {product.featured && (
-            <span className="absolute top-2 left-2 badge bg-orange-500 text-white">
-              ⭐ แนะนำ
-            </span>
-          )}
+          {/* Badges: featured + tags stacked top-left */}
+          <div className="absolute top-2 left-2 flex flex-col gap-1">
+            {product.featured && (
+              <span className="badge bg-orange-500 text-white">⭐ แนะนำ</span>
+            )}
+            {product.tags?.slice(0, 2).map((tag) => (
+              <span
+                key={tag.id}
+                className={`badge ${TAG_COLORS[tag.color] ?? TAG_COLORS.orange}`}
+              >
+                {tag.icon} {tag.name}
+              </span>
+            ))}
+          </div>
           {user && (
             <button
               onClick={(e) => { e.preventDefault(); toggleWishlist(product.id); }}

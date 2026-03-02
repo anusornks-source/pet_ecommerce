@@ -24,6 +24,15 @@ export interface PetType {
   order: number;
 }
 
+export interface Tag {
+  id: string;
+  name: string;
+  nameEn?: string | null;
+  slug: string;
+  color: string;
+  icon?: string | null;
+}
+
 export interface ProductVariant {
   id: string;
   productId: string;
@@ -53,6 +62,7 @@ export interface Product {
   warehouseCountry?: string | null;
   createdAt: string;
   variants?: ProductVariant[];
+  tags?: Tag[];
 }
 
 export interface CartItem {

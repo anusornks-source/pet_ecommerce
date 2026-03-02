@@ -17,6 +17,22 @@ interface PetType {
   icon: string | null;
 }
 
+interface TagOption {
+  id: string;
+  name: string;
+  color: string;
+  icon: string | null;
+}
+
+const TAG_COLORS: Record<string, string> = {
+  orange: "bg-orange-100 text-orange-700 border-orange-200",
+  red:    "bg-red-100 text-red-700 border-red-200",
+  green:  "bg-green-100 text-green-700 border-green-200",
+  blue:   "bg-blue-100 text-blue-700 border-blue-200",
+  purple: "bg-purple-100 text-purple-700 border-purple-200",
+  yellow: "bg-yellow-100 text-yellow-800 border-yellow-200",
+};
+
 interface VariantRow {
   id?: string;
   size: string;
@@ -47,6 +63,7 @@ interface ProductFormProps {
     deliveryDays?: string;
     warehouseCountry?: string;
     variants?: VariantRow[];
+    tagIds?: string[];
   };
 }
 
@@ -79,6 +96,8 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
   const [descPreview, setDescPreview] = useState(false);
   const [variants, setVariants] = useState<VariantRow[]>(initialData?.variants ?? []);
   const [stockRange, setStockRange] = useState({ min: 50, max: 100 });
+  const [allTags, setAllTags] = useState<TagOption[]>([]);
+  const [tagIds, setTagIds] = useState<string[]>(initialData?.tagIds ?? []);
 
   const emptyVariant = (): VariantRow => {
     const stock = Math.floor(Math.random() * (stockRange.max - stockRange.min + 1)) + stockRange.min;
@@ -108,6 +127,10 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
           });
         }
       });
+
+    fetch("/api/admin/tags")
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setAllTags(d.data); });
   }, []);
 
   const imageList = form.images.split(",").map((u) => u.trim()).filter(Boolean);
@@ -159,6 +182,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
       deliveryDays: parseInt(form.deliveryDays) || 2,
       warehouseCountry: form.warehouseCountry || null,
       variants,
+      tagIds,
     };
 
     const url = productId
@@ -515,6 +539,38 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
           </label>
         </div>
       </div>
+
+      {/* Tags */}
+      {allTags.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-stone-700 mb-2">🔖 Tags / Badge</label>
+          <div className="flex flex-wrap gap-2">
+            {allTags.map((tag) => {
+              const selected = tagIds.includes(tag.id);
+              return (
+                <button
+                  key={tag.id}
+                  type="button"
+                  onClick={() =>
+                    setTagIds((prev) =>
+                      selected ? prev.filter((id) => id !== tag.id) : [...prev, tag.id]
+                    )
+                  }
+                  className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                    selected
+                      ? (TAG_COLORS[tag.color] ?? TAG_COLORS.orange) + " scale-105 shadow-sm"
+                      : "bg-stone-50 text-stone-400 border-stone-200 hover:border-stone-300"
+                  }`}
+                >
+                  {tag.icon && <span>{tag.icon}</span>}
+                  {tag.name}
+                  {selected && <span className="ml-0.5">✓</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-3 pt-2">
         <button

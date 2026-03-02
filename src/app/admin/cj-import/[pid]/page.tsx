@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -64,6 +64,10 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
   const [freight, setFreight] = useState<FreightData | null>(null);
   const [freightLoading, setFreightLoading] = useState(true);
   const [freightError, setFreightError] = useState<string | null>(null);
+  const freightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Inventory loaded separately (CJ inventory API is slow — 150ms/vid)
+  const [stockLoading, setStockLoading] = useState(true);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [petTypes, setPetTypes] = useState<PetType[]>([]);
@@ -91,23 +95,49 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
   }, [pid]);
 
   useEffect(() => {
-    // 1. Fetch product detail immediately, then freight after 3s with first vid
-    let firstVid: string | undefined;
+    // 1. Fetch product detail, then freight 1.5s after detail loads (guarantees vid is available)
     fetch(`/api/admin/cj-products/detail?pid=${pid}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.success) {
           setDetail(d.data);
-          firstVid = d.data.variants?.[0]?.vid;
+          const firstVid: string | undefined = d.data.variants?.[0]?.vid;
+          freightTimerRef.current = setTimeout(() => fetchFreight(firstVid), 1500);
+
+          // Fetch real inventory async (slow: 150ms per vid from CJ)
+          const vids: string[] = (d.data.variants ?? []).map((v: VariantRow) => v.vid).filter(Boolean);
+          if (vids.length > 0) {
+            fetch(`/api/admin/cj-products/inventory?vids=${vids.join(",")}`)
+              .then((r) => r.json())
+              .then((inv) => {
+                if (inv.success) {
+                  setDetail((prev) => {
+                    if (!prev) return prev;
+                    const updated = prev.variants.map((v) => ({
+                      ...v,
+                      stock: inv.data[v.vid] ?? v.stock,
+                    }));
+                    const totalStock = updated.reduce((s, v) => s + v.stock, 0);
+                    return { ...prev, variants: updated, totalStock };
+                  });
+                }
+              })
+              .finally(() => setStockLoading(false));
+          } else {
+            setStockLoading(false);
+          }
         } else {
           setError(d.error);
+          setFreightLoading(false);
+          setStockLoading(false);
         }
       })
-      .catch(() => setError("โหลดข้อมูลไม่สำเร็จ"))
+      .catch(() => {
+        setError("โหลดข้อมูลไม่สำเร็จ");
+        setFreightLoading(false);
+        setStockLoading(false);
+      })
       .finally(() => setLoading(false));
-
-    // 2. Fetch freight after 3s delay — pass first vid for CJ products array
-    const freightTimer = setTimeout(() => fetchFreight(firstVid), 3000);
 
     fetch("/api/admin/categories").then((r) => r.json()).then((d) => { if (d.success) setCategories(d.data); });
     fetch("/api/admin/pet-types").then((r) => r.json()).then((d) => { if (d.success) setPetTypes(d.data); });
@@ -118,7 +148,9 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
       }
     });
 
-    return () => clearTimeout(freightTimer);
+    return () => {
+      if (freightTimerRef.current) clearTimeout(freightTimerRef.current);
+    };
   }, [pid, fetchFreight]);
 
   useEffect(() => {
@@ -250,7 +282,7 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
               </button>
               {showDesc && (
                 <div
-                  className="p-4 text-sm text-stone-600 leading-relaxed max-h-64 overflow-y-auto [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-2 [&_p]:mb-2"
+                  className="p-4 text-sm text-stone-600 leading-relaxed [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-2 [&_p]:mb-2"
                   dangerouslySetInnerHTML={{ __html: detail.description }}
                 />
               )}
@@ -272,9 +304,13 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
               {/* Stock */}
               <div className="bg-stone-50 rounded-xl px-3 py-2.5">
                 <p className="text-[10px] text-stone-400 font-medium uppercase tracking-wide mb-0.5">📦 สต็อกรวม</p>
-                <p className={`text-sm font-bold ${detail.totalStock > 0 ? "text-stone-800" : "text-stone-400"}`}>
-                  {detail.totalStock.toLocaleString()} ชิ้น
-                </p>
+                {stockLoading ? (
+                  <div className="h-5 w-20 bg-stone-200 rounded animate-pulse" />
+                ) : (
+                  <p className={`text-sm font-bold ${detail.totalStock > 0 ? "text-stone-800" : "text-stone-400"}`}>
+                    {detail.totalStock.toLocaleString()} ชิ้น
+                  </p>
+                )}
               </div>
 
               {/* Warehouse */}
@@ -327,7 +363,7 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
               <div className="flex items-center justify-between gap-3 px-3 py-2 bg-red-50 border border-red-100 rounded-xl text-xs text-red-500">
                 <span>⚠️ {freightError}</span>
                 <button
-                  onClick={fetchFreight}
+                  onClick={() => fetchFreight(detail?.variants?.[0]?.vid)}
                   className="shrink-0 px-2 py-1 bg-white border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors font-medium"
                 >
                   ลองใหม่
@@ -366,9 +402,13 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
             <div className="bg-white rounded-2xl border border-stone-100 p-4">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-medium text-stone-700">Variants ({detail.variants.length})</p>
-                <p className="text-xs text-stone-400">
-                  {detail.variants.filter((v) => v.stock > 0).length} / {detail.variants.length} มีสต็อก
-                </p>
+                {stockLoading ? (
+                  <div className="h-4 w-24 bg-stone-200 rounded animate-pulse" />
+                ) : (
+                  <p className="text-xs text-stone-400">
+                    {detail.variants.filter((v) => v.stock > 0).length} / {detail.variants.length} มีสต็อก
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5 max-h-56 overflow-y-auto">
                 {detail.variants.map((v) => (
@@ -380,9 +420,13 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
                     )}
                     <span className="flex-1 text-stone-700 font-medium truncate">{v.label}</span>
                     <span className="text-orange-500 font-medium shrink-0">${v.priceUSD.toFixed(2)}</span>
-                    <span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${v.stock > 0 ? "bg-green-50 text-green-600 border border-green-100" : "bg-stone-50 text-stone-400 border border-stone-100"}`}>
-                      {v.stock > 0 ? `${v.stock.toLocaleString()} ชิ้น` : "หมด"}
-                    </span>
+                    {stockLoading ? (
+                      <div className="shrink-0 h-4 w-12 bg-stone-200 rounded-full animate-pulse" />
+                    ) : (
+                      <span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${v.stock > 0 ? "bg-green-50 text-green-600 border border-green-100" : "bg-stone-50 text-stone-400 border border-stone-100"}`}>
+                        {v.stock > 0 ? `${v.stock.toLocaleString()} ชิ้น` : "หมด"}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>

@@ -269,6 +269,21 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 </span>
               )}
             </div>
+            {/* Tag badges */}
+            {product.tags && product.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2 mb-1">
+                {product.tags.map((tag) => (
+                  <span
+                    key={tag.id}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                      ({ orange: "bg-orange-100 text-orange-700 border-orange-200", red: "bg-red-100 text-red-700 border-red-200", green: "bg-green-100 text-green-700 border-green-200", blue: "bg-blue-100 text-blue-700 border-blue-200", purple: "bg-purple-100 text-purple-700 border-purple-200", yellow: "bg-yellow-100 text-yellow-800 border-yellow-200" })[tag.color] ?? "bg-orange-100 text-orange-700 border-orange-200"
+                    }`}
+                  >
+                    {tag.icon} {tag.name}
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="flex items-start justify-between gap-3">
               <h1 className="text-2xl md:text-3xl font-bold text-stone-800">{product.name}</h1>
               {user && (

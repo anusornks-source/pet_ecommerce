@@ -160,17 +160,31 @@ export async function POST(request: NextRequest) {
         const count = data.length;
         const sample = data.slice(0, 5);
 
+        let blobUrl: string | undefined;
+        if (process.env.BLOB_READ_WRITE_TOKEN) {
+          const { put } = await import("@vercel/blob");
+          const blob = await put("thai-address.json", raw, {
+            access: "public",
+            contentType: "application/json",
+            addRandomSuffix: false,
+          });
+          blobUrl = blob.url;
+        }
+
         await prisma.siteSettings.upsert({
           where: { id: "default" },
-          create: { id: "default", thaiAddressUpdatedAt: new Date() },
-          update: { thaiAddressUpdatedAt: new Date() },
+          create: { id: "default", thaiAddressUpdatedAt: new Date(), ...(blobUrl ? { thaiAddressBlobUrl: blobUrl } : {}) },
+          update: { thaiAddressUpdatedAt: new Date(), ...(blobUrl ? { thaiAddressBlobUrl: blobUrl } : {}) },
         });
 
         return NextResponse.json({
           success: true,
-          message: `โหลดข้อมูลที่อยู่ไทยสำเร็จ — ${count.toLocaleString("th-TH")} รายการ`,
+          message: blobUrl
+            ? `อัปโหลดขึ้น Blob สำเร็จ — ${count.toLocaleString("th-TH")} รายการ`
+            : `โหลดข้อมูลที่อยู่ไทยสำเร็จ — ${count.toLocaleString("th-TH")} รายการ (ไม่มี Blob token)`,
           count,
           sample,
+          blobUrl,
           ms: Date.now() - startTime,
         });
       }

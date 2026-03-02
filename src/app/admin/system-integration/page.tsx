@@ -15,6 +15,8 @@ interface ConfigStatus {
 interface ThaiAddressMeta {
   count: number;
   updatedAt: string | null;
+  source: "blob" | "static";
+  blobUrl?: string;
 }
 
 interface TestResult {
@@ -24,6 +26,7 @@ interface TestResult {
   ms?: number;
   count?: number;
   sample?: Array<{ district: string; amphoe: string; province: string; zipcode: string }>;
+  blobUrl?: string;
 }
 
 interface TestState {
@@ -112,6 +115,8 @@ export default function SystemIntegrationPage() {
   const [tests, setTests] = useState<Record<string, TestState>>({});
   const [testEmail, setTestEmail] = useState("");
   const [thaiAddrMeta, setThaiAddrMeta] = useState<ThaiAddressMeta | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/system-integration")
@@ -122,7 +127,7 @@ export default function SystemIntegrationPage() {
     fetch("/api/thai-address")
       .then((r) => r.json())
       .then((d) => {
-        if (d.success) setThaiAddrMeta({ count: d.count, updatedAt: d.updatedAt });
+        if (d.success) setThaiAddrMeta({ count: d.count, updatedAt: d.updatedAt, source: d.source ?? "static" });
       });
   }, []);
 
@@ -137,7 +142,7 @@ export default function SystemIntegrationPage() {
       const data = await res.json();
       setTests((prev) => ({ ...prev, [testId]: { loading: false, result: data } }));
       if (testId === "thai-address" && data.success) {
-        setThaiAddrMeta({ count: data.count, updatedAt: new Date().toISOString() });
+        setThaiAddrMeta({ count: data.count, updatedAt: new Date().toISOString(), source: data.blobUrl ? "blob" : "static", blobUrl: data.blobUrl });
       }
     } catch {
       setTests((prev) => ({
@@ -146,6 +151,41 @@ export default function SystemIntegrationPage() {
       }));
     }
   }, []);
+
+  const handleThaiAddrUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    setUploadResult(null);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (!Array.isArray(data)) throw new Error("ไฟล์ต้องเป็น JSON array");
+      const res = await fetch("/api/admin/thai-address", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setThaiAddrMeta({ count: result.count, updatedAt: new Date().toISOString(), source: "blob", blobUrl: result.blobUrl });
+      }
+      setUploadResult({ success: result.success, message: result.message ?? result.error ?? "Unknown error" });
+    } catch (err) {
+      setUploadResult({ success: false, message: err instanceof Error ? err.message : "อ่านไฟล์ไม่ได้" });
+    } finally {
+      setUploading(false);
+    }
+  }, []);
+
+  const handleThaiAddrDownload = useCallback(() => {
+    const url = thaiAddrMeta?.blobUrl ?? "/api/thai-address?download=1";
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "thai-address.json";
+    a.click();
+  }, [thaiAddrMeta]);
 
   const configuredCount = config ? Object.values(config).filter(Boolean).length : 0;
   const totalCount = config ? Object.values(config).length : 0;
@@ -362,26 +402,54 @@ export default function SystemIntegrationPage() {
           </div>
 
           {thaiAddrMeta && (
-            <div className="mb-3 flex items-center gap-4 text-sm text-stone-600">
-              <span className="flex items-center gap-1.5">
-                <span className="text-emerald-500 font-semibold">{thaiAddrMeta.count.toLocaleString("th-TH")}</span>
-                <span className="text-stone-400">รายการ</span>
-              </span>
-              {thaiAddrMeta.updatedAt && (
-                <span className="text-stone-400 text-xs">
-                  อัปเดต {new Date(thaiAddrMeta.updatedAt).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}
+            <div className="mb-3 space-y-1.5">
+              <div className="flex items-center gap-3 text-sm">
+                <span className="flex items-center gap-1.5">
+                  <span className="text-emerald-500 font-semibold">{thaiAddrMeta.count.toLocaleString("th-TH")}</span>
+                  <span className="text-stone-400">รายการ</span>
                 </span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${thaiAddrMeta.source === "blob" ? "bg-sky-50 text-sky-600 border border-sky-200" : "bg-stone-50 text-stone-400 border border-stone-200"}`}>
+                  {thaiAddrMeta.source === "blob" ? "☁️ Vercel Blob" : "📁 Static file"}
+                </span>
+              </div>
+              {thaiAddrMeta.updatedAt && (
+                <p className="text-stone-400 text-xs">
+                  อัปเดต {new Date(thaiAddrMeta.updatedAt).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}
+                </p>
+              )}
+              {thaiAddrMeta.blobUrl && (
+                <p className="text-xs text-stone-400 font-mono truncate" title={thaiAddrMeta.blobUrl}>
+                  {thaiAddrMeta.blobUrl}
+                </p>
               )}
             </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <TestButton
               onClick={() => runTest("thai-address")}
               loading={tests["thai-address"]?.loading ?? false}
               label="โหลดใหม่ / ตรวจสอบ"
             />
+            <label className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer ${uploading ? "opacity-50 cursor-not-allowed" : "bg-stone-100 hover:bg-stone-200 text-stone-700"}`}>
+              {uploading && <span className="inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+              อัปโหลดไฟล์ใหม่
+              <input type="file" accept=".json" className="hidden" disabled={uploading} onChange={handleThaiAddrUpload} />
+            </label>
+            <TestButton
+              onClick={handleThaiAddrDownload}
+              loading={false}
+              label="ดาวน์โหลด JSON"
+              variant="secondary"
+            />
           </div>
+
+          {uploadResult && (
+            <div className={`mt-3 rounded-xl px-4 py-3 text-sm flex items-start gap-2 ${uploadResult.success ? "bg-emerald-50 border border-emerald-200 text-emerald-700" : "bg-red-50 border border-red-200 text-red-700"}`}>
+              <span className="text-base leading-none mt-0.5">{uploadResult.success ? "✅" : "❌"}</span>
+              <p>{uploadResult.message}</p>
+            </div>
+          )}
           <ResultBox state={tests["thai-address"]} />
 
           {tests["thai-address"]?.result?.success && tests["thai-address"].result.sample && (

@@ -295,6 +295,7 @@ model SiteSettings {
   displayStockMin       Int       @default(50)
   displayStockMax       Int       @default(100)
   thaiAddressUpdatedAt  DateTime?
+  thaiAddressBlobUrl    String?
   updatedAt             DateTime  @updatedAt
 
   @@map("site_settings")

@@ -59,6 +59,7 @@ model Product {
   description         String
   shortDescription    String?
   price               Float
+  normalPrice         Float?
   stock       Int      @default(0)
   images      String[]
   categoryId  String

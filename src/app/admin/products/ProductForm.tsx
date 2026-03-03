@@ -54,6 +54,7 @@ interface ProductFormProps {
     description: string;
     shortDescription?: string;
     price: string;
+    normalPrice?: string;
     stock: string;
     images: string;
     categoryId: string;
@@ -82,6 +83,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
     description: "",
     shortDescription: "",
     price: "",
+    normalPrice: "",
     stock: "",
     images: "",
     categoryId: "",
@@ -176,6 +178,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
     const payload = {
       ...form,
       price: parseFloat(form.price),
+      normalPrice: form.normalPrice ? parseFloat(form.normalPrice) : null,
       stock: parseInt(form.stock),
       images: imageList,
       petTypeId: form.petTypeId || null,
@@ -306,8 +309,9 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         {field("ราคา (บาท)", "price", { required: true, type: "number", min: "0", step: "0.01", placeholder: "0.00" })}
+        {field("ราคาเดิม / ก่อนลด (บาท)", "normalPrice", { type: "number", min: "0", step: "0.01", placeholder: "เว้นว่าง = ไม่แสดงส่วนลด" })}
         {field("จำนวนสต็อก", "stock", { required: true, type: "number", min: "0", placeholder: "0" })}
       </div>
 

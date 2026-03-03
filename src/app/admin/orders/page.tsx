@@ -9,8 +9,9 @@ interface Order {
   status: string;
   total: number;
   createdAt: string;
+  statusHistory: { status: string; timestamp: string }[] | null;
   user: { name: string; email: string };
-  items: { id: string }[];
+  items: { id: string; quantity: number; product: { name: string; cjProductId: string | null }; variant: { cjVid: string | null } | null }[];
   payment: { method: string; status: string } | null;
 }
 
@@ -38,16 +39,18 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("ทั้งหมด");
   const [paymentTab, setPaymentTab] = useState("ทั้งหมด");
+  const [sourceTab, setSourceTab] = useState("ทั้งหมด");
   const [page, setPage] = useState(1);
 
   const pageSize = 50;
   const totalPages = Math.ceil(total / pageSize);
 
-  const fetchOrders = useCallback(async (status: string, paymentStatus: string, p: number) => {
+  const fetchOrders = useCallback(async (status: string, paymentStatus: string, source: string, p: number) => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(p) });
     if (status !== "ทั้งหมด") params.set("status", status);
     if (paymentStatus !== "ทั้งหมด") params.set("paymentStatus", paymentStatus);
+    if (source !== "ทั้งหมด") params.set("source", source);
     const res = await fetch(`/api/admin/orders?${params}`);
     const d = await res.json();
     if (d.success) {
@@ -58,18 +61,12 @@ export default function AdminOrdersPage() {
   }, []);
 
   useEffect(() => {
-    fetchOrders(activeTab, paymentTab, page);
-  }, [activeTab, paymentTab, page, fetchOrders]);
+    fetchOrders(activeTab, paymentTab, sourceTab, page);
+  }, [activeTab, paymentTab, sourceTab, page, fetchOrders]);
 
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    setPage(1);
-  };
-
-  const handlePaymentTabChange = (tab: string) => {
-    setPaymentTab(tab);
-    setPage(1);
-  };
+  const handleTabChange = (tab: string) => { setActiveTab(tab); setPage(1); };
+  const handlePaymentTabChange = (tab: string) => { setPaymentTab(tab); setPage(1); };
+  const handleSourceTabChange = (tab: string) => { setSourceTab(tab); setPage(1); };
 
   return (
     <div>
@@ -94,6 +91,26 @@ export default function AdminOrdersPage() {
               }`}
             >
               {tab === "ทั้งหมด" ? tab : `${statusConfig[tab].icon} ${statusConfig[tab].label}`}
+            </button>
+          ))}
+        </div>
+
+        <div className="w-px h-6 bg-stone-200 shrink-0 hidden sm:block" />
+
+        {/* Source */}
+        <div className="flex gap-1 items-center shrink-0">
+          <span className="text-xs text-stone-400 mr-1 shrink-0">แหล่งที่มา:</span>
+          {(["ทั้งหมด", "CJ", "MANUAL"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => handleSourceTabChange(tab)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                sourceTab === tab
+                  ? "bg-blue-500 text-white"
+                  : "bg-white border border-stone-200 text-stone-600 hover:bg-stone-50"
+              }`}
+            >
+              {tab === "ทั้งหมด" ? "ทั้งหมด" : tab === "CJ" ? "🏭 CJ" : "✋ ส่งเอง"}
             </button>
           ))}
         </div>
@@ -133,7 +150,7 @@ export default function AdminOrdersPage() {
                 <th className="text-right px-4 py-3 text-stone-500 font-medium">ยอดรวม</th>
                 <th className="text-center px-4 py-3 text-stone-500 font-medium">สถานะ</th>
                 <th className="text-center px-4 py-3 text-stone-500 font-medium hidden md:table-cell">ชำระเงิน</th>
-                <th className="text-right px-4 py-3 text-stone-500 font-medium hidden lg:table-cell">วันที่</th>
+                <th className="text-right px-4 py-3 text-stone-500 font-medium hidden lg:table-cell">วันที่สั่งซื้อ</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -144,8 +161,20 @@ export default function AdminOrdersPage() {
                     <p className="font-medium text-stone-800">{order.user.name}</p>
                     <p className="text-xs text-stone-400">{order.user.email}</p>
                   </td>
-                  <td className="px-4 py-3 text-stone-500 hidden sm:table-cell">
-                    {order.items.length} รายการ
+                  <td className="px-4 py-3 hidden sm:table-cell max-w-50">
+                    {order.items.slice(0, 2).map((item) => {
+                      const isCJ = !!(item.variant?.cjVid || item.product.cjProductId);
+                      return (
+                        <p key={item.id} className="text-xs text-stone-600 truncate flex items-center gap-1">
+                          {item.quantity > 1 && <span className="text-stone-400 shrink-0">{item.quantity}×</span>}
+                          {isCJ && <span className="shrink-0 text-[9px] font-bold bg-blue-100 text-blue-600 px-1 rounded">CJ</span>}
+                          <span className="truncate">{item.product.name}</span>
+                        </p>
+                      );
+                    })}
+                    {order.items.length > 2 && (
+                      <p className="text-xs text-stone-400">+{order.items.length - 2} รายการ</p>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right font-semibold text-stone-800">
                     ฿{order.total.toLocaleString("th-TH")}
@@ -169,8 +198,19 @@ export default function AdminOrdersPage() {
                       <span className="text-xs text-stone-300">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right text-stone-400 text-xs hidden lg:table-cell">
-                    {new Date(order.createdAt).toLocaleDateString("th-TH")}
+                  <td className="px-4 py-3 text-right text-xs hidden lg:table-cell">
+                    <p className="text-stone-400">{new Date(order.createdAt).toLocaleDateString("th-TH")}</p>
+                    {order.status === "DELIVERED" ? (() => {
+                      const deliveredEntry = order.statusHistory?.find((h) => h.status === "DELIVERED");
+                      if (!deliveredEntry) return null;
+                      const days = Math.floor((new Date(deliveredEntry.timestamp).getTime() - new Date(order.createdAt).getTime()) / 86400000);
+                      return <p className="font-semibold mt-0.5 text-green-600">📦 ได้ของใน {days} วัน</p>;
+                    })() : order.status !== "CANCELLED" && (() => {
+                      const days = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 86400000);
+                      const label = days === 0 ? "วันนี้" : `รอมา ${days} วัน`;
+                      const color = days >= 7 ? "text-red-600" : days >= 3 ? "text-orange-500" : "text-stone-600";
+                      return <p className={`font-semibold mt-0.5 ${color}`}>⏳ {label}</p>;
+                    })()}
                   </td>
                   <td className="px-4 py-3">
                     <Link

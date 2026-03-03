@@ -23,6 +23,14 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
       include: {
         user: { select: { name: true, email: true } },
+        items: {
+          take: 2,
+          include: {
+            product: { select: { name: true, cjProductId: true } },
+            variant: { select: { cjVid: true } },
+          },
+        },
+        payment: { select: { method: true, status: true } },
       },
     }),
     prisma.order.aggregate({

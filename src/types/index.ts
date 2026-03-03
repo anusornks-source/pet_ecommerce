@@ -51,6 +51,7 @@ export interface Product {
   description: string;
   shortDescription?: string | null;
   price: number;
+  normalPrice?: number | null;
   stock: number;
   images: string[];
   categoryId: string;

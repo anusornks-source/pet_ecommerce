@@ -178,6 +178,7 @@ export async function POST(request: NextRequest) {
         shortDescription,
         sourceDescription,
         price: sellPrice,
+        normalPrice: sellPrice,
         stock: variantData.reduce((s, v) => s + (v.stock as number), 0),
         images: allImages,
         categoryId,

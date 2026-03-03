@@ -135,6 +135,7 @@ export default function EditProductPage({
             description: product.description,
             shortDescription: product.shortDescription ?? "",
             price: product.price.toString(),
+            normalPrice: product.normalPrice != null ? product.normalPrice.toString() : "",
             stock: product.stock.toString(),
             images: product.images.join(", "),
             categoryId: product.categoryId,

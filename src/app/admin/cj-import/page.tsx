@@ -11,6 +11,11 @@ interface CJItem {
   productImage: string;
   sellPrice: number;
   categoryName: string;
+  inventoryNum?: number;
+  productSales?: number;
+  productRating?: number;
+  productVideoSet?: string[];
+  productImageSet?: string[];
 }
 
 interface ShippingOption {
@@ -37,6 +42,8 @@ export default function CJImportPage() {
   const [keyword, setKeyword] = useState("");
   const [searchMode, setSearchMode] = useState<"name" | "pid">("name");
   const [searching, setSearching] = useState(false);
+  const [loadingInsights, setLoadingInsights] = useState(false);
+  const [insightProgress, setInsightProgress] = useState({ done: 0, total: 0 });
   const [results, setResults] = useState<CJItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -50,6 +57,71 @@ export default function CJImportPage() {
   const [priceFactor, setPriceFactor] = useState(3);
   const [usdToThb, setUsdToThb] = useState(36);
   const [estShippingUSD, setEstShippingUSD] = useState(2.0);
+  const [showPriceSettings, setShowPriceSettings] = useState(false);
+
+  // Load insights sequentially to avoid CJ rate limiting (20 parallel calls = rate limit errors)
+  const loadAllInsights = async (items: CJItem[]) => {
+    const pending = items.filter((item) => !insights[item.pid]);
+    if (pending.length === 0) return;
+    setLoadingInsights(true);
+    setInsightProgress({ done: 0, total: pending.length });
+    setInsights((prev) => {
+      const next = { ...prev };
+      pending.forEach((item) => { next[item.pid] = "loading"; });
+      return next;
+    });
+    for (let i = 0; i < pending.length; i++) {
+      const item = pending[i];
+      try {
+        const res = await fetch(`/api/admin/cj-products/insight?pid=${item.pid}`);
+        const d = await res.json();
+        setInsights((prev) => ({ ...prev, [item.pid]: d.success ? d.data : "error" }));
+      } catch {
+        setInsights((prev) => ({ ...prev, [item.pid]: "error" }));
+      }
+      setInsightProgress({ done: i + 1, total: pending.length });
+      // Small delay between calls to avoid CJ rate limiting
+      if (i < pending.length - 1) await new Promise((r) => setTimeout(r, 300));
+    }
+    setLoadingInsights(false);
+  };
+
+  const [filterStock, setFilterStock] = useState(false);
+  const [filterOrders, setFilterOrders] = useState(false);
+  const [filterRating, setFilterRating] = useState(false);
+  const [filterImage, setFilterImage] = useState(false);
+  const [filterVideo, setFilterVideo] = useState(false);
+  const [filterFastShipping, setFilterFastShipping] = useState(false);
+  const [maxDeliveryDays, setMaxDeliveryDays] = useState(15);
+  const [minStock, setMinStock] = useState(500);
+  const [minOrders, setMinOrders] = useState(1000);
+  const [minRating, setMinRating] = useState(4.5);
+
+  const applyFilters = (items: CJItem[]) => items.filter((item) => {
+    // Only filter out if field is present AND fails threshold (undefined = unknown → keep)
+    if (filterStock && item.inventoryNum != null && item.inventoryNum < minStock) return false;
+    if (filterOrders && item.productSales != null && item.productSales < minOrders) return false;
+    if (filterRating && item.productRating != null && item.productRating < minRating) return false;
+    if (filterImage && item.productImageSet != null && !(item.productImageSet.length || item.productImage)) return false;
+    if (filterVideo && item.productVideoSet != null && !item.productVideoSet.length) return false;
+    if (filterFastShipping) {
+      const insight = insights[item.pid];
+      if (!insight || insight === "loading" || insight === "error") return false; // ยังไม่มีข้อมูล → ซ่อน
+      const hasFast = insight.shippingOptions.some(
+        (o) => o.deliveryDays !== null && o.deliveryDays.min <= maxDeliveryDays
+      );
+      if (!hasFast) return false;
+    }
+    return true;
+  });
+
+  const filteredResults = applyFilters(results);
+  const activeFilterCount = [filterStock, filterOrders, filterRating, filterImage, filterVideo, filterFastShipping].filter(Boolean).length;
+  // Detect if CJ list API returned these optional fields (not all versions do)
+  const hasInventoryData = results.some((r) => r.inventoryNum != null);
+  const hasSalesData = results.some((r) => r.productSales != null);
+  const hasRatingData = results.some((r) => r.productRating != null);
+  const noDataFiltersActive = (filterStock && !hasInventoryData) || (filterOrders && !hasSalesData) || (filterRating && !hasRatingData);
 
   const calcSellPrice = (usd: number) => Math.ceil(Number(usd) * usdToThb * priceFactor);
   const calcMargin = (costUSD: number) => {
@@ -155,35 +227,44 @@ export default function CJImportPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-stone-800">นำเข้าสินค้าจาก CJ</h1>
-        <p className="text-stone-500 text-sm mt-1">ค้นหาสินค้าจาก CJDropshipping แล้วนำเข้าสู่ร้านได้เลย</p>
-      </div>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-stone-800">นำเข้าสินค้าจาก CJ</h1>
+        </div>
 
-      {/* Price factor settings */}
-      <div className="flex flex-wrap items-center gap-4 mb-4 p-4 bg-stone-50 border border-stone-200 rounded-2xl text-sm">
-        <span className="text-stone-500 font-medium">⚙️ การคำนวณราคา:</span>
-        <div className="flex items-center gap-2">
-          <label className="text-stone-500">ตัวคูณราคาขาย</label>
-          <input type="number" min="1" step="0.1" value={priceFactor}
-            onChange={(e) => setPriceFactor(Number(e.target.value))}
-            className="w-16 border border-stone-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-200" />
-          <span className="text-stone-400">x</span>
+        {/* Price settings — compact popover */}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setShowPriceSettings((v) => !v)}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border border-stone-200 bg-white text-stone-500 hover:bg-stone-50 hover:text-stone-700 transition-colors"
+          >
+            ⚙️ ราคา: ×{priceFactor} · {usdToThb}฿/$
+          </button>
+          {showPriceSettings && (
+            <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-stone-200 rounded-2xl shadow-lg p-4 w-64 text-sm space-y-3">
+              <p className="font-medium text-stone-700 text-xs">⚙️ การคำนวณราคา</p>
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-stone-500 text-xs">ตัวคูณราคาขาย</label>
+                <input type="number" min="1" step="0.1" value={priceFactor}
+                  onChange={(e) => setPriceFactor(Number(e.target.value))}
+                  className="w-16 border border-stone-300 rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-orange-200" />
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-stone-500 text-xs">USD/THB</label>
+                <input type="number" min="1" step="0.5" value={usdToThb}
+                  onChange={(e) => setUsdToThb(Number(e.target.value))}
+                  className="w-16 border border-stone-300 rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-orange-200" />
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-stone-500 text-xs">ค่าส่ง CJ ($)</label>
+                <input type="number" min="0" step="0.5" value={estShippingUSD}
+                  onChange={(e) => setEstShippingUSD(Number(e.target.value))}
+                  className="w-16 border border-stone-300 rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-orange-200" />
+              </div>
+              <p className="text-stone-400 text-[10px]">ราคาขาย = ต้นทุน × {usdToThb} × {priceFactor}</p>
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <label className="text-stone-500">USD/THB</label>
-          <input type="number" min="1" step="0.5" value={usdToThb}
-            onChange={(e) => setUsdToThb(Number(e.target.value))}
-            className="w-16 border border-stone-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-200" />
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-stone-500">ค่าส่ง CJ (ประมาณ)</label>
-          <span className="text-stone-400">$</span>
-          <input type="number" min="0" step="0.5" value={estShippingUSD}
-            onChange={(e) => setEstShippingUSD(Number(e.target.value))}
-            className="w-16 border border-stone-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-200" />
-        </div>
-        <span className="text-stone-400 text-xs">ราคาขาย = ต้นทุน × {usdToThb} × {priceFactor} | กำไร = ราคาขาย − ต้นทุน − ค่าส่ง</span>
       </div>
 
       {/* Search bar */}
@@ -210,12 +291,112 @@ export default function CJImportPage() {
         </button>
       </div>
 
+      {/* Filters — hidden until CJ API data is confirmed reliable */}
+      {false && <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-stone-50 border border-stone-200 rounded-2xl text-sm">
+        <span className="text-stone-500 font-medium shrink-0">
+          🎯 Filter:
+          {activeFilterCount > 0 && (
+            <span className="ml-1.5 bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{activeFilterCount}</span>
+          )}
+        </span>
+
+        {/* Stock */}
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" checked={filterStock} onChange={(e) => setFilterStock(e.target.checked)} className="accent-orange-500" />
+          <span className="text-stone-600">📦 stock &gt;</span>
+          <input type="number" min="0" step="100" value={minStock}
+            onChange={(e) => setMinStock(Number(e.target.value))}
+            disabled={!filterStock}
+            className="w-16 border border-stone-300 rounded-lg px-2 py-0.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-orange-300 disabled:opacity-40" />
+        </label>
+
+        <div className="w-px h-4 bg-stone-300 shrink-0" />
+
+        {/* Orders */}
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" checked={filterOrders} onChange={(e) => setFilterOrders(e.target.checked)} className="accent-orange-500" />
+          <span className="text-stone-600">🛒 orders &gt;</span>
+          <input type="number" min="0" step="100" value={minOrders}
+            onChange={(e) => setMinOrders(Number(e.target.value))}
+            disabled={!filterOrders}
+            className="w-16 border border-stone-300 rounded-lg px-2 py-0.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-orange-300 disabled:opacity-40" />
+        </label>
+
+        <div className="w-px h-4 bg-stone-300 shrink-0" />
+
+        {/* Rating */}
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" checked={filterRating} onChange={(e) => setFilterRating(e.target.checked)} className="accent-orange-500" />
+          <span className="text-stone-600">⭐ rating &gt;</span>
+          <input type="number" min="0" max="5" step="0.1" value={minRating}
+            onChange={(e) => setMinRating(Number(e.target.value))}
+            disabled={!filterRating}
+            className="w-14 border border-stone-300 rounded-lg px-2 py-0.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-orange-300 disabled:opacity-40" />
+        </label>
+
+        <div className="w-px h-4 bg-stone-300 shrink-0" />
+
+        {/* Has Image */}
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" checked={filterImage} onChange={(e) => setFilterImage(e.target.checked)} className="accent-orange-500" />
+          <span className="text-stone-600">🖼️ มีรูป</span>
+        </label>
+
+        {/* Has Video */}
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" checked={filterVideo} onChange={(e) => setFilterVideo(e.target.checked)} className="accent-orange-500" />
+          <span className="text-stone-600">🎬 มีวิดีโอ</span>
+        </label>
+
+        {/* Fast Shipping */}
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={filterFastShipping}
+            onChange={(e) => {
+              setFilterFastShipping(e.target.checked);
+              if (e.target.checked && results.length > 0) loadAllInsights(results);
+            }}
+            className="accent-orange-500"
+          />
+          <span className="text-stone-600">🚀 ส่งเร็ว ≤</span>
+        </label>
+        {filterFastShipping && (
+          <div className="flex items-center gap-1">
+            <input
+              type="number"
+              min={1}
+              max={60}
+              value={maxDeliveryDays}
+              onChange={(e) => setMaxDeliveryDays(Number(e.target.value))}
+              className="w-14 border border-stone-300 rounded-lg px-2 py-0.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-200"
+            />
+            <span className="text-stone-500 text-xs">วัน</span>
+          </div>
+        )}
+        {filterFastShipping && loadingInsights && (
+          <span className="text-[10px] text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full animate-pulse">
+            ⏳ {insightProgress.done}/{insightProgress.total}
+          </span>
+        )}
+      </div>}
+
       {/* Results */}
       {results.length > 0 && (
         <>
-          <p className="text-sm text-stone-500 mb-3">พบ {total.toLocaleString()} รายการ — หน้า {page}/{Math.ceil(total / 20)}</p>
+          <p className="text-sm text-stone-500 mb-3">
+            พบ {total.toLocaleString()} รายการ — หน้า {page}/{Math.ceil(total / 100)}
+            {activeFilterCount > 0 && (
+              filterFastShipping && loadingInsights
+                ? <span className="ml-2 text-blue-600 font-medium animate-pulse">⏳ กำลังโหลดค่าส่ง {insightProgress.done}/{insightProgress.total}...</span>
+                : <span className="ml-2 text-orange-600 font-medium">แสดง {filteredResults.length} รายการ (หลัง filter)</span>
+            )}
+            {noDataFiltersActive && (
+              <span className="ml-2 text-amber-600 text-xs">⚠️ CJ ไม่ส่ง stock/orders/rating ใน search results — filter อาจไม่มีผล</span>
+            )}
+          </p>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {results.map((item) => {
+            {filteredResults.map((item) => {
               const imported = importedIds[item.pid];
               const isOpen = importingPid === item.pid;
               const form = importForm[item.pid] ?? { categoryId: categories[0]?.id ?? "", petType: "" };
@@ -237,6 +418,21 @@ export default function CJImportPage() {
                   <div className="p-3">
                     <p className="text-xs font-medium text-stone-800 leading-tight line-clamp-2 mb-1">{item.productNameEn}</p>
                     <p className="text-xs text-stone-400 mb-1">{item.categoryName}</p>
+                    {/* Stats badges */}
+                    <div className="flex flex-wrap gap-1 mb-1">
+                      {item.inventoryNum != null && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-500">📦 {item.inventoryNum.toLocaleString()}</span>
+                      )}
+                      {item.productSales != null && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600">🛒 {item.productSales.toLocaleString()}</span>
+                      )}
+                      {item.productRating != null && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">⭐ {item.productRating.toFixed(1)}</span>
+                      )}
+                      {item.productVideoSet && item.productVideoSet.length > 0 && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600">🎬</span>
+                      )}
+                    </div>
                     <p className="text-[10px] text-stone-300 font-mono mb-1 select-all break-all">{item.pid}</p>
                     <div className="text-[11px] text-stone-400 space-y-0.5 mb-2">
                       {isNaN(costUSD) || costUSD === 0 ? (
@@ -309,6 +505,9 @@ export default function CJImportPage() {
                             {insight.isRecommended && (
                               <div className="inline-flex items-center gap-1 bg-green-50 border border-green-200 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
                                 ✅ น่าเอามาขาย
+                                <span className="font-normal text-green-600">
+                                  (stock {insight.totalStock.toLocaleString()} · ส่งเร็ว · มี tracking)
+                                </span>
                               </div>
                             )}
                             {best && (() => {
@@ -388,7 +587,7 @@ export default function CJImportPage() {
 
           {/* Pagination */}
           {total > 20 && (() => {
-            const totalPages = Math.ceil(total / 20);
+            const totalPages = Math.ceil(total / 100);
             const delta = 2;
             const pages: (number | "...")[] = [];
             for (let i = 1; i <= totalPages; i++) {

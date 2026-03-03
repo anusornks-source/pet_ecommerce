@@ -26,9 +26,15 @@ const navEntries: NavEntry[] = [
   },
   { href: "/admin/orders", label: "คำสั่งซื้อ", icon: "🛒" },
   { href: "/admin/coupons", label: "คูปอง", icon: "🎟️" },
-  { href: "/admin/banners", label: "Hero Banner", icon: "🖼️" },
-  { href: "/admin/articles", label: "บทความ", icon: "📝" },
-  { href: "/admin/stores", label: "สาขา", icon: "📍" },
+  {
+    label: "เนื้อหาหน้าเว้บ",
+    icon: "🌐",
+    items: [
+      { href: "/admin/banners",  label: "Hero Banner", icon: "🖼️" },
+      { href: "/admin/articles", label: "บทความ",      icon: "📝" },
+      { href: "/admin/stores",   label: "สาขา",        icon: "📍" },
+    ],
+  },
   {
     label: "หมวดหมู่",
     icon: "🏷️",
@@ -53,7 +59,7 @@ const navEntries: NavEntry[] = [
 
 export default function AdminSidebar() {
   const pathname = usePathname();
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(["นำเข้าสินค้า"]));
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(["นำเข้าสินค้า", "เนื้อหาหน้าเว้บ"]));
 
   // Auto-expand group containing the active path
   useEffect(() => {

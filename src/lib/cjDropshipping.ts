@@ -8,6 +8,11 @@ export interface CJListItem {
   productImage: string;
   sellPrice: number;
   categoryName: string;
+  inventoryNum?: number;
+  productSales?: number;
+  productRating?: number;
+  productVideoSet?: string[];
+  productImageSet?: string[];
 }
 
 export interface CJVariantDetail {
@@ -33,7 +38,7 @@ export interface CJProductDetail {
 
 export async function searchCJProducts(keyword: string, page = 1): Promise<{ list: CJListItem[]; total: number }> {
   const token = await getCJToken();
-  const params = new URLSearchParams({ pageNum: String(page), pageSize: "20", productNameEn: keyword });
+  const params = new URLSearchParams({ pageNum: String(page), pageSize: "100", productNameEn: keyword });
   const res = await fetch(`${CJ_BASE}/product/list?${params}`, {
     headers: { "CJ-Access-Token": token },
   });
@@ -201,6 +206,11 @@ export async function createCJOrder(input: CJOrderInput, orderId?: string): Prom
     });
   } catch { /* swallow log errors */ }
 
+  // Order created but balance insufficient — orderId exists, treat as partial success
+  if (!data.result && data.data?.orderId) {
+    return { cjOrderId: data.data.orderId as string, warning: data.message } as { cjOrderId: string; warning?: string };
+  }
+
   if (!data.result || !data.data?.orderId) {
     throw new Error(`CJ createOrder failed: ${data.message || JSON.stringify(data)}`);
   }
@@ -240,7 +250,7 @@ export async function getCJFreight(
     return (data.data as any[]).map((opt) => ({
       logisticName: opt.logisticName ?? "",
       logisticPrice: Number(opt.logisticPrice ?? 0),
-      deliveryTime: opt.logisticTime ?? opt.ageTime ?? "",
+      deliveryTime: opt.logisticAging ?? opt.logisticTime ?? opt.ageTime ?? opt.deliveryTime ?? opt.estimatedDeliveryTime ?? opt.shippingTime ?? opt.days ?? "",
     }));
   } catch {
     return [];

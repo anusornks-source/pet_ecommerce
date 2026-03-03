@@ -89,10 +89,16 @@ export default function ProductCard({ product }: Props) {
               </span>
             ))}
           </div>
+          {/* Discount badge top-right */}
+          {product.normalPrice != null && product.normalPrice > product.price && (
+            <span className="absolute top-2 right-2 bg-red-500 text-white text-[11px] font-bold px-1.5 py-0.5 rounded-md leading-tight z-10">
+              -{Math.round((1 - product.price / product.normalPrice) * 100)}%
+            </span>
+          )}
           {user && (
             <button
               onClick={(e) => { e.preventDefault(); toggleWishlist(product.id); }}
-              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 transition-transform"
+              className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 transition-transform"
             >
               {isWishlisted(product.id) ? "❤️" : "🤍"}
             </button>
@@ -129,7 +135,12 @@ export default function ProductCard({ product }: Props) {
 
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-stone-50">
             <div>
-              <span className="text-lg font-bold text-orange-500">{formatPrice(product.price)}</span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-lg font-bold text-orange-500">{formatPrice(product.price)}</span>
+                {product.normalPrice != null && product.normalPrice > product.price && (
+                  <span className="text-xs text-stone-400 line-through">{formatPrice(product.normalPrice)}</span>
+                )}
+              </div>
               {product.stock > 0 && product.stock <= 5 && (
                 <p className="text-xs text-red-500 mt-0.5">เหลือ {product.stock} ชิ้น</p>
               )}

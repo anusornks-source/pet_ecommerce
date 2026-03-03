@@ -232,6 +232,9 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
         {isRecommended && (
           <span className="shrink-0 text-[11px] font-bold px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full">
             ✅ น่าเอามาขาย
+            <span className="font-normal ml-1 text-green-600">
+              (stock {detail.totalStock.toLocaleString()} · ส่งเร็ว · มี tracking)
+            </span>
           </span>
         )}
       </div>

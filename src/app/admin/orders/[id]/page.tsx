@@ -22,12 +22,14 @@ interface Order {
   trackingNumber: string | null;
   trackingCarrier: string | null;
   createdAt: string;
+  statusHistory: { status: string; timestamp: string }[] | null;
   user: { name: string; email: string; phone: string | null };
   items: {
     id: string;
     quantity: number;
     price: number;
-    product: { name: string; images: string[] };
+    product: { name: string; images: string[]; cjProductId: string | null };
+    variant: { cjVid: string | null } | null;
   }[];
   payment: {
     method: string;
@@ -320,6 +322,17 @@ export default function AdminOrderDetailPage({
               minute: "2-digit",
             })}
           </p>
+          {order.status === "DELIVERED" ? (() => {
+            const deliveredEntry = order.statusHistory?.find((h) => h.status === "DELIVERED");
+            if (!deliveredEntry) return null;
+            const days = Math.floor((new Date(deliveredEntry.timestamp).getTime() - new Date(order.createdAt).getTime()) / 86400000);
+            return <p className="text-xs font-semibold text-green-600 mt-0.5">📦 ได้ของใน {days} วัน</p>;
+          })() : order.status !== "CANCELLED" ? (() => {
+            const days = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 86400000);
+            const label = days === 0 ? "วันนี้" : `รอมา ${days} วัน`;
+            const color = days >= 7 ? "text-red-600" : days >= 3 ? "text-orange-500" : "text-stone-600";
+            return <p className={`text-xs font-semibold mt-0.5 ${color}`}>⏳ {label}</p>;
+          })() : null}
         </div>
       </div>
 
@@ -347,9 +360,13 @@ export default function AdminOrderDetailPage({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-stone-800 truncate">{item.product.name}</p>
-                    <p className="text-sm text-stone-400">
-                      {item.quantity} x ฿{item.price.toLocaleString("th-TH")}
-                    </p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {(item.variant?.cjVid || item.product.cjProductId)
+                        ? <span className="text-[9px] font-bold bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">🏭 CJ</span>
+                        : <span className="text-[9px] font-bold bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded">✋ ส่งเอง</span>
+                      }
+                      <span className="text-sm text-stone-400">{item.quantity} x ฿{item.price.toLocaleString("th-TH")}</span>
+                    </div>
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-stone-800">
@@ -386,28 +403,66 @@ export default function AdminOrderDetailPage({
                   const isPast = i < currentIdx;
                   const isCurrent = i === currentIdx;
                   const isLast = i === STEPS.length - 1;
+                  const ts = step === "PENDING"
+                    ? order.createdAt
+                    : order.statusHistory?.find((h) => h.status === step)?.timestamp ?? null;
                   return (
                     <div key={step} className="flex items-start flex-1">
                       <div className="flex flex-col items-center flex-1">
                         <div
                           className={`w-3 h-3 rounded-full border-2 transition-colors ${
-                            isPast || isCurrent
+                            isPast
+                              ? "bg-green-500 border-green-500"
+                              : isCurrent
                               ? "bg-orange-400 border-orange-400"
                               : "bg-white border-stone-300"
                           }`}
                         />
                         <p className={`text-[10px] mt-1.5 text-center leading-tight ${
                           isCurrent ? "font-bold text-orange-600" :
-                          isPast ? "text-stone-500" : "text-stone-300"
+                          isPast ? "text-green-600" : "text-stone-300"
                         }`}>
                           {statusLabel[step]}
                         </p>
+                        {ts && (isPast || isCurrent) && (
+                          <p className="text-[9px] text-stone-400 text-center mt-0.5 leading-tight">
+                            {new Date(ts).toLocaleDateString("th-TH", { day: "numeric", month: "short" })}
+                            <br />
+                            {new Date(ts).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        )}
                       </div>
-                      {!isLast && (
-                        <div className={`h-0.5 flex-1 mt-1.5 mx-0.5 transition-colors ${
-                          i < currentIdx ? "bg-orange-300" : "bg-stone-200"
-                        }`} />
-                      )}
+                      {!isLast && (() => {
+                        const nextStep = STEPS[i + 1];
+                        const tsNext = order.statusHistory?.find((h) => h.status === nextStep)?.timestamp ?? null;
+                        let durationLabel = "";
+                        if (i < currentIdx && ts && tsNext) {
+                          const ms = new Date(tsNext).getTime() - new Date(ts).getTime();
+                          const totalMins = Math.floor(ms / 60000);
+                          const hours = Math.floor(totalMins / 60);
+                          const days = Math.floor(hours / 24);
+                          if (days > 0) {
+                            const remHours = hours % 24;
+                            durationLabel = remHours > 0 ? `${days}ว ${remHours}ชม.` : `${days}ว`;
+                          } else if (hours > 0) {
+                            const remMins = totalMins % 60;
+                            durationLabel = remMins > 0 ? `${hours}ชม. ${remMins}น.` : `${hours}ชม.`;
+                          } else {
+                            durationLabel = totalMins <= 0 ? "<1น." : `${totalMins}น.`;
+                          }
+                        }
+                        return (
+                          <div className="flex items-center flex-1 mt-1.5 mx-0.5 gap-0.5">
+                            <div className={`h-0.5 flex-1 transition-colors ${i < currentIdx ? "bg-green-400" : "bg-stone-200"}`} />
+                            {durationLabel && (
+                              <span className="text-[9px] text-green-700 font-semibold whitespace-nowrap px-0.5 bg-white leading-none">
+                                {durationLabel}
+                              </span>
+                            )}
+                            <div className={`h-0.5 flex-1 transition-colors ${i < currentIdx ? "bg-green-400" : "bg-stone-200"}`} />
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
@@ -449,7 +504,7 @@ export default function AdminOrderDetailPage({
                       <li>1. ไปที่ CJ Dashboard → เลือก order นี้ → <span className="font-semibold">ชำระเงิน</span> (tick checkbox แล้วกด Pay)</li>
                       <li>2. รอ CJ เปลี่ยนสถานะ: Picking → Processing → <span className="font-semibold">Dispatched</span></li>
                       <li>3. กลับมาหน้านี้ → กด <span className="font-semibold">🔄 Sync จาก CJ</span> เพื่อรับ tracking number</li>
-                      <li>4. เมื่อได้ tracking แล้ว → กด <span className="font-semibold">→ จัดส่งแล้ว</span></li>
+                      <li>4. เมื่อได้ tracking แล้ว → กด <span className="font-semibold">→ กำลังจัดส่ง</span></li>
                     </ol>
                     <a
                       href="https://app.cjdropshipping.com"
@@ -460,12 +515,20 @@ export default function AdminOrderDetailPage({
                       ไปที่ CJ Dashboard →
                     </a>
                   </>
-                ) : (
-                  <>
-                    <p className="font-semibold text-amber-700 mb-1">⚠️ ไม่มี CJ Order</p>
-                    <p className="text-amber-600">สินค้านี้ไม่ผ่าน CJ หรือสร้าง order ไม่สำเร็จ — จัดการส่งเอง แล้วกดเปลี่ยนเป็น "จัดส่งแล้ว"</p>
-                  </>
-                )}
+                ) : (() => {
+                  const hasCJItems = order.items.some((item) => item.variant?.cjVid || item.product.cjProductId);
+                  return hasCJItems ? (
+                    <>
+                      <p className="font-semibold text-amber-700 mb-1">⚠️ CJ Order ยังไม่ถูกสร้าง</p>
+                      <p className="text-amber-600">มีสินค้า CJ แต่ยังไม่มี CJ order — อาจเกิด error ตอน confirm ดู <span className="font-semibold">CJ Logs</span> ด้านล่าง หรือยืนยันออเดอร์ใหม่เพื่อ retry</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-semibold text-amber-700 mb-1">⚠️ ไม่มีสินค้า CJ</p>
+                      <p className="text-amber-600">สินค้าทั้งหมดไม่ผ่าน CJ — จัดการส่งเอง แล้วกดเปลี่ยนเป็น "กำลังจัดส่ง"</p>
+                    </>
+                  );
+                })()}
               </div>
             )}
 

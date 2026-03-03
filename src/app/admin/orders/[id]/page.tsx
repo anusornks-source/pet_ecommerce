@@ -86,6 +86,9 @@ const statusLabel: Record<string, string> = {
 };
 
 const STEPS = ["PENDING", "CONFIRMED", "SHIPPING", "DELIVERED"];
+const STEP_ICON: Record<string, string> = {
+  PENDING: "📋", CONFIRMED: "🔖", SHIPPING: "🚚", DELIVERED: "📦",
+};
 const NEXT_STATUS: Record<string, string | null> = {
   PENDING: "CONFIRMED",
   CONFIRMED: "SHIPPING",
@@ -397,7 +400,7 @@ export default function AdminOrderDetailPage({
                 ✕ ยกเลิกแล้ว
               </span>
             ) : (
-              <div className="flex items-start mb-5">
+              <div className="mb-5">
                 {STEPS.map((step, i) => {
                   const currentIdx = STEPS.indexOf(order.status);
                   const isPast = i < currentIdx;
@@ -406,63 +409,63 @@ export default function AdminOrderDetailPage({
                   const ts = step === "PENDING"
                     ? order.createdAt
                     : order.statusHistory?.find((h) => h.status === step)?.timestamp ?? null;
+
+                  let durationLabel = "";
+                  if (!isLast && isPast) {
+                    const nextStep = STEPS[i + 1];
+                    const tsNext = order.statusHistory?.find((h) => h.status === nextStep)?.timestamp ?? null;
+                    if (ts && tsNext) {
+                      const ms = new Date(tsNext).getTime() - new Date(ts).getTime();
+                      const totalMins = Math.floor(ms / 60000);
+                      const hours = Math.floor(totalMins / 60);
+                      const days = Math.floor(hours / 24);
+                      if (days > 0) {
+                        const remHours = hours % 24;
+                        durationLabel = remHours > 0 ? `${days}ว ${remHours}ชม.` : `${days}ว`;
+                      } else if (hours > 0) {
+                        const remMins = totalMins % 60;
+                        durationLabel = remMins > 0 ? `${hours}ชม. ${remMins}น.` : `${hours}ชม.`;
+                      } else {
+                        durationLabel = totalMins <= 0 ? "<1น." : `${totalMins}น.`;
+                      }
+                    }
+                  }
+
                   return (
-                    <div key={step} className="flex items-start flex-1">
-                      <div className="flex flex-col items-center flex-1">
-                        <div
-                          className={`w-3 h-3 rounded-full border-2 transition-colors ${
-                            isPast
-                              ? "bg-green-500 border-green-500"
-                              : isCurrent
-                              ? "bg-orange-400 border-orange-400"
-                              : "bg-white border-stone-300"
-                          }`}
-                        />
-                        <p className={`text-[10px] mt-1.5 text-center leading-tight ${
-                          isCurrent ? "font-bold text-orange-600" :
-                          isPast ? "text-green-600" : "text-stone-300"
+                    <div key={step} className="flex gap-3">
+                      {/* Left: circle + connector line */}
+                      <div className="flex flex-col items-center">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 border-2 transition-all ${
+                          isPast ? "bg-green-500 border-green-500 text-white"
+                          : isCurrent ? "bg-orange-500 border-orange-500 text-white ring-4 ring-orange-100"
+                          : "bg-white border-stone-200 text-stone-300"
+                        }`}>
+                          {isPast ? "✓" : STEP_ICON[step]}
+                        </div>
+                        {!isLast && (
+                          <div className={`w-0.5 flex-1 my-1 min-h-5 ${isPast ? "bg-green-400" : "bg-stone-200"}`} />
+                        )}
+                      </div>
+                      {/* Right: label + timestamp + duration */}
+                      <div className={`${isLast ? "pb-0" : "pb-4"}`}>
+                        <p className={`text-sm font-semibold leading-tight ${
+                          isCurrent ? "text-orange-600" : isPast ? "text-green-700" : "text-stone-300"
                         }`}>
                           {statusLabel[step]}
                         </p>
-                        {ts && (isPast || isCurrent) && (
-                          <p className="text-[9px] text-stone-400 text-center mt-0.5 leading-tight">
+                        {ts && (isPast || isCurrent) ? (
+                          <p className="text-xs text-stone-400 mt-0.5">
                             {new Date(ts).toLocaleDateString("th-TH", { day: "numeric", month: "short" })}
-                            <br />
+                            {" "}
                             {new Date(ts).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })}
                           </p>
+                        ) : (
+                          <p className="text-xs text-stone-300 mt-0.5">รอดำเนินการ</p>
+                        )}
+                        {durationLabel && (
+                          <p className="text-[10px] text-green-600 font-medium mt-0.5">⏱ {durationLabel}</p>
                         )}
                       </div>
-                      {!isLast && (() => {
-                        const nextStep = STEPS[i + 1];
-                        const tsNext = order.statusHistory?.find((h) => h.status === nextStep)?.timestamp ?? null;
-                        let durationLabel = "";
-                        if (i < currentIdx && ts && tsNext) {
-                          const ms = new Date(tsNext).getTime() - new Date(ts).getTime();
-                          const totalMins = Math.floor(ms / 60000);
-                          const hours = Math.floor(totalMins / 60);
-                          const days = Math.floor(hours / 24);
-                          if (days > 0) {
-                            const remHours = hours % 24;
-                            durationLabel = remHours > 0 ? `${days}ว ${remHours}ชม.` : `${days}ว`;
-                          } else if (hours > 0) {
-                            const remMins = totalMins % 60;
-                            durationLabel = remMins > 0 ? `${hours}ชม. ${remMins}น.` : `${hours}ชม.`;
-                          } else {
-                            durationLabel = totalMins <= 0 ? "<1น." : `${totalMins}น.`;
-                          }
-                        }
-                        return (
-                          <div className="flex items-center flex-1 mt-1.5 mx-0.5 gap-0.5">
-                            <div className={`h-0.5 flex-1 transition-colors ${i < currentIdx ? "bg-green-400" : "bg-stone-200"}`} />
-                            {durationLabel && (
-                              <span className="text-[9px] text-green-700 font-semibold whitespace-nowrap px-0.5 bg-white leading-none">
-                                {durationLabel}
-                              </span>
-                            )}
-                            <div className={`h-0.5 flex-1 transition-colors ${i < currentIdx ? "bg-green-400" : "bg-stone-200"}`} />
-                          </div>
-                        );
-                      })()}
                     </div>
                   );
                 })}
@@ -903,41 +906,53 @@ export default function AdminOrderDetailPage({
                         <span className="text-xs text-stone-400 ml-1">(~${stockModal.costEstimate.itemsCostUSD})</span>
                       </span>
                     </div>
-                    <div className="flex justify-between text-stone-600">
-                      <span>
-                        ค่าส่ง ({stockModal.costEstimate.logistic})
-                        {stockModal.costEstimate.freightFallback && (
-                          <span className="text-xs text-amber-500 ml-1">*ประมาณ</span>
-                        )}
-                      </span>
-                      <span className="font-medium">
-                        ฿{stockModal.costEstimate.freightTHB.toLocaleString()}
-                        <span className="text-xs text-stone-400 ml-1">(~${stockModal.costEstimate.freightTotalUSD})</span>
-                      </span>
-                    </div>
+                    {stockModal.costEstimate.freightFallback ? (
+                      <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        <span className="text-amber-500 text-base shrink-0">⚠️</span>
+                        <div>
+                          <p className="text-xs text-amber-700 font-medium">ไม่สามารถดึงข้อมูลค่าส่งจาก CJ ได้</p>
+                          <p className="text-xs text-amber-600 mt-0.5">
+                            ดูค่าส่งจริงได้ที่{" "}
+                            <a
+                              href="https://app.cjdropshipping.com/"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline font-medium hover:text-amber-800"
+                            >
+                              CJ Dashboard →
+                            </a>
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between text-stone-600">
+                        <span>ค่าส่ง ({stockModal.costEstimate.logistic})</span>
+                        <span className="font-medium">
+                          ฿{stockModal.costEstimate.freightTHB.toLocaleString()}
+                          <span className="text-xs text-stone-400 ml-1">(~${stockModal.costEstimate.freightTotalUSD})</span>
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between font-semibold text-stone-700 border-t border-stone-200 pt-1.5">
-                      <span>รวมต้นทุน{stockModal.costEstimate.freightFallback && <span className="text-amber-500 font-normal text-xs ml-1">*ประมาณ</span>}</span>
-                      <span>฿{stockModal.costEstimate.totalCostTHB.toLocaleString()}</span>
+                      <span>รวมต้นทุน{stockModal.costEstimate.freightFallback && <span className="text-amber-500 font-normal text-xs ml-1">(ไม่รวมค่าส่ง)</span>}</span>
+                      <span>฿{stockModal.costEstimate.freightFallback ? stockModal.costEstimate.itemsCostTHB.toLocaleString() : stockModal.costEstimate.totalCostTHB.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-stone-600">
                       <span>ลูกค้าจ่าย</span>
                       <span className="font-medium text-orange-500">฿{order.total.toLocaleString("th-TH")}</span>
                     </div>
-                    <div className={`flex justify-between font-bold border-t border-stone-200 pt-1.5 ${
-                      stockModal.costEstimate.estimatedMarginTHB >= 0 ? "text-green-600" : "text-red-600"
-                    }`}>
-                      <span>กำไรประมาณ{stockModal.costEstimate.freightFallback && <span className="text-amber-500 font-normal text-xs ml-1">*ประมาณ</span>}</span>
-                      <span>
-                        {stockModal.costEstimate.estimatedMarginTHB >= 0 ? "+" : ""}
-                        ฿{stockModal.costEstimate.estimatedMarginTHB.toLocaleString()}
-                      </span>
-                    </div>
+                    {!stockModal.costEstimate.freightFallback && (
+                      <div className={`flex justify-between font-bold border-t border-stone-200 pt-1.5 ${
+                        stockModal.costEstimate.estimatedMarginTHB >= 0 ? "text-green-600" : "text-red-600"
+                      }`}>
+                        <span>กำไรประมาณ</span>
+                        <span>
+                          {stockModal.costEstimate.estimatedMarginTHB >= 0 ? "+" : ""}
+                          ฿{stockModal.costEstimate.estimatedMarginTHB.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  {stockModal.costEstimate.freightFallback && (
-                    <p className="text-xs text-stone-400 mt-2">
-                      * ค่าส่งเป็นประมาณการ (0.3 kg/ชิ้น × $3/kg) เนื่องจาก CJ API ไม่ตอบ — ดูราคาจริงใน CJ Dashboard
-                    </p>
-                  )}
                 </div>
               )}
             </div>

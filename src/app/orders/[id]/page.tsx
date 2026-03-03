@@ -41,7 +41,7 @@ interface OrderDetail {
 
 const TIMELINE_STEPS = [
   { status: "PENDING", label: "รอดำเนินการ", icon: "📋" },
-  { status: "CONFIRMED", label: "ยืนยันแล้ว", icon: "✅" },
+  { status: "CONFIRMED", label: "เตรียมจัดส่ง", icon: "🔖" },
   { status: "SHIPPING", label: "กำลังจัดส่ง", icon: "🚚" },
   { status: "DELIVERED", label: "จัดส่งแล้ว", icon: "📦" },
 ];

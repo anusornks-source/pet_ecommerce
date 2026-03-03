@@ -298,8 +298,16 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
 
-          <div className="flex items-baseline gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <span className="text-3xl font-bold text-orange-500">{formatPrice(displayPrice)}</span>
+            {product.normalPrice != null && product.normalPrice > displayPrice && (
+              <>
+                <span className="text-lg text-stone-400 line-through">{formatPrice(product.normalPrice)}</span>
+                <span className="bg-red-500 text-white text-sm font-bold px-2 py-0.5 rounded-md leading-tight">
+                  -{Math.round((1 - displayPrice / product.normalPrice) * 100)}%
+                </span>
+              </>
+            )}
           </div>
 
           {/* Stock */}

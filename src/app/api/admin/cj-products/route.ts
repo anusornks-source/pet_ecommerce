@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
-import { searchCJProducts, getCJProductDetail, getCJInventory } from "@/lib/cjDropshipping";
+import { searchCJProducts, getCJProductDetail, getCJProductDetailBySku, getCJInventory } from "@/lib/cjDropshipping";
 import Anthropic from "@anthropic-ai/sdk";
 
 async function generateShortDesc(name: string, sourceDescription: string): Promise<string | null> {
@@ -32,27 +32,43 @@ export async function GET(request: NextRequest) {
   if (isNextResponse(auth)) return auth;
 
   const pid = request.nextUrl.searchParams.get("pid") ?? "";
+  const sku = request.nextUrl.searchParams.get("sku") ?? "";
   const keyword = request.nextUrl.searchParams.get("keyword") ?? "";
   const page = parseInt(request.nextUrl.searchParams.get("page") ?? "1");
+
+  // Helper: turn a CJProductDetail into a list item
+  const detailToItem = (detail: Awaited<ReturnType<typeof getCJProductDetail>>) => ({
+    pid: detail.pid,
+    productNameEn: detail.productNameEn,
+    productImage: Array.isArray(detail.productImageSet) && detail.productImageSet.length > 0
+      ? detail.productImageSet[0]
+      : detail.productImage,
+    sellPrice: detail.variants?.[0]?.variantSellPrice ?? 0,
+    categoryName: detail.categoryName,
+  });
 
   // PID lookup mode — fetch product detail and return as single-item list
   if (pid.trim()) {
     try {
       const detail = await getCJProductDetail(pid.trim());
-      const item = {
-        pid: detail.pid,
-        productNameEn: detail.productNameEn,
-        productImage: Array.isArray(detail.productImageSet) && detail.productImageSet.length > 0
-          ? detail.productImageSet[0]
-          : detail.productImage,
-        sellPrice: detail.variants?.[0]?.variantSellPrice ?? 0,
-        categoryName: detail.categoryName,
-      };
-      return NextResponse.json({ success: true, data: { list: [item], total: 1 } });
+      return NextResponse.json({ success: true, data: { list: [detailToItem(detail)], total: 1 } });
     } catch (err) {
       return NextResponse.json({
         success: false,
         error: err instanceof Error ? err.message : "PID not found",
+      });
+    }
+  }
+
+  // Variant SKU lookup mode — uses /product/query?variantSku=xxx
+  if (sku.trim()) {
+    try {
+      const detail = await getCJProductDetailBySku(sku.trim());
+      return NextResponse.json({ success: true, data: { list: [detailToItem(detail)], total: 1 } });
+    } catch (err) {
+      return NextResponse.json({
+        success: false,
+        error: err instanceof Error ? err.message : "SKU not found",
       });
     }
   }

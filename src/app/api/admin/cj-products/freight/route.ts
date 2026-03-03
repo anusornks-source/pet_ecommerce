@@ -39,9 +39,27 @@ function resolveWarehouse(opt: any): string {
   return "CN";
 }
 
-function isTracked(name: string): boolean {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isTracked(name: string, raw?: any): boolean {
+  // 1. Trust explicit boolean field from CJ API (various field names)
+  if (raw) {
+    const flag = raw.tracking ?? raw.trackAble ?? raw.isTracking ?? raw.hasTracking ?? raw.trackable;
+    if (typeof flag === "boolean") return flag;
+    if (flag === 1 || flag === "1" || flag === "true" || flag === "Y" || flag === "yes") return true;
+    if (flag === 0 || flag === "0" || flag === "false" || flag === "N" || flag === "no") return false;
+  }
+  // 2. Fallback: infer from logistic name keywords
   const n = name.toLowerCase();
-  return n.includes("epacket") || n.includes("cjpacket") || n.includes("cj packet");
+  return (
+    n.includes("epacket") ||
+    n.includes("cjpacket") || n.includes("cj packet") || n.includes("cjpkt") || n.includes("cj pkt") ||
+    n.includes("registered") ||
+    n.includes("yunexpress") || n.includes("yun express") ||
+    n.includes("4px") ||
+    n.includes("dhl") || n.includes("fedex") || n.includes("ups") ||
+    n.includes("sf express") || n.includes("sfexpress") ||
+    n.includes("ems")
+  );
 }
 
 // GET /api/admin/cj-products/freight?pid=xxx
@@ -86,6 +104,10 @@ export async function GET(request: NextRequest) {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rawOptions: any[] = Array.isArray(data.data) ? data.data : [];
+      if (rawOptions.length > 0) {
+        console.log("[CJ Freight] sample option keys:", Object.keys(rawOptions[0]));
+        console.log("[CJ Freight] sample option:", JSON.stringify(rawOptions[0]));
+      }
 
       const shippingOptions = rawOptions.map((opt) => {
         const warehouseCode = resolveWarehouse(opt);
@@ -95,13 +117,13 @@ export async function GET(request: NextRequest) {
           opt.estimatedDeliveryTime ?? opt.shippingTime ?? opt.days ?? "";
         return {
           logisticName: opt.logisticName ?? "",
-          priceUSD: Number(opt.logisticPrice ?? 0),
+          priceUSD: Number(opt.logisticPrice ?? opt.freightRate ?? opt.price ?? opt.cost ?? opt.shippingCost ?? 0),
           deliveryTime: deliveryTimeStr,
           deliveryDays: parseDeliveryDays(String(deliveryTimeStr)),
           warehouseCode,
           warehouseFlag: COUNTRY_FLAG[warehouseCode] ?? "🌐",
           warehouseName: COUNTRY_NAME[warehouseCode] ?? warehouseCode,
-          hasTracking: isTracked(opt.logisticName ?? ""),
+          hasTracking: isTracked(opt.logisticName ?? "", opt),
         };
       });
 

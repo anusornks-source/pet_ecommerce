@@ -68,7 +68,7 @@ export default function OrderHistoryPage() {
                 onClick={() => setExpanded(expanded === order.id ? null : order.id)}
                 className="w-full p-5 flex items-center justify-between hover:bg-stone-50 transition-colors rounded-2xl"
               >
-                <div className="text-left">
+                <div className="text-left min-w-0 flex-1">
                   <div className="flex items-center gap-3 mb-1">
                     <span className="font-mono text-sm font-bold text-stone-500">
                       #{order.id.slice(-8).toUpperCase()}
@@ -77,11 +77,21 @@ export default function OrderHistoryPage() {
                       {ORDER_STATUS_LABEL[order.status] || order.status}
                     </span>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-stone-500">
-                    <span>{formatDate(order.createdAt)}</span>
-                    <span>{order.items.length} รายการ</span>
+                  {/* Item summary */}
+                  <p className="text-sm text-stone-700 truncate mb-1">
+                    {order.items.slice(0, 2).map((item, i) => (
+                      <span key={item.id}>
+                        {i > 0 && <span className="text-stone-300 mx-1">·</span>}
+                        {item.product?.name?.split(" ").slice(0, 4).join(" ")}{item.quantity > 1 ? ` ×${item.quantity}` : ""}
+                      </span>
+                    ))}
+                    {order.items.length > 2 && <span className="text-stone-400"> +{order.items.length - 2} รายการ</span>}
+                  </p>
+                  <div className="flex items-center gap-3 text-xs text-stone-400">
+                    <span>📅 {formatDate(order.createdAt)}</span>
+                    <span>📦 {order.items.length} รายการ</span>
                     {order.payment && (
-                      <span>{PAYMENT_METHOD_LABEL[order.payment.method] || order.payment.method}</span>
+                      <span>💳 {PAYMENT_METHOD_LABEL[order.payment.method] || order.payment.method}</span>
                     )}
                   </div>
                 </div>

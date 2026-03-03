@@ -40,7 +40,7 @@ interface PetType { id: string; name: string; slug: string; icon: string | null 
 
 export default function CJImportPage() {
   const [keyword, setKeyword] = useState("");
-  const [searchMode, setSearchMode] = useState<"name" | "pid">("name");
+  const [searchMode, setSearchMode] = useState<"name" | "pid" | "sku">("name");
   const [searching, setSearching] = useState(false);
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [insightProgress, setInsightProgress] = useState({ done: 0, total: 0 });
@@ -145,6 +145,8 @@ export default function CJImportPage() {
     try {
       const url = searchMode === "pid"
         ? `/api/admin/cj-products?pid=${encodeURIComponent(keyword.trim())}`
+        : searchMode === "sku"
+        ? `/api/admin/cj-products?sku=${encodeURIComponent(keyword.trim())}`
         : `/api/admin/cj-products?keyword=${encodeURIComponent(keyword)}&page=${p}`;
       const res = await fetch(url);
       const data = await res.json();
@@ -278,11 +280,15 @@ export default function CJImportPage() {
             className={`px-3 py-2 font-medium transition-colors ${searchMode === "pid" ? "bg-stone-800 text-white" : "bg-white text-stone-500 hover:bg-stone-50"}`}>
             PID
           </button>
+          <button onClick={() => { setSearchMode("sku"); setResults([]); setKeyword(""); }}
+            className={`px-3 py-2 font-medium transition-colors ${searchMode === "sku" ? "bg-stone-800 text-white" : "bg-white text-stone-500 hover:bg-stone-50"}`}>
+            SKU
+          </button>
         </div>
         <input type="text" value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch(1)}
-          placeholder={searchMode === "pid" ? "วาง CJ Product ID เช่น 17392847591..." : "ค้นหาสินค้า เช่น dog collar, cat food..."}
+          placeholder={searchMode === "pid" ? "วาง CJ Product ID เช่น 17392847591..." : searchMode === "sku" ? "วาง variant SKU เช่น CJFT277141401AZ..." : "ค้นหาสินค้า เช่น dog collar, cat food..."}
           className="flex-1 border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 font-mono placeholder:font-sans"
         />
         <button onClick={() => handleSearch(1)} disabled={searching || !keyword.trim()}

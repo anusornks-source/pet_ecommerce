@@ -36,9 +36,10 @@ export interface CJProductDetail {
   variants: CJVariantDetail[];
 }
 
-export async function searchCJProducts(keyword: string, page = 1): Promise<{ list: CJListItem[]; total: number }> {
+export async function searchCJProducts(keyword: string, page = 1, searchField: "name" | "sku" = "name"): Promise<{ list: CJListItem[]; total: number }> {
   const token = await getCJToken();
-  const params = new URLSearchParams({ pageNum: String(page), pageSize: "100", productNameEn: keyword });
+  const field = searchField === "sku" ? "productSku" : "productNameEn";
+  const params = new URLSearchParams({ pageNum: String(page), pageSize: "100", [field]: keyword });
   const res = await fetch(`${CJ_BASE}/product/list?${params}`, {
     headers: { "CJ-Access-Token": token },
   });
@@ -61,6 +62,16 @@ export async function getCJProductDetail(pid: string): Promise<CJProductDetail> 
   });
   const data = parseCJJson(await res.text());
   if (!data.result || !data.data) throw new Error(data.message || "CJ product not found");
+  return data.data as CJProductDetail;
+}
+
+export async function getCJProductDetailBySku(variantSku: string): Promise<CJProductDetail> {
+  const token = await getCJToken();
+  const res = await fetch(`${CJ_BASE}/product/query?variantSku=${encodeURIComponent(variantSku)}`, {
+    headers: { "CJ-Access-Token": token },
+  });
+  const data = parseCJJson(await res.text());
+  if (!data.result || !data.data) throw new Error(data.message || "ไม่พบสินค้าสำหรับ SKU นี้");
   return data.data as CJProductDetail;
 }
 

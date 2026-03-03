@@ -76,7 +76,7 @@ export default function ProductCard({ product }: Props) {
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
           {/* Badges: featured + tags stacked top-left */}
-          <div className="absolute top-2 left-2 flex flex-col gap-1">
+          <div className="absolute top-1.5 left-1.5 flex flex-col gap-0.5">
             {product.featured && (
               <span className="badge bg-orange-500 text-white">⭐ แนะนำ</span>
             )}
@@ -91,7 +91,7 @@ export default function ProductCard({ product }: Props) {
           </div>
           {/* Discount badge top-right */}
           {product.normalPrice != null && product.normalPrice > product.price && (
-            <span className="absolute top-2 right-2 bg-red-500 text-white text-[11px] font-bold px-1.5 py-0.5 rounded-md leading-tight z-10">
+            <span className="absolute top-1.5 right-1.5 bg-red-500 text-white text-[10px] font-bold px-1 py-0.5 rounded leading-tight z-10">
               -{Math.round((1 - product.price / product.normalPrice) * 100)}%
             </span>
           )}

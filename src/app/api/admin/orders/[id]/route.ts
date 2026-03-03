@@ -135,7 +135,7 @@ export async function PUT(
 
       for (const item of cjItems) {
         try {
-          const opts = await getCJFreight(item.product.cjProductId!, item.quantity);
+          const opts = await getCJFreight(item.product.cjProductId!, item.quantity, 0.3, item.variant?.cjVid ?? undefined);
           if (opts.length > 0) {
             freightApiAvailable = true;
             const match =

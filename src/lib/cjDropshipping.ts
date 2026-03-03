@@ -240,7 +240,8 @@ export interface CJFreightOption {
 export async function getCJFreight(
   pid: string,
   quantity: number,
-  weightKgPerUnit = 0.3
+  weightKgPerUnit = 0.3,
+  vid?: string
 ): Promise<CJFreightOption[]> {
   try {
     const token = await getCJToken();
@@ -253,6 +254,7 @@ export async function getCJFreight(
         quantity,
         weight: Math.max(0.1, weightKgPerUnit * quantity),
         pid,
+        ...(vid ? { products: [{ vid, quantity }] } : {}),
       }),
     });
     const data = await res.json();

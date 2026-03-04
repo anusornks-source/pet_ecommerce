@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
   const pid = request.nextUrl.searchParams.get("pid") ?? "";
   const sku = request.nextUrl.searchParams.get("sku") ?? "";
   const keyword = request.nextUrl.searchParams.get("keyword") ?? "";
-  const page = parseInt(request.nextUrl.searchParams.get("page") ?? "1");
+  // CJ API max offset = 6000, pageSize = 100 → max page 60
+  const page = Math.min(60, Math.max(1, parseInt(request.nextUrl.searchParams.get("page") ?? "1")));
 
   // Helper: turn a CJProductDetail into a list item
   const detailToItem = (detail: Awaited<ReturnType<typeof getCJProductDetail>>) => ({

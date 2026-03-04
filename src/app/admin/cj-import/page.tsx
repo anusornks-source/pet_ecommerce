@@ -409,20 +409,23 @@ export default function CJImportPage() {
               <input
                 type="number"
                 min={1}
-                max={Math.ceil(total / 100)}
+                max={Math.min(60, Math.ceil(total / 100))}
                 defaultValue={page}
                 key={page}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     const v = parseInt((e.target as HTMLInputElement).value);
-                    const totalPages = Math.ceil(total / 100);
-                    if (v >= 1 && v <= totalPages && v !== page) handleSearch(v);
+                    const maxPage = Math.min(60, Math.ceil(total / 100));
+                    if (v >= 1 && v <= maxPage && v !== page) handleSearch(v);
                   }
                 }}
                 className="w-14 border border-stone-200 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-200"
               />
-              <span className="text-xs text-stone-400">/ {Math.ceil(total / 100)}</span>
-              <button onClick={() => handleSearch(page + 1)} disabled={page >= Math.ceil(total / 100) || searching}
+              <span className="text-xs text-stone-400">
+                / {Math.min(60, Math.ceil(total / 100))}
+                {Math.ceil(total / 100) > 60 && <span className="text-amber-500 ml-1" title="CJ จำกัด offset 6,000 รายการ">⚠️</span>}
+              </span>
+              <button onClick={() => handleSearch(page + 1)} disabled={page >= Math.min(60, Math.ceil(total / 100)) || searching}
                 className="px-2 py-1 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 disabled:opacity-40 transition-colors text-xs">→</button>
             </div>
           </div>
@@ -618,7 +621,7 @@ export default function CJImportPage() {
 
           {/* Pagination */}
           {total > 20 && (() => {
-            const totalPages = Math.ceil(total / 100);
+            const totalPages = Math.min(60, Math.ceil(total / 100)); // CJ max offset 6000
             const delta = 2;
             const pages: (number | "...")[] = [];
             for (let i = 1; i <= totalPages; i++) {

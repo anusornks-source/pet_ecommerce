@@ -21,6 +21,8 @@ interface Order {
   cjStatus: string | null;
   trackingNumber: string | null;
   trackingCarrier: string | null;
+  selfTrackingNumber: string | null;
+  selfCarrier: string | null;
   createdAt: string;
   statusHistory: { status: string; timestamp: string }[] | null;
   user: { name: string; email: string; phone: string | null };
@@ -123,6 +125,9 @@ export default function AdminOrderDetailPage({
   const [trackingInput, setTrackingInput] = useState("");
   const [carrierInput, setCarrierInput] = useState("");
   const [savingTracking, setSavingTracking] = useState(false);
+  const [selfTrackingInput, setSelfTrackingInput] = useState("");
+  const [selfCarrierInput, setSelfCarrierInput] = useState("");
+  const [savingSelfTracking, setSavingSelfTracking] = useState(false);
   const [cjLogs, setCjLogs] = useState<CjApiLog[]>([]);
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
 
@@ -213,6 +218,35 @@ export default function AdminOrderDetailPage({
       toast.error("ไม่สามารถบันทึกได้");
     } finally {
       setSavingTracking(false);
+    }
+  };
+
+  const handleSaveSelfTracking = async () => {
+    if (!order || !selfTrackingInput.trim()) return;
+    setSavingSelfTracking(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: order.status,
+          selfTrackingNumber: selfTrackingInput.trim(),
+          selfCarrier: selfCarrierInput.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("บันทึก tracking ส่งเองแล้ว");
+        setOrder((o) => o ? { ...o, selfTrackingNumber: selfTrackingInput.trim(), selfCarrier: selfCarrierInput.trim() || null } : o);
+        setSelfTrackingInput("");
+        setSelfCarrierInput("");
+      } else {
+        toast.error(data.error || "เกิดข้อผิดพลาด");
+      }
+    } catch {
+      toast.error("ไม่สามารถบันทึกได้");
+    } finally {
+      setSavingSelfTracking(false);
     }
   };
 
@@ -599,10 +633,45 @@ export default function AdminOrderDetailPage({
                           </div>
                         ))}
                       </div>
-                      <ol className="text-green-600 space-y-1 list-none">
+                      <ol className="text-green-600 space-y-1 list-none mb-2">
                         <li>1. แพ็คสินค้า แล้วนำส่งขนส่ง (Kerry, Flash, J&T ฯลฯ)</li>
-                        <li>2. กด <span className="font-semibold">→ กำลังจัดส่ง</span> แล้วกรอก tracking number</li>
+                        <li>2. กรอก tracking number ด้านล่าง แล้วกด บันทึก</li>
+                        <li>3. กด <span className="font-semibold">→ กำลังจัดส่ง</span></li>
                       </ol>
+                      {order.selfTrackingNumber ? (
+                        <div className="bg-white rounded-lg px-3 py-2 border border-green-200">
+                          <p className="font-mono text-green-900 font-semibold">{order.selfTrackingNumber}</p>
+                          {order.selfCarrier && <p className="text-green-500 text-[10px] mt-0.5">ขนส่ง: {order.selfCarrier}</p>}
+                          <button
+                            onClick={() => { setSelfTrackingInput(order.selfTrackingNumber!); setSelfCarrierInput(order.selfCarrier ?? ""); }}
+                            className="text-[10px] text-green-500 underline mt-1"
+                          >แก้ไข</button>
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5">
+                          <input
+                            type="text"
+                            value={selfTrackingInput}
+                            onChange={(e) => setSelfTrackingInput(e.target.value)}
+                            placeholder="Tracking number (Kerry, Flash, J&T ฯลฯ)"
+                            className="w-full border border-green-200 rounded-lg px-3 py-1.5 text-xs text-stone-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-200"
+                          />
+                          <input
+                            type="text"
+                            value={selfCarrierInput}
+                            onChange={(e) => setSelfCarrierInput(e.target.value)}
+                            placeholder="ชื่อขนส่ง เช่น Kerry, Flash, J&T (ถ้ามี)"
+                            className="w-full border border-green-200 rounded-lg px-3 py-1.5 text-xs text-stone-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-200"
+                          />
+                          <button
+                            onClick={handleSaveSelfTracking}
+                            disabled={savingSelfTracking || !selfTrackingInput.trim()}
+                            className="w-full bg-green-500 hover:bg-green-600 text-white rounded-lg py-1.5 text-xs font-medium transition-colors disabled:opacity-40"
+                          >
+                            {savingSelfTracking ? "กำลังบันทึก..." : "💾 บันทึก Tracking"}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -611,24 +680,35 @@ export default function AdminOrderDetailPage({
 
             {order.status === "SHIPPING" && (
               <div className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-3 mb-3 text-xs">
-                <p className="font-semibold text-purple-700 mb-1">📦 กำลังจัดส่ง</p>
-                {order.trackingNumber ? (
-                  <>
-                    <p className="font-mono text-purple-900 text-sm font-semibold mb-0.5">{order.trackingNumber}</p>
-                    {order.trackingCarrier && (
-                      <p className="text-purple-500 mb-1">ขนส่ง: {order.trackingCarrier}</p>
-                    )}
-                    <a
-                      href={`https://t.17track.net/th#nums=${order.trackingNumber}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-purple-600 underline hover:text-purple-800 font-medium"
-                    >
+                <p className="font-semibold text-purple-700 mb-2">📦 กำลังจัดส่ง</p>
+                {/* CJ tracking */}
+                {order.trackingNumber && (
+                  <div className="mb-2">
+                    <p className="text-purple-400 mb-0.5">🏭 CJ Tracking</p>
+                    <p className="font-mono text-purple-900 text-sm font-semibold">{order.trackingNumber}</p>
+                    {order.trackingCarrier && <p className="text-purple-500 mt-0.5">ขนส่ง: {order.trackingCarrier}</p>}
+                    <a href={`https://t.17track.net/th#nums=${order.trackingNumber}`} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-purple-600 underline hover:text-purple-800 font-medium mt-1">
                       ติดตามพัสดุ (17track) →
                     </a>
-                    <p className="text-purple-500 mt-2">รอลูกค้าได้รับสินค้า แล้วกด <span className="font-semibold">ส่งแล้ว</span></p>
-                  </>
-                ) : (
+                  </div>
+                )}
+                {/* Self-ship tracking */}
+                {order.selfTrackingNumber && (
+                  <div className="mb-2">
+                    <p className="text-green-500 mb-0.5">✋ Self-ship Tracking</p>
+                    <p className="font-mono text-green-900 text-sm font-semibold">{order.selfTrackingNumber}</p>
+                    {order.selfCarrier && <p className="text-green-600 mt-0.5">ขนส่ง: {order.selfCarrier}</p>}
+                    <a href={`https://t.17track.net/th#nums=${order.selfTrackingNumber}`} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-green-600 underline hover:text-green-800 font-medium mt-1">
+                      ติดตามพัสดุ (17track) →
+                    </a>
+                  </div>
+                )}
+                {(order.trackingNumber || order.selfTrackingNumber) && (
+                  <p className="text-purple-500 mt-1">รอลูกค้าได้รับสินค้า แล้วกด <span className="font-semibold">ส่งแล้ว</span></p>
+                )}
+                {!order.trackingNumber && !order.selfTrackingNumber && (
                   <div>
                     {order.cjOrderId ? (
                       <p className="text-purple-600 mb-2">รอ tracking จาก CJ — กด Sync หากยังไม่อัปเดต</p>
@@ -659,6 +739,7 @@ export default function AdminOrderDetailPage({
                 )}
               </div>
             )}
+
 
             {order.status === "DELIVERED" && (
               <div className="bg-green-50 border border-green-100 rounded-xl px-4 py-3 mb-3 text-xs">

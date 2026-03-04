@@ -202,8 +202,10 @@ model Order {
   stripeSessionId  String?
   cjOrderId        String?
   cjStatus        String?
-  trackingNumber  String?
-  trackingCarrier String?
+  trackingNumber      String?
+  trackingCarrier     String?
+  selfTrackingNumber  String?
+  selfCarrier         String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 

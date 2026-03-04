@@ -390,17 +390,42 @@ export default function CJImportPage() {
       {/* Results */}
       {results.length > 0 && (
         <>
-          <p className="text-sm text-stone-500 mb-3">
-            พบ {total.toLocaleString()} รายการ — หน้า {page}/{Math.ceil(total / 100)}
-            {activeFilterCount > 0 && (
-              filterFastShipping && loadingInsights
-                ? <span className="ml-2 text-blue-600 font-medium animate-pulse">⏳ กำลังโหลดค่าส่ง {insightProgress.done}/{insightProgress.total}...</span>
-                : <span className="ml-2 text-orange-600 font-medium">แสดง {filteredResults.length} รายการ (หลัง filter)</span>
-            )}
-            {noDataFiltersActive && (
-              <span className="ml-2 text-amber-600 text-xs">⚠️ CJ ไม่ส่ง stock/orders/rating ใน search results — filter อาจไม่มีผล</span>
-            )}
-          </p>
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <p className="text-sm text-stone-500">
+              พบ {total.toLocaleString()} รายการ
+              {activeFilterCount > 0 && (
+                filterFastShipping && loadingInsights
+                  ? <span className="ml-2 text-blue-600 font-medium animate-pulse">⏳ กำลังโหลดค่าส่ง {insightProgress.done}/{insightProgress.total}...</span>
+                  : <span className="ml-2 text-orange-600 font-medium">แสดง {filteredResults.length} รายการ (หลัง filter)</span>
+              )}
+              {noDataFiltersActive && (
+                <span className="ml-2 text-amber-600 text-xs">⚠️ CJ ไม่ส่ง stock/orders/rating ใน search results — filter อาจไม่มีผล</span>
+              )}
+            </p>
+            <div className="flex items-center gap-2 text-sm text-stone-500">
+              <button onClick={() => handleSearch(page - 1)} disabled={page <= 1 || searching}
+                className="px-2 py-1 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 disabled:opacity-40 transition-colors text-xs">←</button>
+              <span className="text-xs text-stone-400">หน้า</span>
+              <input
+                type="number"
+                min={1}
+                max={Math.ceil(total / 100)}
+                defaultValue={page}
+                key={page}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const v = parseInt((e.target as HTMLInputElement).value);
+                    const totalPages = Math.ceil(total / 100);
+                    if (v >= 1 && v <= totalPages && v !== page) handleSearch(v);
+                  }
+                }}
+                className="w-14 border border-stone-200 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-200"
+              />
+              <span className="text-xs text-stone-400">/ {Math.ceil(total / 100)}</span>
+              <button onClick={() => handleSearch(page + 1)} disabled={page >= Math.ceil(total / 100) || searching}
+                className="px-2 py-1 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 disabled:opacity-40 transition-colors text-xs">→</button>
+            </div>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {filteredResults.map((item) => {
               const imported = importedIds[item.pid];
@@ -604,41 +629,21 @@ export default function CJImportPage() {
               }
             }
             return (
-              <div className="flex flex-col items-center gap-3 mt-8">
-                <div className="flex items-center gap-1">
-                  <button onClick={() => handleSearch(page - 1)} disabled={page <= 1 || searching}
-                    className="px-3 py-2 rounded-xl border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 disabled:opacity-40 transition-colors">←</button>
-                  {pages.map((p, i) =>
-                    p === "..." ? (
-                      <span key={`ellipsis-${i}`} className="px-2 text-stone-400 text-sm">…</span>
-                    ) : (
-                      <button key={p} onClick={() => p !== page && handleSearch(p)} disabled={searching}
-                        className={`w-9 h-9 rounded-xl text-sm font-medium transition-colors ${p === page ? "bg-orange-500 text-white" : "border border-stone-200 text-stone-600 hover:bg-stone-50"}`}>
-                        {p}
-                      </button>
-                    )
-                  )}
-                  <button onClick={() => handleSearch(page + 1)} disabled={page >= totalPages || searching}
-                    className="px-3 py-2 rounded-xl border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 disabled:opacity-40 transition-colors">→</button>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-stone-500">
-                  <span>ไปหน้า</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={totalPages}
-                    defaultValue={page}
-                    key={page}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        const v = parseInt((e.target as HTMLInputElement).value);
-                        if (v >= 1 && v <= totalPages && v !== page) handleSearch(v);
-                      }
-                    }}
-                    className="w-16 border border-stone-200 rounded-xl px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-200"
-                  />
-                  <span className="text-stone-400">/ {totalPages} ({total.toLocaleString()} รายการ)</span>
-                </div>
+              <div className="flex items-center justify-center gap-1 mt-8">
+                <button onClick={() => handleSearch(page - 1)} disabled={page <= 1 || searching}
+                  className="px-3 py-2 rounded-xl border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 disabled:opacity-40 transition-colors">←</button>
+                {pages.map((p, i) =>
+                  p === "..." ? (
+                    <span key={`ellipsis-${i}`} className="px-2 text-stone-400 text-sm">…</span>
+                  ) : (
+                    <button key={p} onClick={() => p !== page && handleSearch(p)} disabled={searching}
+                      className={`w-9 h-9 rounded-xl text-sm font-medium transition-colors ${p === page ? "bg-orange-500 text-white" : "border border-stone-200 text-stone-600 hover:bg-stone-50"}`}>
+                      {p}
+                    </button>
+                  )
+                )}
+                <button onClick={() => handleSearch(page + 1)} disabled={page >= totalPages || searching}
+                  className="px-3 py-2 rounded-xl border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 disabled:opacity-40 transition-colors">→</button>
               </div>
             );
           })()}

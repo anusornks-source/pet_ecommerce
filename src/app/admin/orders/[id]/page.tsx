@@ -490,50 +490,60 @@ export default function AdminOrderDetailPage({
               </div>
             )}
 
-            {order.status === "CONFIRMED" && (
-              <div className={`rounded-xl px-4 py-3 mb-3 text-xs border ${
-                order.cjOrderId
-                  ? "bg-blue-50 border-blue-100"
-                  : "bg-amber-50 border-amber-100"
-              }`}>
-                {order.cjOrderId ? (
-                  <>
-                    <p className="font-semibold text-blue-700 mb-1">🚚 CJ Order สร้างแล้ว</p>
-                    <p className="font-mono text-blue-800 mb-1">{order.cjOrderId}</p>
-                    {order.cjStatus && (
-                      <p className="text-blue-500 mb-1">สถานะ CJ: <span className="font-medium text-blue-700">{order.cjStatus}</span></p>
-                    )}
-                    <ol className="text-blue-600 space-y-1 mb-2 list-none">
-                      <li>1. ไปที่ CJ Dashboard → เลือก order นี้ → <span className="font-semibold">ชำระเงิน</span> (tick checkbox แล้วกด Pay)</li>
-                      <li>2. รอ CJ เปลี่ยนสถานะ: Picking → Processing → <span className="font-semibold">Dispatched</span></li>
-                      <li>3. กลับมาหน้านี้ → กด <span className="font-semibold">🔄 Sync จาก CJ</span> เพื่อรับ tracking number</li>
-                      <li>4. เมื่อได้ tracking แล้ว → กด <span className="font-semibold">→ กำลังจัดส่ง</span></li>
-                    </ol>
-                    <a
-                      href="https://app.cjdropshipping.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-blue-600 underline hover:text-blue-800 font-medium"
-                    >
-                      ไปที่ CJ Dashboard →
-                    </a>
-                  </>
-                ) : (() => {
-                  const hasCJItems = order.items.some((item) => item.variant?.cjVid || item.product.cjProductId);
-                  return hasCJItems ? (
-                    <>
-                      <p className="font-semibold text-amber-700 mb-1">⚠️ CJ Order ยังไม่ถูกสร้าง</p>
-                      <p className="text-amber-600">มีสินค้า CJ แต่ยังไม่มี CJ order — อาจเกิด error ตอน confirm ดู <span className="font-semibold">CJ Logs</span> ด้านล่าง หรือยืนยันออเดอร์ใหม่เพื่อ retry</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="font-semibold text-amber-700 mb-1">⚠️ ไม่มีสินค้า CJ</p>
-                      <p className="text-amber-600">สินค้าทั้งหมดไม่ผ่าน CJ — จัดการส่งเอง แล้วกดเปลี่ยนเป็น "กำลังจัดส่ง"</p>
-                    </>
-                  );
-                })()}
-              </div>
-            )}
+            {order.status === "CONFIRMED" && (() => {
+              const selfItems = order.items.filter((item) => !item.variant?.cjVid && !item.product.cjProductId);
+              const hasCJItems = order.items.some((item) => item.variant?.cjVid || item.product.cjProductId);
+              return (
+                <div className="space-y-2 mb-3">
+                  {/* CJ section */}
+                  {hasCJItems && (
+                    <div className={`rounded-xl px-4 py-3 text-xs border ${order.cjOrderId ? "bg-blue-50 border-blue-100" : "bg-amber-50 border-amber-100"}`}>
+                      {order.cjOrderId ? (
+                        <>
+                          <p className="font-semibold text-blue-700 mb-1">🚚 CJ Order สร้างแล้ว</p>
+                          <p className="font-mono text-blue-800 mb-1">{order.cjOrderId}</p>
+                          {order.cjStatus && <p className="text-blue-500 mb-1">สถานะ CJ: <span className="font-medium text-blue-700">{order.cjStatus}</span></p>}
+                          <ol className="text-blue-600 space-y-1 mb-2 list-none">
+                            <li>1. ไปที่ CJ Dashboard → เลือก order นี้ → <span className="font-semibold">ชำระเงิน</span></li>
+                            <li>2. รอ CJ เปลี่ยนสถานะ → <span className="font-semibold">Dispatched</span></li>
+                            <li>3. กด <span className="font-semibold">🔄 Sync จาก CJ</span> เพื่อรับ tracking</li>
+                            <li>4. กด <span className="font-semibold">→ กำลังจัดส่ง</span></li>
+                          </ol>
+                          <a href="https://app.cjdropshipping.com" target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-blue-600 underline hover:text-blue-800 font-medium">
+                            ไปที่ CJ Dashboard →
+                          </a>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-semibold text-amber-700 mb-1">⚠️ CJ Order ยังไม่ถูกสร้าง</p>
+                          <p className="text-amber-600">มีสินค้า CJ แต่ยังไม่มี CJ order — ดู <span className="font-semibold">CJ Logs</span> หรือยืนยันออเดอร์ใหม่เพื่อ retry</p>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Self-ship section */}
+                  {selfItems.length > 0 && (
+                    <div className="bg-green-50 border border-green-100 rounded-xl px-4 py-3 text-xs">
+                      <p className="font-semibold text-green-700 mb-2">✋ ส่งเอง — {selfItems.length} รายการ</p>
+                      <div className="bg-white rounded-lg px-3 py-2 border border-green-100 mb-2 space-y-1">
+                        {selfItems.map((item) => (
+                          <div key={item.id} className="flex justify-between text-green-800">
+                            <span className="truncate">{item.product.name}</span>
+                            <span className="shrink-0 ml-2 text-green-600 font-medium">×{item.quantity}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <ol className="text-green-600 space-y-1 list-none">
+                        <li>1. แพ็คสินค้า แล้วนำส่งขนส่ง (Kerry, Flash, J&T ฯลฯ)</li>
+                        <li>2. กด <span className="font-semibold">→ กำลังจัดส่ง</span> แล้วกรอก tracking number</li>
+                      </ol>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {order.status === "SHIPPING" && (
               <div className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-3 mb-3 text-xs">

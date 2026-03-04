@@ -28,8 +28,8 @@ interface Order {
     id: string;
     quantity: number;
     price: number;
-    product: { name: string; images: string[]; cjProductId: string | null };
-    variant: { cjVid: string | null; size: string | null; color: string | null; sku: string | null } | null;
+    product: { id: string; name: string; images: string[]; cjProductId: string | null };
+    variant: { id: string; cjVid: string | null; size: string | null; color: string | null; sku: string | null } | null;
   }[];
   payment: {
     method: string;
@@ -381,6 +381,12 @@ export default function AdminOrderDetailPage({
                           SKU: {item.variant.sku}
                         </span>
                       )}
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                      <span className="text-[9px] font-mono text-stone-300 select-all">P:{item.product.id.slice(-8)}</span>
+                      {item.variant && (
+                        <span className="text-[9px] font-mono text-stone-300 select-all">V:{item.variant.id.slice(-8)}</span>
+                      )}
                       <span className="text-sm text-stone-400">{item.quantity} x ฿{item.price.toLocaleString("th-TH")}</span>
                     </div>
                   </div>
@@ -518,19 +524,25 @@ export default function AdminOrderDetailPage({
                             <p className="font-semibold text-blue-700 mb-1">🚚 CJ Order สร้างแล้ว</p>
                             <p className="font-mono text-blue-800 mb-1">{order.cjOrderId}</p>
                             {order.cjStatus && <p className="text-blue-500 mb-1">สถานะ CJ: <span className="font-medium text-blue-700">{order.cjStatus}</span></p>}
-                            <div className="bg-white rounded-lg px-3 py-2 border border-blue-100 mb-2 space-y-1">
+                            <div className="bg-white rounded-lg px-3 py-2 border border-blue-100 mb-2 space-y-1.5">
                               {cjItems.map((item) => (
-                                <div key={item.id} className="flex justify-between text-blue-800">
-                                  <div className="truncate">
-                                    <span>{item.product.name}</span>
-                                    {(item.variant?.size || item.variant?.color) && (
-                                      <span className="ml-1.5 text-blue-500 font-mono">[{[item.variant?.size, item.variant?.color].filter(Boolean).join("/")}]</span>
-                                    )}
-                                    {item.variant?.sku && (
-                                      <span className="ml-1.5 text-blue-400 font-mono">SKU:{item.variant.sku}</span>
-                                    )}
+                                <div key={item.id} className="text-blue-800">
+                                  <div className="flex justify-between">
+                                    <div className="truncate">
+                                      <span>{item.product.name}</span>
+                                      {(item.variant?.size || item.variant?.color) && (
+                                        <span className="ml-1.5 text-blue-500 font-mono">[{[item.variant?.size, item.variant?.color].filter(Boolean).join("/")}]</span>
+                                      )}
+                                      {item.variant?.sku && (
+                                        <span className="ml-1.5 text-blue-400 font-mono">SKU:{item.variant.sku}</span>
+                                      )}
+                                    </div>
+                                    <span className="shrink-0 ml-2 text-blue-600 font-medium">×{item.quantity}</span>
                                   </div>
-                                  <span className="shrink-0 ml-2 text-blue-600 font-medium">×{item.quantity}</span>
+                                  <div className="flex gap-1.5 mt-0.5">
+                                    <span className="text-[9px] font-mono text-blue-300 select-all">P:{item.product.id.slice(-8)}</span>
+                                    {item.variant && <span className="text-[9px] font-mono text-blue-300 select-all">V:{item.variant.id.slice(-8)}</span>}
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -548,11 +560,17 @@ export default function AdminOrderDetailPage({
                         ) : (
                           <>
                             <p className="font-semibold text-amber-700 mb-1">⚠️ CJ Order ยังไม่ถูกสร้าง</p>
-                            <div className="bg-white rounded-lg px-3 py-2 border border-amber-100 mb-2 space-y-1">
+                            <div className="bg-white rounded-lg px-3 py-2 border border-amber-100 mb-2 space-y-1.5">
                               {cjItems.map((item) => (
-                                <div key={item.id} className="flex justify-between text-amber-800">
-                                  <span className="truncate">{item.product.name}</span>
-                                  <span className="shrink-0 ml-2 text-amber-600 font-medium">×{item.quantity}</span>
+                                <div key={item.id} className="text-amber-800">
+                                  <div className="flex justify-between">
+                                    <span className="truncate">{item.product.name}</span>
+                                    <span className="shrink-0 ml-2 text-amber-600 font-medium">×{item.quantity}</span>
+                                  </div>
+                                  <div className="flex gap-1.5 mt-0.5">
+                                    <span className="text-[9px] font-mono text-amber-300 select-all">P:{item.product.id.slice(-8)}</span>
+                                    {item.variant && <span className="text-[9px] font-mono text-amber-300 select-all">V:{item.variant.id.slice(-8)}</span>}
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -567,11 +585,17 @@ export default function AdminOrderDetailPage({
                   {selfItems.length > 0 && (
                     <div className="bg-green-50 border border-green-100 rounded-xl px-4 py-3 text-xs">
                       <p className="font-semibold text-green-700 mb-2">✋ ส่งเอง — {selfItems.length} รายการ</p>
-                      <div className="bg-white rounded-lg px-3 py-2 border border-green-100 mb-2 space-y-1">
+                      <div className="bg-white rounded-lg px-3 py-2 border border-green-100 mb-2 space-y-1.5">
                         {selfItems.map((item) => (
-                          <div key={item.id} className="flex justify-between text-green-800">
-                            <span className="truncate">{item.product.name}</span>
-                            <span className="shrink-0 ml-2 text-green-600 font-medium">×{item.quantity}</span>
+                          <div key={item.id} className="text-green-800">
+                            <div className="flex justify-between">
+                              <span className="truncate">{item.product.name}</span>
+                              <span className="shrink-0 ml-2 text-green-600 font-medium">×{item.quantity}</span>
+                            </div>
+                            <div className="flex gap-1.5 mt-0.5">
+                              <span className="text-[9px] font-mono text-green-300 select-all">P:{item.product.id.slice(-8)}</span>
+                              {item.variant && <span className="text-[9px] font-mono text-green-300 select-all">V:{item.variant.id.slice(-8)}</span>}
+                            </div>
                           </div>
                         ))}
                       </div>

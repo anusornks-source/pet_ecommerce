@@ -35,6 +35,8 @@ interface OrderDetail {
   statusHistory: StatusHistoryEntry[] | null;
   trackingNumber: string | null;
   trackingCarrier: string | null;
+  selfTrackingNumber: string | null;
+  selfTrackingCarrier: string | null;
   items: OrderItem[];
   payment?: { method: string; status: string; amount: number } | null;
 }
@@ -224,29 +226,61 @@ function OrderTrackingContent({ id }: { id: string }) {
         )}
       </div>
 
-      {/* Tracking Card — show when tracking number available */}
-      {order.trackingNumber && (
+      {/* Tracking Card — show when any tracking number available */}
+      {(order.trackingNumber || order.selfTrackingNumber) && (
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 mb-5">
           <h3 className="font-semibold text-blue-800 mb-3">📦 ติดตามพัสดุ</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex gap-2 items-center">
-              <span className="text-blue-600 shrink-0">เลข Tracking</span>
-              <span className="font-mono font-bold text-blue-900 text-base tracking-wide">{order.trackingNumber}</span>
-            </div>
-            {order.trackingCarrier && (
-              <div className="flex gap-2">
-                <span className="text-blue-600 shrink-0">ขนส่ง</span>
-                <span className="text-blue-800">{order.trackingCarrier}</span>
+          <div className="space-y-4 text-sm">
+            {order.trackingNumber && (
+              <div className="space-y-2">
+                {order.selfTrackingNumber && (
+                  <p className="text-xs text-blue-500 font-medium">🏭 CJ Tracking</p>
+                )}
+                <div className="flex gap-2 items-center">
+                  <span className="text-blue-600 shrink-0">เลข Tracking</span>
+                  <span className="font-mono font-bold text-blue-900 text-base tracking-wide">{order.trackingNumber}</span>
+                </div>
+                {order.trackingCarrier && (
+                  <div className="flex gap-2">
+                    <span className="text-blue-600 shrink-0">ขนส่ง</span>
+                    <span className="text-blue-800">{order.trackingCarrier}</span>
+                  </div>
+                )}
+                <a
+                  href={`https://t.17track.net/th#nums=${order.trackingNumber}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium transition-colors"
+                >
+                  ติดตามพัสดุ →
+                </a>
               </div>
             )}
-            <a
-              href={`https://t.17track.net/th#nums=${order.trackingNumber}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 mt-1 px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium transition-colors"
-            >
-              ติดตามพัสดุ →
-            </a>
+            {order.selfTrackingNumber && (
+              <div className="space-y-2">
+                {order.trackingNumber && (
+                  <p className="text-xs text-green-600 font-medium">✋ Self-ship Tracking</p>
+                )}
+                <div className="flex gap-2 items-center">
+                  <span className="text-blue-600 shrink-0">เลข Tracking</span>
+                  <span className="font-mono font-bold text-blue-900 text-base tracking-wide">{order.selfTrackingNumber}</span>
+                </div>
+                {order.selfTrackingCarrier && (
+                  <div className="flex gap-2">
+                    <span className="text-blue-600 shrink-0">ขนส่ง</span>
+                    <span className="text-blue-800">{order.selfTrackingCarrier}</span>
+                  </div>
+                )}
+                <a
+                  href={`https://t.17track.net/th#nums=${order.selfTrackingNumber}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium transition-colors"
+                >
+                  ติดตามพัสดุ →
+                </a>
+              </div>
+            )}
           </div>
         </div>
       )}

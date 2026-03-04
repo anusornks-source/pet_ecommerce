@@ -659,7 +659,7 @@ export default function AdminOrderDetailPage({
                         <div className="space-y-1.5">
                           <p className="text-[10px] text-stone-400 font-mono">
                             → field: <span className="font-semibold text-stone-500">{hasCJItems ? "selfTrackingNumber" : "trackingNumber"}</span>
-                            {" "}{hasCJItems ? "(แยกจาก CJ, ลูกค้าเห็นเร็ว ๆ นี้)" : "(ลูกค้าเห็น ✓)"}
+                            {" "}{hasCJItems ? "(ลูกค้าเห็นแยกจาก CJ ✓)" : "(ลูกค้าเห็น ✓)"}
                           </p>
                           <input
                             type="text"

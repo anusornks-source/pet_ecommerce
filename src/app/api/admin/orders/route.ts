@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get("status");
   const paymentStatus = searchParams.get("paymentStatus");
   const source = searchParams.get("source");
+  const search = searchParams.get("search")?.trim() ?? "";
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
 
   const where: Record<string, unknown> = {};
@@ -19,6 +20,11 @@ export async function GET(request: NextRequest) {
   if (paymentStatus) where.payment = { status: paymentStatus };
   if (source === "CJ") where.items = { some: { OR: [{ product: { cjProductId: { not: null } } }, { variant: { cjVid: { not: null } } }] } };
   if (source === "MANUAL") where.NOT = { items: { some: { OR: [{ product: { cjProductId: { not: null } } }, { variant: { cjVid: { not: null } } }] } } };
+  if (search) where.OR = [
+    { id: { contains: search } },
+    { user: { name: { contains: search, mode: "insensitive" } } },
+    { user: { email: { contains: search, mode: "insensitive" } } },
+  ];
 
   const [orders, total] = await Promise.all([
     prisma.order.findMany({

@@ -41,16 +41,25 @@ export default function AdminOrdersPage() {
   const [paymentTab, setPaymentTab] = useState("ทั้งหมด");
   const [sourceTab, setSourceTab] = useState("ทั้งหมด");
   const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
 
   const pageSize = 50;
   const totalPages = Math.ceil(total / pageSize);
 
-  const fetchOrders = useCallback(async (status: string, paymentStatus: string, source: string, p: number) => {
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => { setSearch(searchInput); setPage(1); }, 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  const fetchOrders = useCallback(async (status: string, paymentStatus: string, source: string, s: string, p: number) => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(p) });
     if (status !== "ทั้งหมด") params.set("status", status);
     if (paymentStatus !== "ทั้งหมด") params.set("paymentStatus", paymentStatus);
     if (source !== "ทั้งหมด") params.set("source", source);
+    if (s) params.set("search", s);
     const res = await fetch(`/api/admin/orders?${params}`);
     const d = await res.json();
     if (d.success) {
@@ -61,8 +70,8 @@ export default function AdminOrdersPage() {
   }, []);
 
   useEffect(() => {
-    fetchOrders(activeTab, paymentTab, sourceTab, page);
-  }, [activeTab, paymentTab, sourceTab, page, fetchOrders]);
+    fetchOrders(activeTab, paymentTab, sourceTab, search, page);
+  }, [activeTab, paymentTab, sourceTab, search, page, fetchOrders]);
 
   const handleTabChange = (tab: string) => { setActiveTab(tab); setPage(1); };
   const handlePaymentTabChange = (tab: string) => { setPaymentTab(tab); setPage(1); };
@@ -75,7 +84,43 @@ export default function AdminOrdersPage() {
         <p className="text-stone-500 text-sm mt-1">{total.toLocaleString()} รายการ</p>
       </div>
 
-      {/* Filters — single row */}
+      {/* Row 1: Search + Source */}
+      <div className="flex flex-wrap gap-x-3 gap-y-2 mb-2 items-center">
+        <div className="flex items-center gap-1">
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="🔍 ชื่อ, อีเมล, Order ID"
+            className="border border-stone-200 rounded-xl px-3 py-1.5 text-sm text-stone-700 bg-white focus:outline-none focus:ring-2 focus:ring-orange-200 w-52"
+          />
+          {search && (
+            <button onClick={() => setSearchInput("")} className="text-xs text-stone-400 hover:text-stone-600">✕</button>
+          )}
+        </div>
+
+        <div className="w-px h-6 bg-stone-200 shrink-0" />
+
+        {/* Source */}
+        <div className="flex gap-1 items-center shrink-0">
+          <span className="text-xs text-stone-400 mr-1 shrink-0">แหล่งที่มา:</span>
+          {(["ทั้งหมด", "CJ", "MANUAL"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => handleSourceTabChange(tab)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                sourceTab === tab
+                  ? "bg-blue-500 text-white"
+                  : "bg-white border border-stone-200 text-stone-600 hover:bg-stone-50"
+              }`}
+            >
+              {tab === "ทั้งหมด" ? "ทั้งหมด" : tab === "CJ" ? "🏭 CJ" : "✋ ส่งเอง"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Row 2: Status + Payment */}
       <div className="flex flex-wrap gap-x-4 gap-y-2 mb-4 items-center overflow-x-auto pb-1">
         {/* Order status */}
         <div className="flex gap-1 items-center shrink-0">
@@ -96,24 +141,6 @@ export default function AdminOrdersPage() {
         </div>
 
         <div className="w-px h-6 bg-stone-200 shrink-0 hidden sm:block" />
-
-        {/* Source */}
-        <div className="flex gap-1 items-center shrink-0">
-          <span className="text-xs text-stone-400 mr-1 shrink-0">แหล่งที่มา:</span>
-          {(["ทั้งหมด", "CJ", "MANUAL"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => handleSourceTabChange(tab)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                sourceTab === tab
-                  ? "bg-blue-500 text-white"
-                  : "bg-white border border-stone-200 text-stone-600 hover:bg-stone-50"
-              }`}
-            >
-              {tab === "ทั้งหมด" ? "ทั้งหมด" : tab === "CJ" ? "🏭 CJ" : "✋ ส่งเอง"}
-            </button>
-          ))}
-        </div>
 
         <div className="w-px h-6 bg-stone-200 shrink-0 hidden sm:block" />
 
@@ -160,6 +187,7 @@ export default function AdminOrdersPage() {
                   <td className="px-4 py-3">
                     <p className="font-medium text-stone-800">{order.user.name}</p>
                     <p className="text-xs text-stone-400">{order.user.email}</p>
+                    <p className="text-[10px] font-mono text-stone-300 select-all">#{order.id.slice(-8)}</p>
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell max-w-50">
                     {order.items.slice(0, 2).map((item) => {

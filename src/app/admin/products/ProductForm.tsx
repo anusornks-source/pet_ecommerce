@@ -53,6 +53,7 @@ interface ProductFormProps {
     name: string;
     description: string;
     shortDescription?: string;
+    sourceDescription?: string;
     price: string;
     normalPrice?: string;
     stock: string;
@@ -82,6 +83,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
     name: "",
     description: "",
     shortDescription: "",
+    sourceDescription: "",
     price: "",
     normalPrice: "",
     stock: "",
@@ -94,6 +96,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
     warehouseCountry: "",
     ...initialData,
   });
+  const [showSourceDesc, setShowSourceDesc] = useState(false); // always collapsed by default
 
   const [descPreview, setDescPreview] = useState(false);
   const [variants, setVariants] = useState<VariantRow[]>(initialData?.variants ?? []);
@@ -231,6 +234,30 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
     <form onSubmit={handleSubmit} className="space-y-5">
       {field("ชื่อสินค้า", "name", { required: true, placeholder: "เช่น สายจูงหนังแท้" })}
 
+      {/* Source Description — paste raw content for AI/reference */}
+      <div className="border border-stone-200 rounded-xl overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowSourceDesc((v) => !v)}
+          className="w-full flex items-center justify-between px-4 py-2.5 bg-stone-50 hover:bg-stone-100 transition-colors text-sm text-stone-600"
+        >
+          <span className="font-medium">
+            📄 Source Description
+            <span className="ml-1.5 text-xs font-normal text-stone-400">(แปะ content ต้นฉบับ — ใช้เป็นแหล่งข้อมูลให้ AI)</span>
+          </span>
+          <span className="text-stone-400 text-xs">{showSourceDesc ? "ซ่อน ▲" : (form.sourceDescription ? "มีข้อมูล ▼" : "เพิ่ม ▼")}</span>
+        </button>
+        {showSourceDesc && (
+          <textarea
+            rows={6}
+            value={form.sourceDescription}
+            onChange={(e) => setForm((f) => ({ ...f, sourceDescription: e.target.value }))}
+            placeholder="วางรายละเอียดสินค้าต้นฉบับที่นี่ (ภาษาอังกฤษ, HTML, หรือข้อความใดก็ได้) — AI จะใช้เป็นข้อมูลในการสร้าง short description"
+            className="w-full px-4 py-3 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none border-t border-stone-200"
+          />
+        )}
+      </div>
+
       <div>
         <div className="flex items-center justify-between mb-1.5">
           <label className="block text-sm font-medium text-stone-700">
@@ -248,7 +275,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     name: form.name,
-                    description: form.description,
+                    description: form.sourceDescription || form.description,
                   }),
                 });
                 const data = await res.json();

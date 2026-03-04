@@ -42,7 +42,7 @@ export async function PUT(
   const dryRun = request.nextUrl.searchParams.get("dryRun") === "true";
   const force = request.nextUrl.searchParams.get("force") === "true";
   const body = await request.json();
-  const { status, note, trackingNumber, trackingCarrier, selfTrackingNumber, selfCarrier } = body;
+  const { status, note, trackingNumber, trackingCarrier, selfTrackingNumber, selfTrackingCarrier } = body;
 
   const validStatuses = ["PENDING", "CONFIRMED", "SHIPPING", "DELIVERED", "CANCELLED"];
   if (!validStatuses.includes(status)) {
@@ -254,7 +254,7 @@ export async function PUT(
   if (trackingNumber !== undefined) updateData.trackingNumber = trackingNumber || null;
   if (trackingCarrier !== undefined) updateData.trackingCarrier = trackingCarrier || null;
   if (selfTrackingNumber !== undefined) updateData.selfTrackingNumber = selfTrackingNumber || null;
-  if (selfCarrier !== undefined) updateData.selfCarrier = selfCarrier || null;
+  if (selfTrackingCarrier !== undefined) updateData.selfTrackingCarrier = selfTrackingCarrier || null;
 
   // Auto-create CJ order when CONFIRMED (only once, only if items have cjVid)
   if (status === "CONFIRMED" && !current?.cjOrderId && current?.items) {

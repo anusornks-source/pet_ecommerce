@@ -22,7 +22,7 @@ interface Order {
   trackingNumber: string | null;
   trackingCarrier: string | null;
   selfTrackingNumber: string | null;
-  selfCarrier: string | null;
+  selfTrackingCarrier: string | null;
   createdAt: string;
   statusHistory: { status: string; timestamp: string }[] | null;
   user: { name: string; email: string; phone: string | null };
@@ -126,7 +126,7 @@ export default function AdminOrderDetailPage({
   const [carrierInput, setCarrierInput] = useState("");
   const [savingTracking, setSavingTracking] = useState(false);
   const [selfTrackingInput, setSelfTrackingInput] = useState("");
-  const [selfCarrierInput, setSelfCarrierInput] = useState("");
+  const [selfTrackingCarrierInput, setSelfCarrierInput] = useState("");
   const [savingSelfTracking, setSavingSelfTracking] = useState(false);
   const [cjLogs, setCjLogs] = useState<CjApiLog[]>([]);
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
@@ -231,13 +231,13 @@ export default function AdminOrderDetailPage({
         body: JSON.stringify({
           status: order.status,
           selfTrackingNumber: selfTrackingInput.trim(),
-          selfCarrier: selfCarrierInput.trim() || null,
+          selfTrackingCarrier: selfTrackingCarrierInput.trim() || null,
         }),
       });
       const data = await res.json();
       if (data.success) {
         toast.success("บันทึก tracking ส่งเองแล้ว");
-        setOrder((o) => o ? { ...o, selfTrackingNumber: selfTrackingInput.trim(), selfCarrier: selfCarrierInput.trim() || null } : o);
+        setOrder((o) => o ? { ...o, selfTrackingNumber: selfTrackingInput.trim(), selfTrackingCarrier: selfTrackingCarrierInput.trim() || null } : o);
         setSelfTrackingInput("");
         setSelfCarrierInput("");
       } else {
@@ -641,9 +641,9 @@ export default function AdminOrderDetailPage({
                       {order.selfTrackingNumber ? (
                         <div className="bg-white rounded-lg px-3 py-2 border border-green-200">
                           <p className="font-mono text-green-900 font-semibold">{order.selfTrackingNumber}</p>
-                          {order.selfCarrier && <p className="text-green-500 text-[10px] mt-0.5">ขนส่ง: {order.selfCarrier}</p>}
+                          {order.selfTrackingCarrier && <p className="text-green-500 text-[10px] mt-0.5">ขนส่ง: {order.selfTrackingCarrier}</p>}
                           <button
-                            onClick={() => { setSelfTrackingInput(order.selfTrackingNumber!); setSelfCarrierInput(order.selfCarrier ?? ""); }}
+                            onClick={() => { setSelfTrackingInput(order.selfTrackingNumber!); setSelfCarrierInput(order.selfTrackingCarrier ?? ""); }}
                             className="text-[10px] text-green-500 underline mt-1"
                           >แก้ไข</button>
                         </div>
@@ -658,7 +658,7 @@ export default function AdminOrderDetailPage({
                           />
                           <input
                             type="text"
-                            value={selfCarrierInput}
+                            value={selfTrackingCarrierInput}
                             onChange={(e) => setSelfCarrierInput(e.target.value)}
                             placeholder="ชื่อขนส่ง เช่น Kerry, Flash, J&T (ถ้ามี)"
                             className="w-full border border-green-200 rounded-lg px-3 py-1.5 text-xs text-stone-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-200"
@@ -698,7 +698,7 @@ export default function AdminOrderDetailPage({
                   <div className="mb-2">
                     <p className="text-green-500 mb-0.5">✋ Self-ship Tracking</p>
                     <p className="font-mono text-green-900 text-sm font-semibold">{order.selfTrackingNumber}</p>
-                    {order.selfCarrier && <p className="text-green-600 mt-0.5">ขนส่ง: {order.selfCarrier}</p>}
+                    {order.selfTrackingCarrier && <p className="text-green-600 mt-0.5">ขนส่ง: {order.selfTrackingCarrier}</p>}
                     <a href={`https://t.17track.net/th#nums=${order.selfTrackingNumber}`} target="_blank" rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-green-600 underline hover:text-green-800 font-medium mt-1">
                       ติดตามพัสดุ (17track) →

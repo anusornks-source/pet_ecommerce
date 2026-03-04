@@ -205,7 +205,7 @@ model Order {
   trackingNumber      String?
   trackingCarrier     String?
   selfTrackingNumber  String?
-  selfCarrier         String?
+  selfTrackingCarrier String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 

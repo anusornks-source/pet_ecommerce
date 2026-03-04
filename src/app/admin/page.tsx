@@ -104,7 +104,6 @@ export default function AdminDashboard() {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-stone-800">Dashboard</h1>
-        <p className="text-stone-500 text-sm mt-1">ภาพรวมระบบ</p>
       </div>
 
       {/* Revenue Banner */}

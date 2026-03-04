@@ -29,7 +29,7 @@ interface Order {
     quantity: number;
     price: number;
     product: { name: string; images: string[]; cjProductId: string | null };
-    variant: { cjVid: string | null } | null;
+    variant: { cjVid: string | null; size: string | null; color: string | null; sku: string | null } | null;
   }[];
   payment: {
     method: string;
@@ -347,7 +347,7 @@ export default function AdminOrderDetailPage({
               <h2 className="font-semibold text-stone-800">รายการสินค้า</h2>
             </div>
             <div className="divide-y divide-stone-50">
-              {order.items.map((item) => (
+              {order.items.map((item, idx) => (
                 <div key={item.id} className="flex items-center gap-4 px-5 py-4">
                   <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-stone-100 shrink-0">
                     {item.product.images[0] ? (
@@ -362,12 +362,25 @@ export default function AdminOrderDetailPage({
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-stone-800 truncate">{item.product.name}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-[10px] font-bold text-stone-400">#{idx + 1}</span>
+                      <p className="font-medium text-stone-800 truncate">{item.product.name}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       {(item.variant?.cjVid || item.product.cjProductId)
                         ? <span className="text-[9px] font-bold bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">🏭 CJ</span>
                         : <span className="text-[9px] font-bold bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded">✋ ส่งเอง</span>
                       }
+                      {(item.variant?.size || item.variant?.color) && (
+                        <span className="text-[9px] bg-stone-50 text-stone-500 border border-stone-200 px-1.5 py-0.5 rounded font-mono">
+                          {[item.variant?.size, item.variant?.color].filter(Boolean).join(" / ")}
+                        </span>
+                      )}
+                      {item.variant?.sku && (
+                        <span className="text-[9px] font-mono text-stone-400 bg-stone-50 border border-stone-200 px-1.5 py-0.5 rounded">
+                          SKU: {item.variant.sku}
+                        </span>
+                      )}
                       <span className="text-sm text-stone-400">{item.quantity} x ฿{item.price.toLocaleString("th-TH")}</span>
                     </div>
                   </div>
@@ -496,32 +509,59 @@ export default function AdminOrderDetailPage({
               return (
                 <div className="space-y-2 mb-3">
                   {/* CJ section */}
-                  {hasCJItems && (
-                    <div className={`rounded-xl px-4 py-3 text-xs border ${order.cjOrderId ? "bg-blue-50 border-blue-100" : "bg-amber-50 border-amber-100"}`}>
-                      {order.cjOrderId ? (
-                        <>
-                          <p className="font-semibold text-blue-700 mb-1">🚚 CJ Order สร้างแล้ว</p>
-                          <p className="font-mono text-blue-800 mb-1">{order.cjOrderId}</p>
-                          {order.cjStatus && <p className="text-blue-500 mb-1">สถานะ CJ: <span className="font-medium text-blue-700">{order.cjStatus}</span></p>}
-                          <ol className="text-blue-600 space-y-1 mb-2 list-none">
-                            <li>1. ไปที่ CJ Dashboard → เลือก order นี้ → <span className="font-semibold">ชำระเงิน</span></li>
-                            <li>2. รอ CJ เปลี่ยนสถานะ → <span className="font-semibold">Dispatched</span></li>
-                            <li>3. กด <span className="font-semibold">🔄 Sync จาก CJ</span> เพื่อรับ tracking</li>
-                            <li>4. กด <span className="font-semibold">→ กำลังจัดส่ง</span></li>
-                          </ol>
-                          <a href="https://app.cjdropshipping.com" target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-blue-600 underline hover:text-blue-800 font-medium">
-                            ไปที่ CJ Dashboard →
-                          </a>
-                        </>
-                      ) : (
-                        <>
-                          <p className="font-semibold text-amber-700 mb-1">⚠️ CJ Order ยังไม่ถูกสร้าง</p>
-                          <p className="text-amber-600">มีสินค้า CJ แต่ยังไม่มี CJ order — ดู <span className="font-semibold">CJ Logs</span> หรือยืนยันออเดอร์ใหม่เพื่อ retry</p>
-                        </>
-                      )}
-                    </div>
-                  )}
+                  {hasCJItems && (() => {
+                    const cjItems = order.items.filter((item) => item.variant?.cjVid || item.product.cjProductId);
+                    return (
+                      <div className={`rounded-xl px-4 py-3 text-xs border ${order.cjOrderId ? "bg-blue-50 border-blue-100" : "bg-amber-50 border-amber-100"}`}>
+                        {order.cjOrderId ? (
+                          <>
+                            <p className="font-semibold text-blue-700 mb-1">🚚 CJ Order สร้างแล้ว</p>
+                            <p className="font-mono text-blue-800 mb-1">{order.cjOrderId}</p>
+                            {order.cjStatus && <p className="text-blue-500 mb-1">สถานะ CJ: <span className="font-medium text-blue-700">{order.cjStatus}</span></p>}
+                            <div className="bg-white rounded-lg px-3 py-2 border border-blue-100 mb-2 space-y-1">
+                              {cjItems.map((item) => (
+                                <div key={item.id} className="flex justify-between text-blue-800">
+                                  <div className="truncate">
+                                    <span>{item.product.name}</span>
+                                    {(item.variant?.size || item.variant?.color) && (
+                                      <span className="ml-1.5 text-blue-500 font-mono">[{[item.variant?.size, item.variant?.color].filter(Boolean).join("/")}]</span>
+                                    )}
+                                    {item.variant?.sku && (
+                                      <span className="ml-1.5 text-blue-400 font-mono">SKU:{item.variant.sku}</span>
+                                    )}
+                                  </div>
+                                  <span className="shrink-0 ml-2 text-blue-600 font-medium">×{item.quantity}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <ol className="text-blue-600 space-y-1 mb-2 list-none">
+                              <li>1. ไปที่ CJ Dashboard → เลือก order นี้ → <span className="font-semibold">ชำระเงิน</span></li>
+                              <li>2. รอ CJ เปลี่ยนสถานะ → <span className="font-semibold">Dispatched</span></li>
+                              <li>3. กด <span className="font-semibold">🔄 Sync จาก CJ</span> เพื่อรับ tracking</li>
+                              <li>4. กด <span className="font-semibold">→ กำลังจัดส่ง</span></li>
+                            </ol>
+                            <a href="https://app.cjdropshipping.com" target="_blank" rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-blue-600 underline hover:text-blue-800 font-medium">
+                              ไปที่ CJ Dashboard →
+                            </a>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-semibold text-amber-700 mb-1">⚠️ CJ Order ยังไม่ถูกสร้าง</p>
+                            <div className="bg-white rounded-lg px-3 py-2 border border-amber-100 mb-2 space-y-1">
+                              {cjItems.map((item) => (
+                                <div key={item.id} className="flex justify-between text-amber-800">
+                                  <span className="truncate">{item.product.name}</span>
+                                  <span className="shrink-0 ml-2 text-amber-600 font-medium">×{item.quantity}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-amber-600">มีสินค้า CJ แต่ยังไม่มี CJ order — ดู <span className="font-semibold">CJ Logs</span> หรือยืนยันออเดอร์ใหม่เพื่อ retry</p>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Self-ship section */}
                   {selfItems.length > 0 && (

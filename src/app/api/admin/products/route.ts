@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
   }
   if (source === "CJ") where.source = "CJ";
   if (source === "own") where.source = null;
+  if (source === "exCJ") { where.source = null; where.sourceData = { not: null }; }
   if (active === "true") where.active = true;
   if (active === "false") where.active = false;
   if (categoryId) where.categoryId = categoryId;

@@ -186,6 +186,7 @@ export default function AdminProductsPage() {
             <option value="">แหล่งที่มา: ทั้งหมด</option>
             <option value="CJ">CJ Dropshipping</option>
             <option value="own">สินค้าเรา</option>
+            <option value="exCJ">เคย CJ (unlinked)</option>
           </select>
           <select
             value={filterActive}

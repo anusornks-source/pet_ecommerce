@@ -22,6 +22,7 @@ interface Product {
   active: boolean;
   createdAt: string;
   source: string | null;
+  sourceData: object | null;
   petTypeId: string | null;
   petType: { id: string; name: string; slug: string; icon: string | null } | null;
   category: { id: string; name: string };
@@ -358,7 +359,12 @@ export default function AdminProductsPage() {
                     {product.source === "CJ" ? (
                       <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-600">CJ</span>
                     ) : (
-                      <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-500">Our Product</span>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-500">Our Product</span>
+                        {product.sourceData && (
+                          <span className="text-[9px] text-blue-400">เคย CJ</span>
+                        )}
+                      </div>
                     )}
                   </td>
                   <td className="px-4 py-3 text-center text-stone-400 text-xs hidden xl:table-cell whitespace-nowrap">

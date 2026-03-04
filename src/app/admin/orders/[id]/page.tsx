@@ -126,7 +126,7 @@ export default function AdminOrderDetailPage({
   const [carrierInput, setCarrierInput] = useState("");
   const [savingTracking, setSavingTracking] = useState(false);
   const [selfTrackingInput, setSelfTrackingInput] = useState("");
-  const [selfTrackingCarrierInput, setSelfCarrierInput] = useState("");
+  const [selfTrackingCarrierInput, setSelfTrackingCarrierInput] = useState("");
   const [savingSelfTracking, setSavingSelfTracking] = useState(false);
   const [cjLogs, setCjLogs] = useState<CjApiLog[]>([]);
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
@@ -223,6 +223,11 @@ export default function AdminOrderDetailPage({
 
   const handleSaveSelfTracking = async () => {
     if (!order || !selfTrackingInput.trim()) return;
+    // Pure self-ship order → save to trackingNumber (visible to customer)
+    // Mixed order (has CJ items) → save to selfTrackingNumber (separate from CJ tracking)
+    const hasCJItems = order.items.some((item) => item.variant?.cjVid || item.product.cjProductId);
+    const trackingField = hasCJItems ? "selfTrackingNumber" : "trackingNumber";
+    const carrierField = hasCJItems ? "selfTrackingCarrier" : "trackingCarrier";
     setSavingSelfTracking(true);
     try {
       const res = await fetch(`/api/admin/orders/${id}`, {
@@ -230,16 +235,16 @@ export default function AdminOrderDetailPage({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: order.status,
-          selfTrackingNumber: selfTrackingInput.trim(),
-          selfTrackingCarrier: selfTrackingCarrierInput.trim() || null,
+          [trackingField]: selfTrackingInput.trim(),
+          [carrierField]: selfTrackingCarrierInput.trim() || null,
         }),
       });
       const data = await res.json();
       if (data.success) {
         toast.success("บันทึก tracking ส่งเองแล้ว");
-        setOrder((o) => o ? { ...o, selfTrackingNumber: selfTrackingInput.trim(), selfTrackingCarrier: selfTrackingCarrierInput.trim() || null } : o);
+        setOrder((o) => o ? { ...o, [trackingField]: selfTrackingInput.trim(), [carrierField]: selfTrackingCarrierInput.trim() || null } : o);
         setSelfTrackingInput("");
-        setSelfCarrierInput("");
+        setSelfTrackingCarrierInput("");
       } else {
         toast.error(data.error || "เกิดข้อผิดพลาด");
       }
@@ -638,16 +643,19 @@ export default function AdminOrderDetailPage({
                         <li>2. กรอก tracking number ด้านล่าง แล้วกด บันทึก</li>
                         <li>3. กด <span className="font-semibold">→ กำลังจัดส่ง</span></li>
                       </ol>
-                      {order.selfTrackingNumber ? (
-                        <div className="bg-white rounded-lg px-3 py-2 border border-green-200">
-                          <p className="font-mono text-green-900 font-semibold">{order.selfTrackingNumber}</p>
-                          {order.selfTrackingCarrier && <p className="text-green-500 text-[10px] mt-0.5">ขนส่ง: {order.selfTrackingCarrier}</p>}
-                          <button
-                            onClick={() => { setSelfTrackingInput(order.selfTrackingNumber!); setSelfCarrierInput(order.selfTrackingCarrier ?? ""); }}
-                            className="text-[10px] text-green-500 underline mt-1"
-                          >แก้ไข</button>
-                        </div>
-                      ) : (
+                      {(() => {
+                        const displayTracking = hasCJItems ? order.selfTrackingNumber : order.trackingNumber;
+                        const displayCarrier = hasCJItems ? order.selfTrackingCarrier : order.trackingCarrier;
+                        return displayTracking ? (
+                          <div className="bg-white rounded-lg px-3 py-2 border border-green-200">
+                            <p className="font-mono text-green-900 font-semibold">{displayTracking}</p>
+                            {displayCarrier && <p className="text-green-500 text-[10px] mt-0.5">ขนส่ง: {displayCarrier}</p>}
+                            <button
+                              onClick={() => { setSelfTrackingInput(displayTracking); setSelfTrackingCarrierInput(displayCarrier ?? ""); }}
+                              className="text-[10px] text-green-500 underline mt-1"
+                            >แก้ไข</button>
+                          </div>
+                        ) : (
                         <div className="space-y-1.5">
                           <input
                             type="text"
@@ -659,7 +667,7 @@ export default function AdminOrderDetailPage({
                           <input
                             type="text"
                             value={selfTrackingCarrierInput}
-                            onChange={(e) => setSelfCarrierInput(e.target.value)}
+                            onChange={(e) => setSelfTrackingCarrierInput(e.target.value)}
                             placeholder="ชื่อขนส่ง เช่น Kerry, Flash, J&T (ถ้ามี)"
                             className="w-full border border-green-200 rounded-lg px-3 py-1.5 text-xs text-stone-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-200"
                           />
@@ -671,7 +679,8 @@ export default function AdminOrderDetailPage({
                             {savingSelfTracking ? "กำลังบันทึก..." : "💾 บันทึก Tracking"}
                           </button>
                         </div>
-                      )}
+                        );
+                      })()}
                     </div>
                   )}
                 </div>

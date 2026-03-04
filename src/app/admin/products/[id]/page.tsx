@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { use } from "react";
+import { useRouter } from "next/navigation";
 import ProductForm from "../ProductForm";
 import toast from "react-hot-toast";
 
@@ -47,10 +48,32 @@ export default function EditProductPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [togglingCJ, setTogglingCJ] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
+
+  const handleDuplicate = async () => {
+    if (!product) return;
+    if (!confirm(`คัดลอกสินค้า "${product.name}"?\nสินค้าใหม่จะถูกบันทึกเป็น draft`)) return;
+    setDuplicating(true);
+    try {
+      const res = await fetch(`/api/admin/products/${id}/duplicate`, { method: "POST" });
+      const d = await res.json();
+      if (d.success) {
+        toast.success("คัดลอกสินค้าแล้ว");
+        router.push(`/admin/products/${d.data.id}`);
+      } else {
+        toast.error(d.error ?? "เกิดข้อผิดพลาด");
+      }
+    } catch {
+      toast.error("ไม่สามารถคัดลอกได้");
+    } finally {
+      setDuplicating(false);
+    }
+  };
 
   const handleSyncStock = async () => {
     setSyncing(true);
@@ -131,6 +154,13 @@ export default function EditProductPage({
           <p className="text-stone-500 text-sm mt-1">{product.name}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={handleDuplicate}
+            disabled={duplicating}
+            className="flex items-center gap-1.5 bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-600 px-4 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            {duplicating ? "กำลังคัดลอก..." : "📋 คัดลอกสินค้า"}
+          </button>
           {product.variants.some((v) => v.cjVid) && (
             <button
               onClick={handleSyncStock}

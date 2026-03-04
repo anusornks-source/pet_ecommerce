@@ -18,6 +18,8 @@ interface OrderItem {
   productId: string;
   quantity: number;
   price: number;
+  productName: string | null;
+  variantLabel: string | null;
   product: { id: string; name: string; images: string[]; category: { icon: string } };
   variant?: { size?: string | null; color?: string | null } | null;
 }
@@ -340,20 +342,19 @@ function OrderTrackingContent({ id }: { id: string }) {
       <div className="card p-5 space-y-3">
         <h3 className="font-semibold text-stone-800 mb-1">รายการสินค้า</h3>
         {order.items.map((item) => {
-          const img = item.product?.images?.[0] || `https://placehold.co/80x80/fff7ed/f97316?text=${encodeURIComponent(item.product?.name || "")}`;
-          const variantLabel = item.variant
-            ? [item.variant.size, item.variant.color].filter(Boolean).join(" / ")
-            : null;
+          const displayName = item.productName ?? item.product?.name ?? "";
+          const displayVariant = item.variantLabel ?? (item.variant ? [item.variant.size, item.variant.color].filter(Boolean).join(" / ") : null);
+          const img = item.product?.images?.[0] || `https://placehold.co/80x80/fff7ed/f97316?text=${encodeURIComponent(displayName)}`;
           return (
             <div key={item.id} className="flex items-center gap-3">
               <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-orange-50">
-                <Image src={img} alt={item.product?.name || ""} fill className="object-cover" sizes="56px" />
+                <Image src={img} alt={displayName} fill className="object-cover" sizes="56px" />
               </div>
               <div className="flex-1 min-w-0">
                 <Link href={`/products/${item.productId}`} className="font-medium text-stone-700 hover:text-orange-500 text-sm truncate block">
-                  {item.product?.name}
+                  {displayName}
                 </Link>
-                {variantLabel && <p className="text-xs text-stone-400">{variantLabel}</p>}
+                {displayVariant && <p className="text-xs text-stone-400">{displayVariant}</p>}
                 <p className="text-xs text-stone-400">x{item.quantity} × {formatPrice(item.price)}</p>
               </div>
               <span className="font-semibold text-orange-500 text-sm shrink-0">

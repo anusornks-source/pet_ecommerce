@@ -112,13 +112,15 @@ export async function PUT(
       if (cjVid && cjApiAvailable) {
         const cjStock = inventoryMap[cjVid] ?? 0;
         const ok = cjStock >= item.quantity;
-        stockCheckItems.push({ name: item.product.name, quantity: item.quantity, available: cjStock, source: "CJ", ok });
-        if (!ok) outOfStock.push(`${item.product.name} (CJ มีสต็อก ${cjStock} ชิ้น ต้องการ ${item.quantity} ชิ้น)`);
+        const itemName = item.productName ?? item.product.name;
+        stockCheckItems.push({ name: itemName, quantity: item.quantity, available: cjStock, source: "CJ", ok });
+        if (!ok) outOfStock.push(`${itemName} (CJ มีสต็อก ${cjStock} ชิ้น ต้องการ ${item.quantity} ชิ้น)`);
       } else {
+        const itemName = item.productName ?? item.product.name;
         const localStock = item.variant ? item.variant.stock : item.product.stock;
         const ok = localStock >= 0;
-        stockCheckItems.push({ name: item.product.name, quantity: item.quantity, available: localStock + item.quantity, source: "local", ok });
-        if (!ok) outOfStock.push(`${item.product.name} (ขาด ${Math.abs(localStock)} ชิ้น)`);
+        stockCheckItems.push({ name: itemName, quantity: item.quantity, available: localStock + item.quantity, source: "local", ok });
+        if (!ok) outOfStock.push(`${itemName} (ขาด ${Math.abs(localStock)} ชิ้น)`);
       }
     }
 
@@ -141,7 +143,7 @@ export async function PUT(
             const match =
               opts.find((o) => o.logisticName === logisticName) ??
               opts.reduce((a, b) => (a.logisticPrice < b.logisticPrice ? a : b));
-            freightItems.push({ name: item.product.name, priceUSD: match.logisticPrice, logistic: match.logisticName });
+            freightItems.push({ name: item.productName ?? item.product.name, priceUSD: match.logisticPrice, logistic: match.logisticName });
             freightTotalUSD += match.logisticPrice;
           }
         } catch { /* skip */ }

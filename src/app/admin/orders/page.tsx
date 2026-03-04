@@ -11,7 +11,7 @@ interface Order {
   createdAt: string;
   statusHistory: { status: string; timestamp: string }[] | null;
   user: { name: string; email: string };
-  items: { id: string; quantity: number; product: { name: string; cjProductId: string | null }; variant: { cjVid: string | null } | null }[];
+  items: { id: string; quantity: number; productName: string | null; source: string | null; product: { name: string; cjProductId: string | null }; variant: { cjVid: string | null } | null }[];
   payment: { method: string; status: string } | null;
 }
 
@@ -191,12 +191,13 @@ export default function AdminOrdersPage() {
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell max-w-50">
                     {order.items.slice(0, 2).map((item) => {
-                      const isCJ = !!(item.variant?.cjVid || item.product.cjProductId);
+                      const isCJ = item.source === "CJ" || !!(item.variant?.cjVid || item.product.cjProductId);
+                      const displayName = item.productName ?? item.product.name;
                       return (
                         <p key={item.id} className="text-xs text-stone-600 truncate flex items-center gap-1">
                           {item.quantity > 1 && <span className="text-stone-400 shrink-0">{item.quantity}×</span>}
                           {isCJ && <span className="shrink-0 text-[9px] font-bold bg-blue-100 text-blue-600 px-1 rounded">CJ</span>}
-                          <span className="truncate">{item.product.name}</span>
+                          <span className="truncate">{displayName}</span>
                         </p>
                       );
                     })}

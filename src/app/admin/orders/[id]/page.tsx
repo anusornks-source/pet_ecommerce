@@ -30,6 +30,9 @@ interface Order {
     id: string;
     quantity: number;
     price: number;
+    productName: string | null;
+    variantLabel: string | null;
+    source: string | null;
     product: { id: string; name: string; images: string[]; cjProductId: string | null };
     variant: { id: string; cjVid: string | null; size: string | null; color: string | null; sku: string | null } | null;
   }[];
@@ -225,7 +228,7 @@ export default function AdminOrderDetailPage({
     if (!order || !selfTrackingInput.trim()) return;
     // Pure self-ship order → save to trackingNumber (visible to customer)
     // Mixed order (has CJ items) → save to selfTrackingNumber (separate from CJ tracking)
-    const hasCJItems = order.items.some((item) => item.variant?.cjVid || item.product.cjProductId);
+    const hasCJItems = order.items.some((item) => item.source === "CJ" || item.variant?.cjVid || item.product.cjProductId);
     const trackingField = hasCJItems ? "selfTrackingNumber" : "trackingNumber";
     const carrierField = hasCJItems ? "selfTrackingCarrier" : "trackingCarrier";
     setSavingSelfTracking(true);
@@ -392,7 +395,7 @@ export default function AdminOrderDetailPage({
                     {item.product.images[0] ? (
                       <Image
                         src={item.product.images[0]}
-                        alt={item.product.name}
+                        alt={item.productName ?? item.product.name}
                         fill
                         className="object-cover"
                       />
@@ -403,16 +406,16 @@ export default function AdminOrderDetailPage({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 mb-0.5">
                       <span className="text-[10px] font-bold text-stone-400">#{idx + 1}</span>
-                      <p className="font-medium text-stone-800 truncate">{item.product.name}</p>
+                      <p className="font-medium text-stone-800 truncate">{item.productName ?? item.product.name}</p>
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      {(item.variant?.cjVid || item.product.cjProductId)
+                      {(item.source === "CJ" || item.variant?.cjVid || item.product.cjProductId)
                         ? <span className="text-[9px] font-bold bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">🏭 CJ</span>
                         : <span className="text-[9px] font-bold bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded">✋ ส่งเอง</span>
                       }
-                      {(item.variant?.size || item.variant?.color) && (
+                      {(item.variantLabel || item.variant?.size || item.variant?.color) && (
                         <span className="text-[9px] bg-stone-50 text-stone-500 border border-stone-200 px-1.5 py-0.5 rounded font-mono">
-                          {[item.variant?.size, item.variant?.color].filter(Boolean).join(" / ")}
+                          {item.variantLabel ?? [item.variant?.size, item.variant?.color].filter(Boolean).join(" / ")}
                         </span>
                       )}
                       {item.variant?.sku && (
@@ -549,13 +552,14 @@ export default function AdminOrderDetailPage({
             )}
 
             {order.status === "CONFIRMED" && (() => {
-              const selfItems = order.items.filter((item) => !item.variant?.cjVid && !item.product.cjProductId);
-              const hasCJItems = order.items.some((item) => item.variant?.cjVid || item.product.cjProductId);
+              const isCJItem = (item: Order["items"][number]) => item.source === "CJ" || !!(item.variant?.cjVid || item.product.cjProductId);
+              const selfItems = order.items.filter((item) => !isCJItem(item));
+              const hasCJItems = order.items.some(isCJItem);
               return (
                 <div className="space-y-2 mb-3">
                   {/* CJ section */}
                   {hasCJItems && (() => {
-                    const cjItems = order.items.filter((item) => item.variant?.cjVid || item.product.cjProductId);
+                    const cjItems = order.items.filter(isCJItem);
                     return (
                       <div className={`rounded-xl px-4 py-3 text-xs border ${order.cjOrderId ? "bg-blue-50 border-blue-100" : "bg-amber-50 border-amber-100"}`}>
                         {order.cjOrderId ? (
@@ -568,9 +572,9 @@ export default function AdminOrderDetailPage({
                                 <div key={item.id} className="text-blue-800">
                                   <div className="flex justify-between">
                                     <div className="truncate">
-                                      <span>{item.product.name}</span>
-                                      {(item.variant?.size || item.variant?.color) && (
-                                        <span className="ml-1.5 text-blue-500 font-mono">[{[item.variant?.size, item.variant?.color].filter(Boolean).join("/")}]</span>
+                                      <span>{item.productName ?? item.product.name}</span>
+                                      {(item.variantLabel || item.variant?.size || item.variant?.color) && (
+                                        <span className="ml-1.5 text-blue-500 font-mono">[{item.variantLabel ?? [item.variant?.size, item.variant?.color].filter(Boolean).join("/")}]</span>
                                       )}
                                       {item.variant?.sku && (
                                         <span className="ml-1.5 text-blue-400 font-mono">SKU:{item.variant.sku}</span>
@@ -603,7 +607,7 @@ export default function AdminOrderDetailPage({
                               {cjItems.map((item) => (
                                 <div key={item.id} className="text-amber-800">
                                   <div className="flex justify-between">
-                                    <span className="truncate">{item.product.name}</span>
+                                    <span className="truncate">{item.productName ?? item.product.name}</span>
                                     <span className="shrink-0 ml-2 text-amber-600 font-medium">×{item.quantity}</span>
                                   </div>
                                   <div className="flex gap-1.5 mt-0.5">
@@ -628,7 +632,7 @@ export default function AdminOrderDetailPage({
                         {selfItems.map((item) => (
                           <div key={item.id} className="text-green-800">
                             <div className="flex justify-between">
-                              <span className="truncate">{item.product.name}</span>
+                              <span className="truncate">{item.productName ?? item.product.name}</span>
                               <span className="shrink-0 ml-2 text-green-600 font-medium">×{item.quantity}</span>
                             </div>
                             <div className="flex gap-1.5 mt-0.5">

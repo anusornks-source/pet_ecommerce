@@ -18,12 +18,13 @@ export async function GET(request: NextRequest) {
   const where: Record<string, unknown> = {};
   if (status) where.status = status;
   if (paymentStatus) where.payment = { status: paymentStatus };
-  if (source === "CJ") where.items = { some: { OR: [{ product: { cjProductId: { not: null } } }, { variant: { cjVid: { not: null } } }] } };
-  if (source === "MANUAL") where.NOT = { items: { some: { OR: [{ product: { cjProductId: { not: null } } }, { variant: { cjVid: { not: null } } }] } } };
+  if (source === "CJ") where.items = { some: { OR: [{ source: "CJ" }, { product: { cjProductId: { not: null } } }, { variant: { cjVid: { not: null } } }] } };
+  if (source === "MANUAL") where.NOT = { items: { some: { OR: [{ source: "CJ" }, { product: { cjProductId: { not: null } } }, { variant: { cjVid: { not: null } } }] } } };
   if (search) where.OR = [
     { id: { contains: search } },
     { user: { name: { contains: search, mode: "insensitive" } } },
     { user: { email: { contains: search, mode: "insensitive" } } },
+    { items: { some: { productName: { contains: search, mode: "insensitive" } } } },
   ];
 
   const [orders, total] = await Promise.all([
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         user: { select: { name: true, email: true } },
-        items: { include: { product: { select: { name: true, cjProductId: true } }, variant: { select: { cjVid: true } } } },
+        items: { select: { id: true, quantity: true, productName: true, source: true, product: { select: { name: true, cjProductId: true } }, variant: { select: { cjVid: true } } } },
         payment: { select: { method: true, status: true } },
       },
       orderBy: { createdAt: "desc" },

@@ -187,7 +187,7 @@ export default function EditProductPage({
           )}
         </div>
       </div>
-      <div className="bg-white rounded-2xl border border-stone-100 p-6 max-w-2xl">
+      <div className="bg-white rounded-2xl border border-stone-100 p-6 max-w-6xl">
         <ProductForm
           productId={id}
           initialData={{

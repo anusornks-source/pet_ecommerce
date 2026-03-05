@@ -313,7 +313,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
           </button>
         </div>
         <textarea
-          rows={2}
+          rows={4}
           value={form.shortDescription}
           onChange={(e) => setForm((f) => ({ ...f, shortDescription: e.target.value }))}
           placeholder="เช่น สายจูงหนังแท้นุ่มมือ ปรับขนาดได้ เหมาะสำหรับสุนัขทุกสายพันธุ์..."
@@ -370,13 +370,13 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
         </div>
         {descPreview ? (
           <div
-            className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm min-h-20 prose prose-sm max-w-none overflow-auto"
+            className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm min-h-40 prose prose-sm max-w-none overflow-auto"
             dangerouslySetInnerHTML={{ __html: form.description }}
           />
         ) : (
           <textarea
             required
-            rows={4}
+            rows={8}
             value={form.description}
             onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
             placeholder="คำอธิบายสินค้า (รองรับ HTML เช่น <b>ตัวหนา</b>)..."
@@ -532,15 +532,15 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
         {variants.length > 0 && (
           <div className="space-y-3">
             {/* Header */}
-            <div className="grid grid-cols-[70px_70px_80px_60px_80px_100px_54px_80px_44px_32px] gap-2 text-xs text-stone-400 px-1">
-              <span>ขนาด</span><span>สี</span><span>ราคา (฿)</span><span>สต็อก</span><span>SKU</span><span>CJ VID</span><span>CJ Stock</span><span>ส่ง</span><span>แสดง</span><span />
+            <div className="grid grid-cols-[80px_80px_90px_70px_120px_140px_60px_90px_44px_52px] gap-2 text-xs text-stone-400 px-1">
+              <span>ขนาด</span><span>สี</span><span>ราคา (฿)</span><span>สต็อก</span><span>SKU</span><span>CJ VID</span><span>CJ Stock</span><span>ส่ง</span><span>แสดง</span><span className="pl-4">ลบ</span>
             </div>
             {variants.map((v, idx) => {
               const isValidImg = (() => { try { new URL(v.variantImage ?? ""); return true; } catch { return false; } })();
               return (
                 <div key={idx} className={`space-y-1.5 ${!v.active ? "opacity-50" : ""}`}>
                   {/* Main row */}
-                  <div className="grid grid-cols-[70px_70px_80px_60px_80px_100px_54px_80px_44px_32px] gap-2 items-center">
+                  <div className="grid grid-cols-[80px_80px_90px_70px_120px_140px_60px_90px_44px_52px] gap-2 items-center">
                     <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
                       placeholder="S/M/L" value={v.size} onChange={(e) => updateVariant(idx, "size", e.target.value)} />
                     <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
@@ -573,10 +573,10 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
                       className={`w-10 h-7 rounded-full transition-colors shrink-0 relative ${v.active ? "bg-green-400" : "bg-stone-200"}`}
                       title={v.active ? "แสดงอยู่" : "ซ่อนอยู่"}
                     >
-                      <span className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${v.active ? "translate-x-4" : "translate-x-0.5"}`} />
+                      <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${v.active ? "translate-x-3.5" : "translate-x-0"}`} />
                     </button>
                     <button type="button" onClick={() => removeVariant(idx)}
-                      className="w-7 h-7 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 flex items-center justify-center text-xs transition-colors">
+                      className="w-7 h-7 ml-4 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 flex items-center justify-center text-xs transition-colors">
                       ✕
                     </button>
                   </div>

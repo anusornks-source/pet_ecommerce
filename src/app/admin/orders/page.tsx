@@ -55,7 +55,7 @@ export default function AdminOrdersPage() {
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState<"simple" | "grouped" | "tracking">("grouped");
+  const [viewMode, setViewMode] = useState<"simple" | "grouped">("simple");
 
   const pageSize = 50;
   const totalPages = Math.ceil(total / pageSize);
@@ -137,9 +137,8 @@ export default function AdminOrdersPage() {
         {/* View mode */}
         <div className="flex gap-0.5 items-center shrink-0 bg-stone-100 rounded-lg p-0.5">
           {([
-            { key: "simple",   label: "🛒 รายการ" },
-            { key: "grouped",  label: "📋 จัดกลุ่ม" },
-            { key: "tracking", label: "🚚 Tracking" },
+            { key: "simple",  label: "🛒 รายการ" },
+            { key: "grouped", label: "📋 จัดกลุ่ม Tracking" },
           ] as const).map(({ key, label }) => (
             <button
               key={key}
@@ -273,7 +272,7 @@ export default function AdminOrdersPage() {
                       const needsStatus = ["CONFIRMED", "SHIPPING", "DELIVERED"].includes(order.status);
 
                       const showIds = viewMode === "grouped";
-                      const showTracking = viewMode === "tracking";
+                      const showTracking = viewMode === "grouped";
 
                       const renderItem = (item: Order["items"][0], type: "cj" | "self" | "supplier") => (
                         <div key={item.id} className="min-w-0">

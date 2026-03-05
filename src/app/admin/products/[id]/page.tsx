@@ -24,8 +24,11 @@ interface ProductVariant {
 interface Product {
   id: string;
   name: string;
+  name_th: string | null;
   description: string;
+  description_th: string | null;
   shortDescription: string | null;
+  shortDescription_th: string | null;
   sourceDescription: string | null;
   price: number;
   normalPrice: number | null;
@@ -192,8 +195,11 @@ export default function EditProductPage({
           productId={id}
           initialData={{
             name: product.name,
+            name_th: product.name_th ?? "",
             description: product.description,
+            description_th: product.description_th ?? "",
             shortDescription: product.shortDescription ?? "",
+            shortDescription_th: product.shortDescription_th ?? "",
             sourceDescription: product.sourceDescription ?? "",
             price: product.price.toString(),
             normalPrice: product.normalPrice != null ? product.normalPrice.toString() : "",

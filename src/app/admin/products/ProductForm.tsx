@@ -58,8 +58,11 @@ interface ProductFormProps {
   productId?: string;
   initialData?: {
     name: string;
+    name_th?: string;
     description: string;
+    description_th?: string;
     shortDescription?: string;
+    shortDescription_th?: string;
     sourceDescription?: string;
     price: string;
     normalPrice?: string;
@@ -85,13 +88,16 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const [generatingDesc, setGeneratingDesc] = useState(false);
-  const [generatingFullDesc, setGeneratingFullDesc] = useState(false);
+  const [generatingDesc, setGeneratingDesc] = useState<"en" | "th" | false>(false);
+  const [generatingFullDesc, setGeneratingFullDesc] = useState<"en" | "th" | false>(false);
 
   const [form, setForm] = useState({
     name: "",
+    name_th: "",
     description: "",
+    description_th: "",
     shortDescription: "",
+    shortDescription_th: "",
     sourceDescription: "",
     price: "",
     normalPrice: "",
@@ -242,7 +248,10 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {field("ชื่อสินค้า", "name", { required: true, placeholder: "เช่น สายจูงหนังแท้" })}
+      <div className="grid grid-cols-2 gap-4">
+        {field("ชื่อสินค้า (EN)", "name", { required: true, placeholder: "e.g. Genuine Leather Dog Leash" })}
+        {field("ชื่อสินค้า (TH)", "name_th", { placeholder: "เช่น สายจูงหนังแท้" })}
+      </div>
 
       {/* Source Description — paste raw content for AI/reference */}
       <div className="border border-stone-200 rounded-xl overflow-hidden">
@@ -268,68 +277,88 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
         )}
       </div>
 
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <label className="block text-sm font-medium text-stone-700">
-            คำอธิบายสั้น
-            <span className="ml-1.5 text-xs font-normal text-stone-400">(แสดงบน product card — ไม่เกิน 3 บรรทัด)</span>
-          </label>
-          <button
-            type="button"
-            disabled={generatingDesc}
-            onClick={async () => {
-              setGeneratingDesc(true);
-              try {
-                const res = await fetch("/api/admin/ai/generate-short-desc", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    name: form.name,
-                    description: form.sourceDescription || form.description,
-                  }),
-                });
-                const data = await res.json();
-                if (data.success) {
-                  setForm((f) => ({ ...f, shortDescription: data.shortDescription }));
-                } else {
-                  toast.error(data.error || "AI generation ไม่สำเร็จ");
-                }
-              } catch {
-                toast.error("เกิดข้อผิดพลาด");
-              } finally {
-                setGeneratingDesc(false);
-              }
-            }}
-            className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 border border-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-          >
-            {generatingDesc ? (
-              <>
-                <span className="inline-block w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
-                กำลังสร้าง...
-              </>
-            ) : (
-              <>✨ AI สร้างให้</>
-            )}
-          </button>
+      <div className="grid grid-cols-2 gap-4">
+        {/* Short Description EN */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-sm font-medium text-stone-700">
+              คำอธิบายสั้น (EN)
+              <span className="ml-1.5 text-xs font-normal text-stone-400">(product card)</span>
+            </label>
+            <button
+              type="button"
+              disabled={!!generatingDesc}
+              onClick={async () => {
+                setGeneratingDesc("en");
+                try {
+                  const res = await fetch("/api/admin/ai/generate-short-desc", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: form.name, description: form.sourceDescription || form.description, lang: "en" }),
+                  });
+                  const data = await res.json();
+                  if (data.success) setForm((f) => ({ ...f, shortDescription: data.shortDescription }));
+                  else toast.error(data.error || "AI generation failed");
+                } catch { toast.error("Error"); } finally { setGeneratingDesc(false); }
+              }}
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 transition-colors disabled:opacity-50 shrink-0"
+            >
+              {generatingDesc === "en" ? <><span className="inline-block w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" /> EN...</> : <>✨ AI EN</>}
+            </button>
+          </div>
+          <textarea rows={4} value={form.shortDescription}
+            onChange={(e) => setForm((f) => ({ ...f, shortDescription: e.target.value }))}
+            placeholder="e.g. Genuine leather leash, adjustable size..."
+            className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none"
+          />
         </div>
-        <textarea
-          rows={4}
-          value={form.shortDescription}
-          onChange={(e) => setForm((f) => ({ ...f, shortDescription: e.target.value }))}
-          placeholder="เช่น สายจูงหนังแท้นุ่มมือ ปรับขนาดได้ เหมาะสำหรับสุนัขทุกสายพันธุ์..."
-          className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none"
-        />
+        {/* Short Description TH */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-sm font-medium text-stone-700">
+              คำอธิบายสั้น (TH)
+              <span className="ml-1.5 text-xs font-normal text-stone-400">(product card)</span>
+            </label>
+            <button
+              type="button"
+              disabled={!!generatingDesc}
+              onClick={async () => {
+                setGeneratingDesc("th");
+                try {
+                  const res = await fetch("/api/admin/ai/generate-short-desc", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: form.name_th || form.name, description: form.sourceDescription || form.description_th || form.description, lang: "th" }),
+                  });
+                  const data = await res.json();
+                  if (data.success) setForm((f) => ({ ...f, shortDescription_th: data.shortDescription }));
+                  else toast.error(data.error || "AI generation ไม่สำเร็จ");
+                } catch { toast.error("เกิดข้อผิดพลาด"); } finally { setGeneratingDesc(false); }
+              }}
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 border border-violet-200 transition-colors disabled:opacity-50 shrink-0"
+            >
+              {generatingDesc === "th" ? <><span className="inline-block w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" /> TH...</> : <>✨ AI TH</>}
+            </button>
+          </div>
+          <textarea rows={4} value={form.shortDescription_th}
+            onChange={(e) => setForm((f) => ({ ...f, shortDescription_th: e.target.value }))}
+            placeholder="เช่น สายจูงหนังแท้นุ่มมือ ปรับขนาดได้..."
+            className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none"
+          />
+        </div>
       </div>
 
-      <div>
+      <div className="grid grid-cols-2 gap-4">
+        {/* Full Description EN */}
+        <div>
         <div className="flex items-center justify-between mb-1.5">
-          <label className="block text-sm font-medium text-stone-700">คำอธิบายเต็ม</label>
+          <label className="block text-sm font-medium text-stone-700">คำอธิบายเต็ม (EN)</label>
           <div className="flex items-center gap-2">
             <button
               type="button"
-              disabled={generatingFullDesc}
+              disabled={!!generatingFullDesc}
               onClick={async () => {
-                setGeneratingFullDesc(true);
+                setGeneratingFullDesc("en");
                 try {
                   const res = await fetch("/api/admin/ai/generate-desc", {
                     method: "POST",
@@ -337,34 +366,28 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
                     body: JSON.stringify({
                       name: form.name,
                       description: form.sourceDescription || form.description,
+                      lang: "en",
                     }),
                   });
                   const data = await res.json();
                   if (data.success) {
                     setForm((f) => ({ ...f, description: data.description }));
                   } else {
-                    toast.error(data.error || "AI generation ไม่สำเร็จ");
+                    toast.error(data.error || "AI generation failed");
                   }
                 } catch {
-                  toast.error("เกิดข้อผิดพลาด");
+                  toast.error("Error");
                 } finally {
                   setGeneratingFullDesc(false);
                 }
               }}
-              className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 border border-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 transition-colors disabled:opacity-50 shrink-0"
             >
-              {generatingFullDesc ? (
-                <>
-                  <span className="inline-block w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
-                  กำลังสร้าง...
-                </>
-              ) : (
-                <>✨ AI สร้างให้</>
-              )}
+              {generatingFullDesc === "en" ? <><span className="inline-block w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" /> EN...</> : <>✨ AI EN</>}
             </button>
             <button type="button" onClick={() => setDescPreview((v) => !v)}
               className="text-xs text-stone-400 hover:text-orange-500 transition-colors">
-              {descPreview ? "✏️ แก้ไข" : "👁 ดูตัวอย่าง HTML"}
+              {descPreview ? "✏️ แก้ไข" : "👁 HTML"}
             </button>
           </div>
         </div>
@@ -379,10 +402,47 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
             rows={8}
             value={form.description}
             onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-            placeholder="คำอธิบายสินค้า (รองรับ HTML เช่น <b>ตัวหนา</b>)..."
+            placeholder="Product description (HTML supported)..."
             className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none"
           />
         )}
+        </div>
+
+        {/* Full Description TH */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-sm font-medium text-stone-700">คำอธิบายเต็ม (TH)</label>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={!!generatingFullDesc}
+                onClick={async () => {
+                  setGeneratingFullDesc("th");
+                  try {
+                    const res = await fetch("/api/admin/ai/generate-desc", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ name: form.name_th || form.name, description: form.sourceDescription || form.description_th || form.description, lang: "th" }),
+                    });
+                    const data = await res.json();
+                    if (data.success) setForm((f) => ({ ...f, description_th: data.description }));
+                    else toast.error(data.error || "AI generation ไม่สำเร็จ");
+                  } catch { toast.error("เกิดข้อผิดพลาด"); } finally { setGeneratingFullDesc(false); }
+                }}
+                className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 border border-violet-200 transition-colors disabled:opacity-50 shrink-0"
+              >
+                {generatingFullDesc === "th" ? <><span className="inline-block w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" /> TH...</> : <>✨ AI TH</>}
+              </button>
+            </div>
+          </div>
+          <textarea
+            rows={8}
+            value={form.description_th}
+            onChange={(e) => setForm((f) => ({ ...f, description_th: e.target.value }))}
+            placeholder="คำอธิบายสินค้าภาษาไทย (รองรับ HTML)..."
+            className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none"
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">

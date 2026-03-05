@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
-  const { name, description, sourceDescription } = await request.json();
+  const { name, description, sourceDescription, lang = "th" } = await request.json();
 
   if (!name && !description && !sourceDescription) {
     return NextResponse.json({ success: false, error: "ต้องมีข้อมูลสินค้าอย่างน้อย 1 อย่าง" }, { status: 400 });
@@ -23,7 +23,23 @@ export async function POST(request: NextRequest) {
   const rawDesc = sourceDescription || description || "";
   const cleanDesc = stripHtml(rawDesc).slice(0, 2000);
 
-  const prompt = `คุณเป็นนักเขียนคอนเทนต์ร้านขายของออนไลน์ภาษาไทย
+  const isEn = lang === "en";
+
+  const prompt = isEn
+    ? `You are an online pet shop content writer.
+
+Product name: ${name || "N/A"}
+Product details (source): ${cleanDesc || "N/A"}
+
+Write a full English product description for the product detail page.
+Rules:
+- English only
+- Use HTML (<b>, <br>, <ul>, <li>, <p>) but not <html>/<body>
+- Start with an introductory paragraph
+- Include a bullet-point list of key features or specs (<ul><li>)
+- Engaging, concise, informative
+- No advertising sales pitch`
+    : `คุณเป็นนักเขียนคอนเทนต์ร้านขายของออนไลน์ภาษาไทย
 
 ชื่อสินค้า: ${name || "ไม่ระบุ"}
 รายละเอียดสินค้า (ต้นฉบับ): ${cleanDesc || "ไม่ระบุ"}

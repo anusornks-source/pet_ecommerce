@@ -37,8 +37,11 @@ export async function PUT(
   const body = await request.json();
   const {
     name,
+    name_th,
     description,
+    description_th,
     shortDescription,
+    shortDescription_th,
     sourceDescription,
     price,
     normalPrice,
@@ -88,8 +91,11 @@ export async function PUT(
     where: { id },
     data: {
       ...(name !== undefined && { name }),
+      ...(name_th !== undefined && { name_th: name_th || null }),
       ...(description !== undefined && { description }),
+      ...(description_th !== undefined && { description_th: description_th || null }),
       ...(shortDescription !== undefined && { shortDescription: shortDescription || null }),
+      ...(shortDescription_th !== undefined && { shortDescription_th: shortDescription_th || null }),
       ...(sourceDescription !== undefined && { sourceDescription: sourceDescription || null }),
       ...(price !== undefined && { price: parseFloat(price) }),
       ...(normalPrice !== undefined && { normalPrice: normalPrice != null ? parseFloat(normalPrice) : null }),

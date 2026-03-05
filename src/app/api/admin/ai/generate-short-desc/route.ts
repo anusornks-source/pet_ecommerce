@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
-  const { name, description, sourceDescription } = await request.json();
+  const { name, description, sourceDescription, lang = "th" } = await request.json();
 
   if (!name && !description && !sourceDescription) {
     return NextResponse.json({ success: false, error: "ต้องมีข้อมูลสินค้าอย่างน้อย 1 อย่าง" }, { status: 400 });
@@ -24,7 +24,22 @@ export async function POST(request: NextRequest) {
   const rawDesc = sourceDescription || description || "";
   const cleanDesc = stripHtml(rawDesc).slice(0, 1500); // limit tokens
 
-  const prompt = `คุณเป็นนักเขียนคอนเทนต์ร้านขายของออนไลน์ภาษาไทย
+  const isEn = lang === "en";
+
+  const prompt = isEn
+    ? `You are an online pet shop content writer.
+
+Product name: ${name || "N/A"}
+Product details (source): ${cleanDesc || "N/A"}
+
+Write a short English description for display on a product card.
+Rules:
+- Maximum 2-3 sentences (under 120 characters)
+- English only
+- Highlight the main feature or benefit
+- Short, concise, no sales pitch
+- Plain text only — no HTML, no markdown, no quotes`
+    : `คุณเป็นนักเขียนคอนเทนต์ร้านขายของออนไลน์ภาษาไทย
 
 ชื่อสินค้า: ${name || "ไม่ระบุ"}
 รายละเอียดสินค้า (ต้นฉบับ): ${cleanDesc || "ไม่ระบุ"}

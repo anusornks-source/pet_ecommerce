@@ -14,13 +14,13 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
-  const { name, slug, icon, order } = await request.json();
+  const { name, name_th, slug, icon, order } = await request.json();
   if (!name || !slug) {
     return NextResponse.json({ success: false, error: "name และ slug จำเป็นต้องมี" }, { status: 400 });
   }
 
   const petType = await prisma.petType.create({
-    data: { name, slug, icon: icon || null, order: order ?? 0 },
+    data: { name, name_th: name_th || null, slug, icon: icon || null, order: order ?? 0 },
   });
   return NextResponse.json({ success: true, data: petType }, { status: 201 });
 }

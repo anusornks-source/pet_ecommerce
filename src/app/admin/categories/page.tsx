@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 interface Category {
   id: string;
   name: string;
+  name_th: string | null;
   slug: string;
   icon: string | null;
   _count: { products: number };
@@ -15,10 +16,10 @@ export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
-  const [newForm, setNewForm] = useState({ name: "", slug: "", icon: "" });
+  const [newForm, setNewForm] = useState({ name: "", name_th: "", slug: "", icon: "" });
 
   const [editId, setEditId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", slug: "", icon: "" });
+  const [editForm, setEditForm] = useState({ name: "", name_th: "", slug: "", icon: "" });
 
   const fetchCategories = async () => {
     const res = await fetch("/api/admin/categories");
@@ -42,7 +43,7 @@ export default function AdminCategoriesPage() {
     const data = await res.json();
     if (data.success) {
       toast.success("เพิ่มหมวดหมู่แล้ว");
-      setNewForm({ name: "", slug: "", icon: "" });
+      setNewForm({ name: "", name_th: "", slug: "", icon: "" });
       fetchCategories();
     } else {
       toast.error(data.error || "เกิดข้อผิดพลาด");
@@ -52,7 +53,7 @@ export default function AdminCategoriesPage() {
 
   const startEdit = (cat: Category) => {
     setEditId(cat.id);
-    setEditForm({ name: cat.name, slug: cat.slug, icon: cat.icon || "" });
+    setEditForm({ name: cat.name, name_th: cat.name_th || "", slug: cat.slug, icon: cat.icon || "" });
   };
 
   const handleEdit = async (e: React.FormEvent) => {
@@ -100,12 +101,23 @@ export default function AdminCategoriesPage() {
             <form onSubmit={handleAdd} className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-stone-600 mb-1">
-                  ชื่อหมวดหมู่
+                  ชื่อ EN / Default *
                 </label>
                 <input
                   required
                   value={newForm.name}
                   onChange={(e) => setNewForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="e.g. Pet Food"
+                  className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-stone-600 mb-1">
+                  ชื่อภาษาไทย (TH) — name_th
+                </label>
+                <input
+                  value={newForm.name_th}
+                  onChange={(e) => setNewForm((f) => ({ ...f, name_th: e.target.value }))}
                   placeholder="เช่น อาหารสัตว์"
                   className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
                 />
@@ -175,6 +187,13 @@ export default function AdminCategoriesPage() {
                               required
                               value={editForm.name}
                               onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                              placeholder="EN name"
+                              className="flex-1 min-w-24 border border-stone-200 rounded-lg px-2 py-1.5 text-sm"
+                            />
+                            <input
+                              value={editForm.name_th}
+                              onChange={(e) => setEditForm((f) => ({ ...f, name_th: e.target.value }))}
+                              placeholder="ชื่อไทย"
                               className="flex-1 min-w-24 border border-stone-200 rounded-lg px-2 py-1.5 text-sm"
                             />
                             <input

@@ -20,7 +20,9 @@ export async function GET(request: NextRequest) {
   if (search) {
     where.OR = [
       { name: { contains: search, mode: "insensitive" } },
+      { name_th: { contains: search, mode: "insensitive" } },
       { description: { contains: search, mode: "insensitive" } },
+      { description_th: { contains: search, mode: "insensitive" } },
     ];
   }
   if (source === "CJ") where.source = "CJ";
@@ -56,8 +58,11 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const {
     name,
+    name_th,
     description,
+    description_th,
     shortDescription,
+    shortDescription_th,
     price,
     stock,
     images,
@@ -78,8 +83,11 @@ export async function POST(request: NextRequest) {
   const product = await prisma.product.create({
     data: {
       name,
+      name_th: name_th || null,
       description,
+      description_th: description_th || null,
       shortDescription: shortDescription || null,
+      shortDescription_th: shortDescription_th || null,
       price: parseFloat(price),
       stock: parseInt(stock),
       images: Array.isArray(images) ? images : [],

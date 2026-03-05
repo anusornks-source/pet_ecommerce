@@ -21,9 +21,12 @@ export default async function EditArticlePage({
           articleId={article.id}
           initialData={{
             title: article.title,
+            title_th: (article as { title_th?: string | null }).title_th ?? "",
             slug: article.slug,
             excerpt: article.excerpt ?? "",
+            excerpt_th: (article as { excerpt_th?: string | null }).excerpt_th ?? "",
             content: article.content,
+            content_th: (article as { content_th?: string | null }).content_th ?? "",
             coverImage: article.coverImage ?? "",
             published: article.published,
             tags: article.tags,

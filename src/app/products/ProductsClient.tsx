@@ -3,11 +3,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import ProductCard from "@/components/ProductCard";
+import { useLocale } from "@/context/LocaleContext";
 import type { Product, Category, PetType } from "@/types";
 
 export default function ProductsClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { lang, t, pick } = useLocale();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -93,9 +95,9 @@ export default function ProductsClient() {
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-stone-800">สินค้าทั้งหมด</h1>
+        <h1 className="text-3xl font-bold text-stone-800">{t("allProducts", "product")}</h1>
         <p className="text-stone-500 mt-1">
-          {loading ? "กำลังโหลด..." : `${total} รายการ`}
+          {loading ? t("loading") : `${total} ${lang === "th" ? "รายการ" : "items"}`}
         </p>
       </div>
 
@@ -104,22 +106,22 @@ export default function ProductsClient() {
         <aside className="lg:w-60 shrink-0">
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-100 sticky top-20">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-stone-800">ตัวกรอง</h3>
+              <h3 className="font-bold text-stone-800">{lang === "th" ? "ตัวกรอง" : "Filters"}</h3>
               {hasFilters && (
                 <button onClick={clearFilters} className="text-xs text-orange-500 hover:text-orange-600">
-                  ล้างทั้งหมด
+                  {lang === "th" ? "ล้างทั้งหมด" : "Clear all"}
                 </button>
               )}
             </div>
 
             {/* Search */}
             <div className="mb-5">
-              <label className="text-sm font-medium text-stone-600 block mb-2">ค้นหา</label>
+              <label className="text-sm font-medium text-stone-600 block mb-2">{lang === "th" ? "ค้นหา" : "Search"}</label>
               <input
                 type="text"
                 className="input text-sm"
                 style={{ padding: "0.5rem 0.75rem" }}
-                placeholder="ค้นหาสินค้า..."
+                placeholder={t("search", "product")}
                 defaultValue={search}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") setFilter("search", (e.target as HTMLInputElement).value);
@@ -130,7 +132,7 @@ export default function ProductsClient() {
 
             {/* Category */}
             <div className="mb-5">
-              <label className="text-sm font-medium text-stone-600 block mb-2">หมวดหมู่</label>
+              <label className="text-sm font-medium text-stone-600 block mb-2">{lang === "th" ? "หมวดหมู่" : "Category"}</label>
               <div className="space-y-1">
                 <button
                   onClick={() => setFilter("category", "")}
@@ -138,7 +140,7 @@ export default function ProductsClient() {
                     !category ? "bg-orange-500 text-white" : "text-stone-600 hover:bg-orange-50"
                   }`}
                 >
-                  ทั้งหมด
+                  {lang === "th" ? "ทั้งหมด" : "All"}
                 </button>
                 {categories.map((cat) => (
                   <button
@@ -148,7 +150,7 @@ export default function ProductsClient() {
                       category === cat.slug ? "bg-orange-500 text-white" : "text-stone-600 hover:bg-orange-50"
                     }`}
                   >
-                    {cat.icon} {cat.name}
+                    {cat.icon} {pick(cat.name_th, cat.name)}
                   </button>
                 ))}
               </div>
@@ -156,12 +158,12 @@ export default function ProductsClient() {
 
             {/* Price Range */}
             <div className="mb-5">
-              <label className="text-sm font-medium text-stone-600 block mb-2">ช่วงราคา (บาท)</label>
+              <label className="text-sm font-medium text-stone-600 block mb-2">{lang === "th" ? "ช่วงราคา (บาท)" : "Price Range (฿)"}</label>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
                   min={0}
-                  placeholder="ต่ำสุด"
+                  placeholder={lang === "th" ? "ต่ำสุด" : "Min"}
                   value={priceRange[0]}
                   onChange={(e) => setPriceRange([e.target.value, priceRange[1]])}
                   onKeyDown={(e) => e.key === "Enter" && applyPriceFilter()}
@@ -172,7 +174,7 @@ export default function ProductsClient() {
                 <input
                   type="number"
                   min={0}
-                  placeholder="สูงสุด"
+                  placeholder={lang === "th" ? "สูงสุด" : "Max"}
                   value={priceRange[1]}
                   onChange={(e) => setPriceRange([priceRange[0], e.target.value])}
                   onKeyDown={(e) => e.key === "Enter" && applyPriceFilter()}
@@ -184,7 +186,7 @@ export default function ProductsClient() {
                 onClick={applyPriceFilter}
                 className="mt-2 w-full text-sm py-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
               >
-                กรองราคา
+                {lang === "th" ? "กรองราคา" : "Apply"}
               </button>
               {(minPrice || maxPrice) && (
                 <p className="mt-1 text-xs text-stone-400 text-center">
@@ -195,7 +197,7 @@ export default function ProductsClient() {
 
             {/* Pet Type */}
             <div>
-              <label className="text-sm font-medium text-stone-600 block mb-2">ประเภทสัตว์</label>
+              <label className="text-sm font-medium text-stone-600 block mb-2">{lang === "th" ? "ประเภทสัตว์" : "Pet Type"}</label>
               <div className="space-y-1">
                 <button
                   onClick={() => setFilter("petType", "")}
@@ -203,7 +205,7 @@ export default function ProductsClient() {
                     !petType ? "bg-orange-500 text-white" : "text-stone-600 hover:bg-orange-50"
                   }`}
                 >
-                  ทั้งหมด
+                  {lang === "th" ? "ทั้งหมด" : "All"}
                 </button>
                 {petTypeList.map((pt) => (
                   <button
@@ -213,7 +215,7 @@ export default function ProductsClient() {
                       petType === pt.slug ? "bg-orange-500 text-white" : "text-stone-600 hover:bg-orange-50"
                     }`}
                   >
-                    {pt.icon} {pt.name}
+                    {pt.icon} {pick(pt.name_th, pt.name)}
                   </button>
                 ))}
               </div>
@@ -225,18 +227,18 @@ export default function ProductsClient() {
         <div className="flex-1">
           {/* Sort Bar */}
           <div className="flex items-center justify-end mb-4 gap-2">
-            <span className="text-sm text-stone-500">เรียงโดย</span>
+            <span className="text-sm text-stone-500">{t("sortBy", "product")}</span>
             <select
               value={sort}
               onChange={(e) => setFilter("sort", e.target.value === "newest" ? "" : e.target.value)}
               className="input text-sm"
               style={{ padding: "0.4rem 0.75rem", width: "auto" }}
             >
-              <option value="newest">ใหม่ล่าสุด</option>
-              <option value="oldest">เก่าสุด</option>
-              <option value="price_asc">ราคา: ต่ำ → สูง</option>
-              <option value="price_desc">ราคา: สูง → ต่ำ</option>
-              <option value="name_asc">ชื่อ ก → ฮ</option>
+              <option value="newest">{lang === "th" ? "ใหม่ล่าสุด" : "Newest"}</option>
+              <option value="oldest">{lang === "th" ? "เก่าสุด" : "Oldest"}</option>
+              <option value="price_asc">{lang === "th" ? "ราคา: ต่ำ → สูง" : "Price: Low → High"}</option>
+              <option value="price_desc">{lang === "th" ? "ราคา: สูง → ต่ำ" : "Price: High → Low"}</option>
+              <option value="name_asc">{lang === "th" ? "ชื่อ ก → ฮ" : "Name A → Z"}</option>
             </select>
           </div>
           {loading ? (
@@ -299,9 +301,9 @@ export default function ProductsClient() {
           ) : (
             <div className="text-center py-20">
               <div className="text-6xl mb-4">🔍</div>
-              <h3 className="text-xl font-semibold text-stone-600 mb-2">ไม่พบสินค้า</h3>
-              <p className="text-stone-400">ลองเปลี่ยนเงื่อนไขการค้นหาดูนะ</p>
-              <button onClick={clearFilters} className="mt-4 btn-outline">ดูสินค้าทั้งหมด</button>
+              <h3 className="text-xl font-semibold text-stone-600 mb-2">{lang === "th" ? "ไม่พบสินค้า" : "No products found"}</h3>
+              <p className="text-stone-400">{lang === "th" ? "ลองเปลี่ยนเงื่อนไขการค้นหาดูนะ" : "Try changing your search filters"}</p>
+              <button onClick={clearFilters} className="mt-4 btn-outline">{t("allProducts", "product")}</button>
             </div>
           )}
         </div>

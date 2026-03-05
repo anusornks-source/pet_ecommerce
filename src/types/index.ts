@@ -12,6 +12,7 @@ export interface User {
 export interface Category {
   id: string;
   name: string;
+  name_th?: string | null;
   slug: string;
   icon?: string | null;
 }
@@ -19,6 +20,7 @@ export interface Category {
 export interface PetType {
   id: string;
   name: string;
+  name_th?: string | null;
   slug: string;
   icon?: string | null;
   order: number;
@@ -48,8 +50,11 @@ export interface ProductVariant {
 export interface Product {
   id: string;
   name: string;
+  name_th?: string | null;
   description: string;
+  description_th?: string | null;
   shortDescription?: string | null;
+  shortDescription_th?: string | null;
   price: number;
   normalPrice?: number | null;
   stock: number;

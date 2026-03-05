@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { useLocale } from "@/context/LocaleContext";
 import { formatPrice } from "@/lib/utils";
 import type { Product } from "@/types";
 
@@ -29,6 +30,7 @@ export default function ProductCard({ product }: Props) {
   const { user } = useAuth();
   const { addToCart, loading } = useCart();
   const { isWishlisted, toggle: toggleWishlist } = useWishlist();
+  const { lang, pick, t } = useLocale();
   const [adding, setAdding] = useState(false);
 
   const hasVariants = product.variants && product.variants.length > 0;
@@ -41,7 +43,7 @@ export default function ProductCard({ product }: Props) {
       return;
     }
     if (!user) {
-      toast.error("กรุณาเข้าสู่ระบบก่อน");
+      toast.error(lang === "th" ? "กรุณาเข้าสู่ระบบก่อน" : "Please login first");
       router.push("/login");
       return;
     }
@@ -49,9 +51,9 @@ export default function ProductCard({ product }: Props) {
     setAdding(true);
     try {
       await addToCart(product.id);
-      toast.success("เพิ่มในตะกร้าแล้ว! 🛒");
+      toast.success(lang === "th" ? "เพิ่มในตะกร้าแล้ว! 🛒" : "Added to cart! 🛒");
     } catch {
-      toast.error("เกิดข้อผิดพลาด");
+      toast.error(lang === "th" ? "เกิดข้อผิดพลาด" : "Something went wrong");
     } finally {
       setAdding(false);
     }
@@ -78,14 +80,14 @@ export default function ProductCard({ product }: Props) {
           {/* Badges: featured + tags stacked top-left */}
           <div className="absolute top-1.5 left-1.5 flex flex-col gap-0.5">
             {product.featured && (
-              <span className="badge bg-orange-500 text-white">⭐ แนะนำ</span>
+              <span className="badge bg-orange-500 text-white">⭐ {lang === "th" ? "แนะนำ" : "Featured"}</span>
             )}
             {product.tags?.slice(0, 2).map((tag) => (
               <span
                 key={tag.id}
                 className={`badge ${TAG_COLORS[tag.color] ?? TAG_COLORS.orange}`}
               >
-                {tag.icon} {tag.name}
+                {tag.icon} {lang === "th" ? tag.name : (tag.nameEn || tag.name)}
               </span>
             ))}
           </div>
@@ -106,7 +108,7 @@ export default function ProductCard({ product }: Props) {
           {product.stock === 0 && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
               <span className="bg-white text-stone-700 font-bold px-3 py-1 rounded-full text-sm">
-                สินค้าหมด
+                {t("outOfStock", "product")}
               </span>
             </div>
           )}
@@ -116,20 +118,20 @@ export default function ProductCard({ product }: Props) {
         <div className="p-4">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs text-orange-500 font-medium bg-orange-50 px-2 py-0.5 rounded-full">
-              {product.category.icon} {product.category.name}
+              {product.category.icon} {pick(product.category.name_th, product.category.name)}
             </span>
             {product.petType && (
               <span className="text-xs text-stone-500 bg-stone-50 px-2 py-0.5 rounded-full">
-                {product.petType.icon} {product.petType.name}
+                {product.petType.icon} {pick(product.petType.name_th, product.petType.name)}
               </span>
             )}
           </div>
           <h3 className="font-semibold text-stone-800 mt-1 line-clamp-2 group-hover:text-orange-500 transition-colors">
-            {product.name}
+            {pick(product.name_th, product.name)}
           </h3>
-          {product.shortDescription && (
+          {(product.shortDescription || product.shortDescription_th) && (
             <p className="text-sm text-stone-500 mt-1 line-clamp-3">
-              {product.shortDescription}
+              {pick(product.shortDescription_th, product.shortDescription)}
             </p>
           )}
 
@@ -142,7 +144,7 @@ export default function ProductCard({ product }: Props) {
                 )}
               </div>
               {product.stock > 0 && product.stock <= 5 && (
-                <p className="text-xs text-red-500 mt-0.5">เหลือ {product.stock} ชิ้น</p>
+                <p className="text-xs text-red-500 mt-0.5">{lang === "th" ? `เหลือ ${product.stock} ชิ้น` : `Only ${product.stock} left`}</p>
               )}
             </div>
             <button
@@ -170,7 +172,7 @@ export default function ProductCard({ product }: Props) {
                     d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               )}
-              {hasVariants ? "เลือก" : "ใส่ตะกร้า"}
+              {hasVariants ? (lang === "th" ? "เลือก" : "Select") : (lang === "th" ? "ใส่ตะกร้า" : "Add")}
             </button>
           </div>
         </div>

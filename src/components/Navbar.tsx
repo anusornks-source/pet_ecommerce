@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
+import { useLocale } from "@/context/LocaleContext";
 import toast from "react-hot-toast";
 
 interface NavbarProps {
@@ -18,21 +19,22 @@ export default function Navbar({ storeName = "PetShop", logoUrl }: NavbarProps) 
   const router = useRouter();
   const { user, logout } = useAuth();
   const { cartCount } = useCart();
+  const { lang, toggle, t } = useLocale();
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropOpen, setDropOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
-    toast.success("ออกจากระบบแล้ว");
+    toast.success(lang === "th" ? "ออกจากระบบแล้ว" : "Logged out");
     router.push("/");
   };
 
   const navLinks = [
-    { href: "/", label: "หน้าแรก" },
-    { href: "/products", label: "สินค้า" },
-    { href: "/advisor", label: "🐾 ที่ปรึกษา AI" },
-    { href: "/stores", label: "สาขา" },
-    { href: "/articles", label: "บทความ" },
+    { href: "/", label: t("home", "nav") },
+    { href: "/products", label: t("products", "nav") },
+    { href: "/advisor", label: t("advisor", "nav") },
+    { href: "/stores", label: t("stores", "nav") },
+    { href: "/articles", label: t("articles", "nav") },
   ];
 
   return (
@@ -69,6 +71,15 @@ export default function Navbar({ storeName = "PetShop", logoUrl }: NavbarProps) 
 
         {/* Right actions */}
         <div className="flex items-center gap-2">
+          {/* Language toggle */}
+          <button
+            onClick={toggle}
+            className="hidden md:flex items-center gap-1 px-3 py-1.5 rounded-lg border border-stone-200 text-xs font-semibold text-stone-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition-colors"
+            title={lang === "th" ? "Switch to English" : "เปลี่ยนเป็นภาษาไทย"}
+          >
+            <span>{lang === "th" ? "🇬🇧 EN" : "🇹🇭 TH"}</span>
+          </button>
+
           {/* Cart */}
           <Link href="/cart" className="relative p-2 rounded-xl hover:bg-orange-50 transition-colors">
             <svg className="w-6 h-6 text-stone-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -106,14 +117,14 @@ export default function Navbar({ storeName = "PetShop", logoUrl }: NavbarProps) 
                       onClick={() => setDropOpen(false)}
                       className="flex items-center gap-3 px-4 py-3 text-sm text-stone-700 hover:bg-orange-50 hover:text-orange-500 transition-colors"
                     >
-                      <span>👤</span> โปรไฟล์ของฉัน
+                      <span>👤</span> {t("profile", "auth")}
                     </Link>
                     <Link
                       href="/profile/orders"
                       onClick={() => setDropOpen(false)}
                       className="flex items-center gap-3 px-4 py-3 text-sm text-stone-700 hover:bg-orange-50 hover:text-orange-500 transition-colors"
                     >
-                      <span>📦</span> ประวัติคำสั่งซื้อ
+                      <span>📦</span> {t("orders", "auth")}
                     </Link>
                     {user.role === "ADMIN" && (
                       <Link
@@ -129,7 +140,7 @@ export default function Navbar({ storeName = "PetShop", logoUrl }: NavbarProps) 
                       onClick={() => { setDropOpen(false); handleLogout(); }}
                       className="flex items-center gap-3 w-full px-4 py-3 text-sm text-red-500 hover:bg-red-50 transition-colors"
                     >
-                      <span>🚪</span> ออกจากระบบ
+                      <span>🚪</span> {t("logout", "auth")}
                     </button>
                   </div>
                 </>
@@ -137,8 +148,8 @@ export default function Navbar({ storeName = "PetShop", logoUrl }: NavbarProps) 
             </div>
           ) : (
             <div className="hidden md:flex items-center gap-2">
-              <Link href="/login" className="btn-ghost text-sm">เข้าสู่ระบบ</Link>
-              <Link href="/register" className="btn-primary text-sm">สมัครสมาชิก</Link>
+              <Link href="/login" className="btn-ghost text-sm">{t("login", "auth")}</Link>
+              <Link href="/register" className="btn-primary text-sm">{t("register", "auth")}</Link>
             </div>
           )}
 
@@ -178,13 +189,20 @@ export default function Navbar({ storeName = "PetShop", logoUrl }: NavbarProps) 
           {!user && (
             <>
               <Link href="/login" onClick={() => setMenuOpen(false)} className="block px-4 py-3 rounded-xl text-sm text-stone-600 hover:bg-orange-50">
-                เข้าสู่ระบบ
+                {t("login", "auth")}
               </Link>
               <Link href="/register" onClick={() => setMenuOpen(false)} className="block px-4 py-3 rounded-xl text-sm text-white bg-orange-500 text-center">
-                สมัครสมาชิก
+                {t("register", "auth")}
               </Link>
             </>
           )}
+          <button
+            onClick={() => { toggle(); setMenuOpen(false); }}
+            className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm text-stone-600 hover:bg-orange-50 w-full"
+          >
+            <span>{lang === "th" ? "🇬🇧" : "🇹🇭"}</span>
+            {lang === "th" ? "Switch to English" : "เปลี่ยนเป็นภาษาไทย"}
+          </button>
         </div>
       )}
     </nav>

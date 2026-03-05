@@ -3,8 +3,10 @@ import Image from "next/image";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import ShareButtons from "@/components/ShareButtons";
+import { pickLang, type Lang } from "@/lib/translations";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -45,6 +47,14 @@ export default async function ArticleDetailPage({
 
   if (!article) notFound();
 
+  const cookieStore = await cookies();
+  const lang: Lang = cookieStore.get("lang")?.value === "en" ? "en" : "th";
+  const p = (th: string | null | undefined, en: string | null | undefined) => pickLang(th, en, lang);
+
+  const displayTitle = p((article as { title_th?: string | null }).title_th, article.title);
+  const displayExcerpt = p((article as { excerpt_th?: string | null }).excerpt_th, article.excerpt);
+  const displayContent = p((article as { content_th?: string | null }).content_th, article.content) ?? article.content;
+
   const isValidUrl = (() => {
     try { new URL(article.coverImage ?? ""); return true; } catch { return false; }
   })();
@@ -56,7 +66,7 @@ export default async function ArticleDetailPage({
         href="/articles"
         className="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-orange-500 transition-colors mb-6"
       >
-        ← กลับหน้าบทความ
+        ← {p("กลับหน้าบทความ", "Back to Articles")}
       </Link>
 
       {/* Tags */}
@@ -72,12 +82,12 @@ export default async function ArticleDetailPage({
 
       {/* Title */}
       <h1 className="text-3xl md:text-4xl font-bold text-stone-800 leading-tight mb-3">
-        {article.title}
+        {displayTitle}
       </h1>
 
       {/* Date */}
       <p className="text-sm text-stone-400 mb-6">
-        {new Date(article.createdAt).toLocaleDateString("th-TH", {
+        {new Date(article.createdAt).toLocaleDateString(lang === "en" ? "en-US" : "th-TH", {
           weekday: "long", day: "numeric", month: "long", year: "numeric",
         })}
       </p>
@@ -87,7 +97,7 @@ export default async function ArticleDetailPage({
         <div className="relative w-full h-64 md:h-80 rounded-2xl overflow-hidden mb-8 bg-stone-100">
           <Image
             src={article.coverImage!}
-            alt={article.title}
+            alt={displayTitle}
             fill
             className="object-cover"
             sizes="(max-width: 768px) 100vw, 768px"
@@ -97,9 +107,9 @@ export default async function ArticleDetailPage({
       )}
 
       {/* Excerpt */}
-      {article.excerpt && (
+      {displayExcerpt && (
         <p className="text-lg text-stone-600 leading-relaxed mb-6 border-l-4 border-orange-300 pl-4 italic">
-          {article.excerpt}
+          {displayExcerpt}
         </p>
       )}
 
@@ -107,7 +117,7 @@ export default async function ArticleDetailPage({
       <div className="mb-8">
         <ShareButtons
           url={`/articles/${article.slug}`}
-          title={article.title}
+          title={displayTitle}
           image={article.coverImage ?? undefined}
         />
       </div>
@@ -115,7 +125,7 @@ export default async function ArticleDetailPage({
       {/* Content */}
       <article className="prose prose-stone prose-headings:font-bold prose-a:text-orange-500 prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl max-w-none">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>
-          {article.content}
+          {displayContent}
         </ReactMarkdown>
       </article>
 
@@ -125,13 +135,13 @@ export default async function ArticleDetailPage({
           href="/articles"
           className="text-sm text-orange-500 hover:text-orange-600 font-medium"
         >
-          ← ดูบทความทั้งหมด
+          ← {p("ดูบทความทั้งหมด", "View All Articles")}
         </Link>
         <Link
           href="/products"
           className="text-sm bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl transition-colors"
         >
-          ช้อปสินค้า 🛒
+          {p("ช้อปสินค้า 🛒", "Shop Now 🛒")}
         </Link>
       </div>
     </div>

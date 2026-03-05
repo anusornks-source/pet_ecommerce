@@ -8,12 +8,18 @@ interface Banner {
   id: string;
   imageUrl: string;
   badge: string | null;
+  badge_th: string | null;
   title: string | null;
+  title_th: string | null;
   titleHighlight: string | null;
+  titleHighlight_th: string | null;
   subtitle: string | null;
+  subtitle_th: string | null;
   ctaLabel: string | null;
+  ctaLabel_th: string | null;
   ctaUrl: string | null;
   secondaryCtaLabel: string | null;
+  secondaryCtaLabel_th: string | null;
   secondaryCtaUrl: string | null;
   order: number;
   active: boolean;
@@ -22,12 +28,18 @@ interface Banner {
 const emptyForm = {
   imageUrl: "",
   badge: "",
+  badge_th: "",
   title: "",
+  title_th: "",
   titleHighlight: "",
+  titleHighlight_th: "",
   subtitle: "",
+  subtitle_th: "",
   ctaLabel: "",
+  ctaLabel_th: "",
   ctaUrl: "",
   secondaryCtaLabel: "",
+  secondaryCtaLabel_th: "",
   secondaryCtaUrl: "",
   order: "0",
   active: true,
@@ -98,12 +110,18 @@ export default function AdminBannersPage() {
     setForm({
       imageUrl: b.imageUrl,
       badge: b.badge ?? "",
+      badge_th: b.badge_th ?? "",
       title: b.title ?? "",
+      title_th: b.title_th ?? "",
       titleHighlight: b.titleHighlight ?? "",
+      titleHighlight_th: b.titleHighlight_th ?? "",
       subtitle: b.subtitle ?? "",
+      subtitle_th: b.subtitle_th ?? "",
       ctaLabel: b.ctaLabel ?? "",
+      ctaLabel_th: b.ctaLabel_th ?? "",
       ctaUrl: b.ctaUrl ?? "",
       secondaryCtaLabel: b.secondaryCtaLabel ?? "",
+      secondaryCtaLabel_th: b.secondaryCtaLabel_th ?? "",
       secondaryCtaUrl: b.secondaryCtaUrl ?? "",
       order: String(b.order),
       active: b.active,
@@ -203,94 +221,68 @@ export default function AdminBannersPage() {
             />
           </div>
 
-          {/* Text content */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Text content — EN / TH side by side */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
+            <p className="sm:col-span-2 text-xs font-semibold text-stone-500 uppercase tracking-wide">ข้อความ EN (Default) / TH</p>
             <div>
-              <label className="block text-xs text-stone-500 mb-1">Badge (ข้อความเล็กบนสุด)</label>
-              <input
-                value={form.badge}
-                onChange={(e) => setForm((f) => ({ ...f, badge: e.target.value }))}
-                placeholder="🎉 ยินดีต้อนรับสู่ PetShop"
-                className={inputCls}
-              />
+              <label className="block text-xs text-stone-500 mb-1">Badge EN</label>
+              <input value={form.badge} onChange={(e) => setForm((f) => ({ ...f, badge: e.target.value }))} placeholder="🎉 Welcome to PetShop" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-xs text-stone-500 mb-1">Badge TH</label>
+              <input value={form.badge_th} onChange={(e) => setForm((f) => ({ ...f, badge_th: e.target.value }))} placeholder="🎉 ยินดีต้อนรับสู่ PetShop" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-xs text-stone-500 mb-1">Title EN (หัวเรื่องหลัก)</label>
+              <input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Everything your" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-xs text-stone-500 mb-1">Title TH</label>
+              <input value={form.title_th} onChange={(e) => setForm((f) => ({ ...f, title_th: e.target.value }))} placeholder="ทุกสิ่งที่" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-xs text-stone-500 mb-1">Title Highlight EN (สีส้ม)</label>
+              <input value={form.titleHighlight} onChange={(e) => setForm((f) => ({ ...f, titleHighlight: e.target.value }))} placeholder="Pet needs, right here!" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-xs text-stone-500 mb-1">Title Highlight TH (สีส้ม)</label>
+              <input value={form.titleHighlight_th} onChange={(e) => setForm((f) => ({ ...f, titleHighlight_th: e.target.value }))} placeholder="น้องรัก ต้องการ ที่นี่ครบ!" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-xs text-stone-500 mb-1">Subtitle EN (คำอธิบาย)</label>
+              <textarea value={form.subtitle} onChange={(e) => setForm((f) => ({ ...f, subtitle: e.target.value }))} rows={2} placeholder="Quality pet products delivered nationwide." className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-xs text-stone-500 mb-1">Subtitle TH</label>
+              <textarea value={form.subtitle_th} onChange={(e) => setForm((f) => ({ ...f, subtitle_th: e.target.value }))} rows={2} placeholder="คัดสรรสัตว์เลี้ยงคุณภาพ จัดส่งถึงบ้านทั่วประเทศ" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-xs text-stone-500 mb-1">ปุ่มหลัก EN (CTA Label)</label>
+              <input value={form.ctaLabel} onChange={(e) => setForm((f) => ({ ...f, ctaLabel: e.target.value }))} placeholder="Shop Now 🛒" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-xs text-stone-500 mb-1">ปุ่มหลัก TH</label>
+              <input value={form.ctaLabel_th} onChange={(e) => setForm((f) => ({ ...f, ctaLabel_th: e.target.value }))} placeholder="ช้อปเลย 🛒" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-xs text-stone-500 mb-1">ปุ่มหลัก URL</label>
+              <input value={form.ctaUrl} onChange={(e) => setForm((f) => ({ ...f, ctaUrl: e.target.value }))} placeholder="/products" className={inputCls} />
             </div>
             <div>
               <label className="block text-xs text-stone-500 mb-1">Order (ลำดับ)</label>
-              <input
-                type="number"
-                value={form.order}
-                onChange={(e) => setForm((f) => ({ ...f, order: e.target.value }))}
-                className={inputCls}
-              />
+              <input type="number" value={form.order} onChange={(e) => setForm((f) => ({ ...f, order: e.target.value }))} className={inputCls} />
             </div>
             <div>
-              <label className="block text-xs text-stone-500 mb-1">Title (หัวเรื่องหลัก)</label>
-              <input
-                value={form.title}
-                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                placeholder="ทุกสิ่งที่"
-                className={inputCls}
-              />
+              <label className="block text-xs text-stone-500 mb-1">ปุ่มรอง EN (Secondary Label)</label>
+              <input value={form.secondaryCtaLabel} onChange={(e) => setForm((f) => ({ ...f, secondaryCtaLabel: e.target.value }))} placeholder="View Pets" className={inputCls} />
             </div>
             <div>
-              <label className="block text-xs text-stone-500 mb-1">Title Highlight (สีส้ม)</label>
-              <input
-                value={form.titleHighlight}
-                onChange={(e) => setForm((f) => ({ ...f, titleHighlight: e.target.value }))}
-                placeholder="น้องรัก ต้องการ ที่นี่ครบ!"
-                className={inputCls}
-              />
+              <label className="block text-xs text-stone-500 mb-1">ปุ่มรอง TH</label>
+              <input value={form.secondaryCtaLabel_th} onChange={(e) => setForm((f) => ({ ...f, secondaryCtaLabel_th: e.target.value }))} placeholder="ดูสัตว์เลี้ยง" className={inputCls} />
             </div>
-          </div>
-
-          <div>
-            <label className="block text-xs text-stone-500 mb-1">Subtitle (คำอธิบาย)</label>
-            <textarea
-              value={form.subtitle}
-              onChange={(e) => setForm((f) => ({ ...f, subtitle: e.target.value }))}
-              rows={2}
-              placeholder="คัดสรรสัตว์เลี้ยงคุณภาพ พร้อมอาหาร ของเล่น และอุปกรณ์ครบครัน จัดส่งถึงบ้านทั่วประเทศ"
-              className={inputCls}
-            />
-          </div>
-
-          {/* CTAs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-stone-500 mb-1">ปุ่มหลัก (CTA Label)</label>
-              <input
-                value={form.ctaLabel}
-                onChange={(e) => setForm((f) => ({ ...f, ctaLabel: e.target.value }))}
-                placeholder="ช้อปเลย 🛒"
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-stone-500 mb-1">ปุ่มหลัก (CTA URL)</label>
-              <input
-                value={form.ctaUrl}
-                onChange={(e) => setForm((f) => ({ ...f, ctaUrl: e.target.value }))}
-                placeholder="/products"
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-stone-500 mb-1">ปุ่มรอง (Secondary Label)</label>
-              <input
-                value={form.secondaryCtaLabel}
-                onChange={(e) => setForm((f) => ({ ...f, secondaryCtaLabel: e.target.value }))}
-                placeholder="ดูสัตว์เลี้ยง"
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-stone-500 mb-1">ปุ่มรอง (Secondary URL)</label>
-              <input
-                value={form.secondaryCtaUrl}
-                onChange={(e) => setForm((f) => ({ ...f, secondaryCtaUrl: e.target.value }))}
-                placeholder="/products?category=dogs"
-                className={inputCls}
-              />
+            <div className="sm:col-span-2">
+              <label className="block text-xs text-stone-500 mb-1">ปุ่มรอง URL</label>
+              <input value={form.secondaryCtaUrl} onChange={(e) => setForm((f) => ({ ...f, secondaryCtaUrl: e.target.value }))} placeholder="/products?category=dogs" className={inputCls} />
             </div>
           </div>
 

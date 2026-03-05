@@ -10,12 +10,13 @@ export async function PUT(
   if (isNextResponse(auth)) return auth;
 
   const { id } = await params;
-  const { name, slug, icon, order } = await request.json();
+  const { name, name_th, slug, icon, order } = await request.json();
 
   const petType = await prisma.petType.update({
     where: { id },
     data: {
       ...(name !== undefined && { name }),
+      ...(name_th !== undefined && { name_th: name_th || null }),
       ...(slug !== undefined && { slug }),
       ...(icon !== undefined && { icon: icon || null }),
       ...(order !== undefined && { order }),

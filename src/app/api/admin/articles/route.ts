@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   if (isNextResponse(auth)) return auth;
 
   const body = await request.json();
-  const { title, slug, excerpt, content, coverImage, published, tags } = body;
+  const { title, title_th, slug, excerpt, excerpt_th, content, content_th, coverImage, published, tags } = body;
 
   if (!title || !content) {
     return NextResponse.json(
@@ -69,9 +69,12 @@ export async function POST(request: NextRequest) {
   const article = await prisma.article.create({
     data: {
       title,
+      title_th: title_th || null,
       slug: finalSlug,
       excerpt: excerpt || null,
+      excerpt_th: excerpt_th || null,
       content,
+      content_th: content_th || null,
       coverImage: coverImage || null,
       published: published ?? false,
       tags: Array.isArray(tags) ? tags : [],

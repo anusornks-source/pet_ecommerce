@@ -9,9 +9,12 @@ interface ArticleFormProps {
   articleId?: string;
   initialData?: {
     title: string;
+    title_th?: string;
     slug: string;
     excerpt: string;
+    excerpt_th?: string;
     content: string;
+    content_th?: string;
     coverImage: string;
     published: boolean;
     tags: string[];
@@ -36,15 +39,21 @@ export default function ArticleForm({ articleId, initialData }: ArticleFormProps
 
   const [form, setForm] = useState({
     title: "",
+    title_th: "",
     slug: "",
     excerpt: "",
+    excerpt_th: "",
     content: "",
+    content_th: "",
     coverImage: "",
     published: false,
     tagsText: "",
     ...initialData
       ? {
           ...initialData,
+          title_th: initialData.title_th ?? "",
+          excerpt_th: initialData.excerpt_th ?? "",
+          content_th: initialData.content_th ?? "",
           tagsText: initialData.tags.join(", "),
         }
       : {},
@@ -83,9 +92,12 @@ export default function ArticleForm({ articleId, initialData }: ArticleFormProps
 
     const payload = {
       title: form.title,
+      title_th: form.title_th || null,
       slug: form.slug,
       excerpt: form.excerpt,
+      excerpt_th: form.excerpt_th || null,
       content: form.content,
+      content_th: form.content_th || null,
       coverImage: form.coverImage,
       published: form.published,
       tags,
@@ -120,15 +132,26 @@ export default function ArticleForm({ articleId, initialData }: ArticleFormProps
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Title */}
-      <div>
-        <label className="block text-sm font-medium text-stone-700 mb-1.5">ชื่อบทความ *</label>
-        <input
-          required
-          value={form.title}
-          onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-          placeholder="เช่น 5 วิธีดูแลสุนัขพันธุ์โกลเด้น"
-          className={inputCls}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium text-stone-700 mb-1.5">ชื่อบทความ EN / Default *</label>
+          <input
+            required
+            value={form.title}
+            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+            placeholder="e.g. 5 Ways to Care for Your Golden Retriever"
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-stone-700 mb-1.5">ชื่อบทความภาษาไทย (TH)</label>
+          <input
+            value={form.title_th}
+            onChange={(e) => setForm((f) => ({ ...f, title_th: e.target.value }))}
+            placeholder="เช่น 5 วิธีดูแลสุนัขพันธุ์โกลเด้น"
+            className={inputCls}
+          />
+        </div>
       </div>
 
       {/* Slug */}
@@ -149,15 +172,27 @@ export default function ArticleForm({ articleId, initialData }: ArticleFormProps
       </div>
 
       {/* Excerpt */}
-      <div>
-        <label className="block text-sm font-medium text-stone-700 mb-1.5">สรุปย่อ</label>
-        <textarea
-          rows={2}
-          value={form.excerpt}
-          onChange={(e) => setForm((f) => ({ ...f, excerpt: e.target.value }))}
-          placeholder="คำอธิบายสั้น ๆ แสดงในหน้ารายการบทความ..."
-          className={`${inputCls} resize-none`}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium text-stone-700 mb-1.5">สรุปย่อ EN / Default</label>
+          <textarea
+            rows={2}
+            value={form.excerpt}
+            onChange={(e) => setForm((f) => ({ ...f, excerpt: e.target.value }))}
+            placeholder="Short description shown in article list..."
+            className={`${inputCls} resize-none`}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-stone-700 mb-1.5">สรุปย่อภาษาไทย (TH)</label>
+          <textarea
+            rows={2}
+            value={form.excerpt_th}
+            onChange={(e) => setForm((f) => ({ ...f, excerpt_th: e.target.value }))}
+            placeholder="คำอธิบายสั้น ๆ แสดงในหน้ารายการบทความ..."
+            className={`${inputCls} resize-none`}
+          />
+        </div>
       </div>
 
       {/* Cover image */}
@@ -243,6 +278,18 @@ export default function ArticleForm({ articleId, initialData }: ArticleFormProps
           />
         )}
         <p className="text-xs text-stone-400 mt-1">รองรับ Markdown: # หัวข้อ, **ตัวหนา**, *ตัวเอียง*, - รายการ</p>
+      </div>
+
+      {/* Content TH */}
+      <div>
+        <label className="block text-sm font-medium text-stone-700 mb-1.5">เนื้อหาภาษาไทย (TH) — content_th (ไม่บังคับ)</label>
+        <textarea
+          rows={10}
+          value={form.content_th}
+          onChange={(e) => setForm((f) => ({ ...f, content_th: e.target.value }))}
+          placeholder={`# หัวข้อหลัก\n\nเนื้อหาภาษาไทย...`}
+          className={`${inputCls} resize-y font-mono text-xs leading-relaxed`}
+        />
       </div>
 
       {/* Published */}

@@ -26,7 +26,11 @@ export async function GET(request: NextRequest) {
   if (search) {
     where.OR = [
       { name: { contains: search, mode: "insensitive" } },
+      { name_th: { contains: search, mode: "insensitive" } },
+      { shortDescription: { contains: search, mode: "insensitive" } },
+      { shortDescription_th: { contains: search, mode: "insensitive" } },
       { description: { contains: search, mode: "insensitive" } },
+      { description_th: { contains: search, mode: "insensitive" } },
     ];
   }
   if (featured === "true") {

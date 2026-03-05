@@ -15,8 +15,15 @@ function isGroup(e: NavEntry): e is NavGroup {
 const navEntries: NavEntry[] = [
   { href: "/admin", label: "Dashboard", icon: "📊", exact: true },
   { href: "/admin/analytics", label: "Analytics", icon: "📈" },
-  { href: "/admin/products", label: "สินค้า", icon: "📦" },
-  { href: "/admin/shelves", label: "Product Shelves", icon: "🗂️" },
+  {
+    label: "สินค้า",
+    icon: "📦",
+    items: [
+      { href: "/admin/products", label: "สินค้าทั้งหมด", icon: "📦" },
+      { href: "/admin/variants", label: "Variants", icon: "🔀" },
+      { href: "/admin/shelves", label: "Product Shelves", icon: "🗂️" },
+    ],
+  },
   {
     label: "นำเข้าสินค้า",
     icon: "📥",

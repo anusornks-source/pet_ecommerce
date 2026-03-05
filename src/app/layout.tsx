@@ -6,8 +6,11 @@ import Footer from "@/components/Footer";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { WishlistProvider } from "@/context/WishlistContext";
+import { LocaleProvider } from "@/context/LocaleContext";
 import ChatAssistant from "@/components/ChatAssistant";
 import { getSettings } from "@/lib/settings";
+import { cookies } from "next/headers";
+import type { Lang } from "@/lib/translations";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSettings();
@@ -23,10 +26,14 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const settings = await getSettings();
+  const cookieStore = await cookies();
+  const langCookie = cookieStore.get("lang")?.value;
+  const initialLang: Lang = langCookie === "en" ? "en" : "th";
 
   return (
-    <html lang="th">
+    <html lang={initialLang}>
       <body className="antialiased">
+        <LocaleProvider initialLang={initialLang}>
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
@@ -53,6 +60,7 @@ export default async function RootLayout({
             </WishlistProvider>
           </CartProvider>
         </AuthProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

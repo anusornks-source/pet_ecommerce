@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import ProductCard from "@/components/ProductCard";
 import HeroSlider from "@/components/HeroSlider";
 import type { Product } from "@/types";
+import { pickLang, type Lang } from "@/lib/translations";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +57,9 @@ export default async function HomePage() {
     getActiveShelves(),
     getActiveBanners(),
   ]);
+  const cookieStore = await cookies();
+  const lang: Lang = cookieStore.get("lang")?.value === "en" ? "en" : "th";
+  const p = (th: string | null | undefined, en: string | null | undefined) => pickLang(th, en, lang);
 
   const PET_COLORS = [
     { bg: "bg-amber-50", border: "border-amber-200" },
@@ -74,7 +79,7 @@ export default async function HomePage() {
       {/* Pet Types */}
       {petTypes.length > 0 && (
         <section className="max-w-6xl mx-auto px-4 py-12">
-          <h2 className="text-2xl font-bold text-stone-800 mb-6">เลือกตามประเภทสัตว์เลี้ยง</h2>
+          <h2 className="text-2xl font-bold text-stone-800 mb-6">{p("เลือกตามประเภทสัตว์เลี้ยง", "Shop by Pet Type")}</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {petTypes.map((pt, i) => {
               const color = PET_COLORS[i % PET_COLORS.length];
@@ -85,7 +90,7 @@ export default async function HomePage() {
                   className={`${color.bg} ${color.border} border-2 rounded-2xl p-6 flex flex-col items-center gap-3 hover:scale-105 transition-transform cursor-pointer`}
                 >
                   <span className="text-5xl">{pt.icon}</span>
-                  <span className="font-semibold text-stone-700">{pt.name}</span>
+                  <span className="font-semibold text-stone-700">{p(pt.name_th, pt.name)}</span>
                 </Link>
               );
             })}
@@ -96,7 +101,7 @@ export default async function HomePage() {
       {/* Categories */}
       <section className="bg-stone-50 py-12">
         <div className="max-w-6xl mx-auto px-4">
-          <h2 className="text-2xl font-bold text-stone-800 mb-6">หมวดหมู่สินค้า</h2>
+          <h2 className="text-2xl font-bold text-stone-800 mb-6">{p("หมวดหมู่สินค้า", "Product Categories")}</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
             {categories.map((cat) => (
               <Link
@@ -105,9 +110,9 @@ export default async function HomePage() {
                 className="bg-white rounded-2xl p-4 text-center hover:bg-orange-50 hover:border-orange-200 border-2 border-transparent transition-all group"
               >
                 <div className="text-3xl mb-2">{cat.icon}</div>
-                <p className="text-sm font-medium text-stone-700 group-hover:text-orange-500">{cat.name}</p>
+                <p className="text-sm font-medium text-stone-700 group-hover:text-orange-500">{p((cat as {name_th?: string | null}).name_th, cat.name)}</p>
                 <p className="text-xs text-stone-400 mt-0.5">
-                  {(cat as { _count?: { products: number } })._count?.products || 0} รายการ
+                  {(cat as { _count?: { products: number } })._count?.products || 0} {p("รายการ", "items")}
                 </p>
               </Link>
             ))}
@@ -136,7 +141,7 @@ export default async function HomePage() {
                 href={`/products?shelf=${shelf.slug}`}
                 className="text-white/80 hover:text-white text-sm font-medium transition-colors"
               >
-                ดูทั้งหมด →
+                {p("ดูทั้งหมด", "View All")} →
               </Link>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -151,9 +156,9 @@ export default async function HomePage() {
       {/* Featured Products */}
       <section className="max-w-6xl mx-auto px-4 py-12">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-stone-800">สินค้าแนะนำ ⭐</h2>
+          <h2 className="text-2xl font-bold text-stone-800">{p("สินค้าแนะนำ ⭐", "Featured Products ⭐")}</h2>
           <Link href="/products?featured=true" className="text-orange-500 hover:text-orange-600 text-sm font-medium">
-            ดูทั้งหมด →
+            {p("ดูทั้งหมด", "View All")} →
           </Link>
         </div>
         {featuredProducts.length > 0 ? (
@@ -163,7 +168,7 @@ export default async function HomePage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 text-stone-400">ยังไม่มีสินค้าแนะนำ</div>
+          <div className="text-center py-12 text-stone-400">{p("ยังไม่มีสินค้าแนะนำ", "No featured products yet")}</div>
         )}
       </section>
 

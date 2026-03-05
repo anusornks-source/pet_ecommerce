@@ -28,15 +28,18 @@ export async function PUT(
 
   const { id } = await params;
   const body = await request.json();
-  const { title, slug, excerpt, content, coverImage, published, tags } = body;
+  const { title, title_th, slug, excerpt, excerpt_th, content, content_th, coverImage, published, tags } = body;
 
   const article = await prisma.article.update({
     where: { id },
     data: {
       ...(title !== undefined && { title }),
+      ...(title_th !== undefined && { title_th: title_th || null }),
       ...(slug !== undefined && { slug }),
       ...(excerpt !== undefined && { excerpt: excerpt || null }),
+      ...(excerpt_th !== undefined && { excerpt_th: excerpt_th || null }),
       ...(content !== undefined && { content }),
+      ...(content_th !== undefined && { content_th: content_th || null }),
       ...(coverImage !== undefined && { coverImage: coverImage || null }),
       ...(published !== undefined && { published }),
       ...(tags !== undefined && { tags: Array.isArray(tags) ? tags : [] }),

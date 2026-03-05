@@ -6,12 +6,13 @@ import toast from "react-hot-toast";
 interface PetType {
   id: string;
   name: string;
+  name_th: string | null;
   slug: string;
   icon: string | null;
   order: number;
 }
 
-const empty = { name: "", slug: "", icon: "", order: 0 };
+const empty = { name: "", name_th: "", slug: "", icon: "", order: 0 };
 
 export default function AdminPetTypesPage() {
   const [petTypes, setPetTypes] = useState<PetType[]>([]);
@@ -39,7 +40,7 @@ export default function AdminPetTypesPage() {
 
   const openEdit = (pt: PetType) => {
     setEditing(pt);
-    setForm({ name: pt.name, slug: pt.slug, icon: pt.icon || "", order: pt.order });
+    setForm({ name: pt.name, name_th: pt.name_th || "", slug: pt.slug, icon: pt.icon || "", order: pt.order });
     setShowForm(true);
   };
 
@@ -156,7 +157,7 @@ export default function AdminPetTypesPage() {
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-stone-600 mb-1">ชื่อ (ภาษาไทย)</label>
+                <label className="block text-xs font-medium text-stone-600 mb-1">ชื่อ EN / Default *</label>
                 <input
                   className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
                   value={form.name}
@@ -164,8 +165,17 @@ export default function AdminPetTypesPage() {
                     const name = e.target.value;
                     setForm((f) => ({ ...f, name, slug: editing ? f.slug : autoSlug(name) }));
                   }}
-                  placeholder="เช่น สุนัข"
+                  placeholder="e.g. Dog"
                   required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-stone-600 mb-1">ชื่อภาษาไทย (TH) — name_th</label>
+                <input
+                  className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+                  value={form.name_th}
+                  onChange={(e) => setForm((f) => ({ ...f, name_th: e.target.value }))}
+                  placeholder="เช่น สุนัข"
                 />
               </div>
               <div>

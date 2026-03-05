@@ -35,6 +35,7 @@ model User {
 model Category {
   id       String    @id @default(cuid())
   name     String    @unique
+  name_th  String?
   slug     String    @unique
   icon     String?
   products Product[]
@@ -44,7 +45,8 @@ model Category {
 
 model PetType {
   id       String    @id @default(cuid())
-  name     String    @unique  // Thai name e.g. "สุนัข"
+  name     String    @unique  // English name e.g. "Dog"
+  name_th  String?            // Thai name e.g. "สุนัข"
   slug     String    @unique  // "dog", "cat"
   icon     String?            // emoji e.g. "🐕"
   order    Int       @default(0)
@@ -56,8 +58,11 @@ model PetType {
 model Product {
   id                  String   @id @default(cuid())
   name                String
+  name_th             String?
   description         String
+  description_th      String?
   shortDescription    String?
+  shortDescription_th String?
   price               Float
   normalPrice         Float?
   stock       Int      @default(0)
@@ -317,19 +322,25 @@ model SiteSettings {
 }
 
 model HeroBanner {
-  id                String   @id @default(cuid())
-  imageUrl          String
-  badge             String?
-  title             String?
-  titleHighlight    String?
-  subtitle          String?
-  ctaLabel          String?
-  ctaUrl            String?
-  secondaryCtaLabel String?
-  secondaryCtaUrl   String?
-  order             Int      @default(0)
-  active            Boolean  @default(true)
-  createdAt         DateTime @default(now())
+  id                   String   @id @default(cuid())
+  imageUrl             String
+  badge                String?
+  badge_th             String?
+  title                String?
+  title_th             String?
+  titleHighlight       String?
+  titleHighlight_th    String?
+  subtitle             String?
+  subtitle_th          String?
+  ctaLabel             String?
+  ctaLabel_th          String?
+  ctaUrl               String?
+  secondaryCtaLabel    String?
+  secondaryCtaLabel_th String?
+  secondaryCtaUrl      String?
+  order                Int      @default(0)
+  active               Boolean  @default(true)
+  createdAt            DateTime @default(now())
 
   @@map("hero_banners")
 }
@@ -337,9 +348,12 @@ model HeroBanner {
 model Article {
   id         String   @id @default(cuid())
   title      String
+  title_th   String?
   slug       String   @unique
   excerpt    String?
+  excerpt_th String?
   content    String
+  content_th String?
   coverImage String?
   published  Boolean  @default(false)
   tags       String[]

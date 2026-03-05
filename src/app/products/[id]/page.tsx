@@ -11,6 +11,7 @@ import { formatPrice } from "@/lib/utils";
 import type { Product, ProductVariant, Review } from "@/types";
 import toast from "react-hot-toast";
 import ShareButtons from "@/components/ShareButtons";
+import { useLocale } from "@/context/LocaleContext";
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -18,6 +19,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const { user } = useAuth();
   const { addToCart } = useCart();
   const { isWishlisted, toggle: toggleWishlist } = useWishlist();
+  const { pick, t } = useLocale();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,7 +54,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   }, [id]);
 
   const handleSubmitReview = async () => {
-    if (!user) { toast.error("กรุณาเข้าสู่ระบบก่อน"); return; }
+    if (!user) { toast.error(pick("กรุณาเข้าสู่ระบบก่อน", "Please log in first")); return; }
     setSubmittingReview(true);
     try {
       const res = await fetch(`/api/products/${id}/reviews`, {
@@ -62,12 +64,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       });
       const data = await res.json();
       if (data.success) {
-        toast.success("รีวิวสำเร็จ!");
+        toast.success(pick("รีวิวสำเร็จ!", "Review submitted!"));
         setReviewComment("");
         setReviewRating(5);
         fetchReviews();
       } else {
-        toast.error(data.error || "เกิดข้อผิดพลาด");
+        toast.error(data.error || pick("เกิดข้อผิดพลาด", "Something went wrong"));
       }
     } finally {
       setSubmittingReview(false);
@@ -78,7 +80,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     const res = await fetch(`/api/reviews/${reviewId}`, { method: "DELETE" });
     const data = await res.json();
     if (data.success) {
-      toast.success("ลบรีวิวแล้ว");
+      toast.success(pick("ลบรีวิวแล้ว", "Review deleted"));
       fetchReviews();
     }
   };
@@ -89,13 +91,13 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   const handleAddToCart = async () => {
     if (!user) {
-      toast.error("กรุณาเข้าสู่ระบบก่อน");
+      toast.error(pick("กรุณาเข้าสู่ระบบก่อน", "Please log in first"));
       router.push("/login");
       return;
     }
     if (!product) return;
     if (hasVariants && !selectedVariant) {
-      toast.error("กรุณาเลือกตัวเลือกสินค้าก่อนนะคะ ☝️");
+      toast.error(pick("กรุณาเลือกตัวเลือกสินค้าก่อนนะคะ ☝️", "Please select an option first ☝️"));
       setVariantError(true);
       setTimeout(() => setVariantError(false), 2500);
       document.getElementById("variant-selector")?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -105,9 +107,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     setAdding(true);
     try {
       await addToCart(product.id, quantity, selectedVariant?.id ?? null);
-      toast.success(`เพิ่ม "${product.name}" ในตะกร้าแล้ว! 🛒`);
+      toast.success(`${pick("เพิ่ม", "Added")} "${pick(product.name_th, product.name)}" ${pick("ในตะกร้าแล้ว! 🛒", "to cart! 🛒")}`);
     } catch {
-      toast.error("เกิดข้อผิดพลาด");
+      toast.error(pick("เกิดข้อผิดพลาด", "Something went wrong"));
     } finally {
       setAdding(false);
     }
@@ -133,8 +135,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     return (
       <div className="max-w-6xl mx-auto px-4 py-20 text-center">
         <div className="text-6xl mb-4">😢</div>
-        <h2 className="text-2xl font-bold text-stone-700">ไม่พบสินค้า</h2>
-        <Link href="/products" className="mt-4 btn-primary inline-block">กลับไปดูสินค้า</Link>
+        <h2 className="text-2xl font-bold text-stone-700">{pick("ไม่พบสินค้า", "Product not found")}</h2>
+        <Link href="/products" className="mt-4 btn-primary inline-block">{pick("กลับไปดูสินค้า", "Browse Products")}</Link>
       </div>
     );
   }
@@ -155,15 +157,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-stone-400 mb-6">
-        <Link href="/" className="hover:text-orange-500">หน้าแรก</Link>
+        <Link href="/" className="hover:text-orange-500">{t("home", "nav")}</Link>
         <span>/</span>
-        <Link href="/products" className="hover:text-orange-500">สินค้า</Link>
+        <Link href="/products" className="hover:text-orange-500">{t("products", "nav")}</Link>
         <span>/</span>
         <Link href={`/products?category=${product.category.slug}`} className="hover:text-orange-500">
-          {product.category.name}
+          {pick((product.category as { name_th?: string | null }).name_th, product.category.name)}
         </Link>
         <span>/</span>
-        <span className="text-stone-600 truncate max-w-48">{product.name}</span>
+        <span className="text-stone-600 truncate max-w-48">{pick(product.name_th, product.name)}</span>
       </nav>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -243,9 +245,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           <div className="mt-6 pt-6 px-4 border-t border-stone-100 space-y-4">
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-stone-500">
               {[
-                { icon: "🚚", label: "จัดส่งทั่วไทย" },
-                { icon: "✅", label: "สินค้าคุณภาพ" },
-                { icon: "💬", label: "ดูแลหลังขาย" },
+                { icon: "🚚", label: pick("จัดส่งทั่วไทย", "Nationwide Shipping") },
+                { icon: "✅", label: pick("สินค้าคุณภาพ", "Quality Products") },
+                { icon: "💬", label: pick("ดูแลหลังขาย", "After Sales Support") },
               ].map((f) => (
                 <span key={f.label} className="flex items-center gap-1.5">
                   <span>{f.icon}</span>{f.label}
@@ -261,11 +263,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-sm text-orange-500 font-medium bg-orange-50 px-3 py-1 rounded-full">
-                {product.category.icon} {product.category.name}
+                {product.category.icon} {pick((product.category as { name_th?: string | null }).name_th, product.category.name)}
               </span>
               {product.petType && (
                 <span className="text-sm text-stone-500 bg-stone-50 px-3 py-1 rounded-full">
-                  {product.petType.icon} {product.petType.name}
+                  {product.petType.icon} {pick((product.petType as { name_th?: string | null }).name_th, product.petType.name)}
                 </span>
               )}
             </div>
@@ -285,7 +287,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               </div>
             )}
             <div className="flex items-start justify-between gap-3">
-              <h1 className="text-2xl md:text-3xl font-bold text-stone-800">{product.name}</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-stone-800">{pick(product.name_th, product.name)}</h1>
               {user && (
                 <button
                   onClick={() => toggleWishlist(product.id)}
@@ -316,13 +318,13 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               <>
                 <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />
                 <span className="text-sm text-green-600 font-medium">
-                  มีสินค้า {displayStock <= 5 ? `(เหลือ ${displayStock} ชิ้น)` : ""}
+                  {pick("มีสินค้า", "In Stock")} {displayStock <= 5 ? pick(`(เหลือ ${displayStock} ชิ้น)`, `(${displayStock} left)`) : ""}
                 </span>
               </>
             ) : (
               <>
                 <span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" />
-                <span className="text-sm text-red-500 font-medium">สินค้าหมด</span>
+                <span className="text-sm text-red-500 font-medium">{pick("สินค้าหมด", "Out of Stock")}</span>
               </>
             )}
           </div>
@@ -331,7 +333,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           {product.deliveryDays && (
             <div className="flex items-center gap-1.5 text-sm text-stone-500">
               <span>🚚</span>
-              <span>จัดส่งภายใน <span className="font-medium text-stone-700">{product.deliveryDays} วัน</span></span>
+              <span>{pick("จัดส่งภายใน", "Ships within")} <span className="font-medium text-stone-700">{product.deliveryDays} {pick("วัน", "days")}</span></span>
             </div>
           )}
 
@@ -339,7 +341,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           {hasVariants && (
             <div id="variant-selector" className={`transition-all duration-300 rounded-xl ${variantError ? "ring-2 ring-orange-400 ring-offset-2 p-3 bg-orange-50" : ""}`}>
               <label className="text-sm font-medium text-stone-700 block mb-2">
-                เลือกตัวเลือกสินค้า {!selectedVariant && <span className="text-orange-400">*</span>}
+                {pick("เลือกตัวเลือกสินค้า", "Select Option")} {!selectedVariant && <span className="text-orange-400">*</span>}
               </label>
               <div className="flex flex-wrap gap-2">
                 {product.variants!.map((v) => {
@@ -388,10 +390,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 </div>
               ) : variantError ? (
                 <p className="mt-2 text-sm text-orange-500 font-medium animate-pulse">
-                  ☝️ กรุณาเลือกตัวเลือกสินค้าก่อนเพิ่มในตะกร้า
+                  ☝️ {pick("กรุณาเลือกตัวเลือกสินค้าก่อนเพิ่มในตะกร้า", "Please select an option before adding to cart")}
                 </p>
               ) : (
-                <p className="mt-2 text-xs text-stone-400">กรุณาเลือกตัวเลือกสินค้า</p>
+                <p className="mt-2 text-xs text-stone-400">{pick("กรุณาเลือกตัวเลือกสินค้า", "Please select an option")}</p>
               )}
             </div>
           )}
@@ -400,7 +402,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           {displayStock > 0 && (
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-stone-600 block mb-2">จำนวน</label>
+                <label className="text-sm font-medium text-stone-600 block mb-2">{pick("จำนวน", "Quantity")}</label>
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -420,12 +422,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
               <button
                 onClick={() => {
-                  const msg = `แนะนำสินค้าที่คล้ายกับ "${product.name}" ในหมวด ${product.category.name}`;
+                  const msg = pick(
+                    `แนะนำสินค้าที่คล้ายกับ "${pick(product.name_th, product.name)}" ในหมวด ${pick((product.category as { name_th?: string | null }).name_th, product.category.name)}`,
+                    `Recommend products similar to "${pick(product.name_th, product.name)}" in category ${pick((product.category as { name_th?: string | null }).name_th, product.category.name)}`
+                  );
                   window.dispatchEvent(new CustomEvent("open-chat", { detail: { message: msg } }));
                 }}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-orange-200 text-orange-600 hover:bg-orange-50 transition-colors text-sm font-medium"
               >
-                ✨ ถาม AI หาสินค้าที่คล้ายกัน
+                ✨ {pick("ถาม AI หาสินค้าที่คล้ายกัน", "Ask AI for similar products")}
               </button>
 
               <div className="flex gap-3">
@@ -442,14 +447,14 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   ) : (
                     "🛒"
                   )}
-                  เพิ่มในตะกร้า
+                  {pick("เพิ่มในตะกร้า", "Add to Cart")}
                 </button>
                 <Link
                   href="/cart"
                   className="btn-outline py-4 px-6 flex items-center gap-2"
                   onClick={handleAddToCart}
                 >
-                  ซื้อเลย
+                  {pick("ซื้อเลย", "Buy Now")}
                 </Link>
               </div>
             </div>
@@ -459,15 +464,18 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       </div>
 
       {/* Description — full width below the grid */}
-      {product.description && (
-        <div className="mt-6 bg-white rounded-2xl border border-stone-100 p-6 md:p-8">
-          <h2 className="text-lg font-bold text-stone-800 mb-4 pb-3 border-b border-stone-100">รายละเอียดสินค้า</h2>
-          <div
-            className="text-stone-600 leading-relaxed [&_p]:mb-3 [&_b]:font-semibold [&_strong]:font-semibold [&_img]:max-w-full [&_img]:rounded-xl [&_img]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3 [&_li]:mb-1"
-            dangerouslySetInnerHTML={{ __html: product.description }}
-          />
-        </div>
-      )}
+      {(product.description || product.description_th) && (() => {
+        const displayDesc = pick(product.description_th, product.description);
+        return displayDesc ? (
+          <div className="mt-6 bg-white rounded-2xl border border-stone-100 p-6 md:p-8">
+            <h2 className="text-lg font-bold text-stone-800 mb-4 pb-3 border-b border-stone-100">{pick("รายละเอียดสินค้า", "Product Description")}</h2>
+            <div
+              className="text-stone-600 leading-relaxed [&_p]:mb-3 [&_b]:font-semibold [&_strong]:font-semibold [&_img]:max-w-full [&_img]:rounded-xl [&_img]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3 [&_li]:mb-1"
+              dangerouslySetInnerHTML={{ __html: displayDesc }}
+            />
+          </div>
+        ) : null;
+      })()}
 
       {/* Product Specs — derived from variant attributes */}
       {(() => {
@@ -481,12 +489,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           }
         });
         // Also add petType and category as basic specs
-        if (product.petType) specMap.set("เหมาะสำหรับ", new Set([product.petType.name]));
+        if (product.petType) specMap.set(pick("เหมาะสำหรับ", "Suitable for"), new Set([pick((product.petType as { name_th?: string | null }).name_th, product.petType.name)]));
         const specs = Array.from(specMap.entries());
         if (specs.length === 0) return null;
         return (
           <div className="mt-6 bg-white rounded-2xl border border-stone-100 p-6 md:p-8">
-            <h2 className="text-lg font-bold text-stone-800 mb-4 pb-3 border-b border-stone-100">ข้อมูลจำเพาะสินค้า</h2>
+            <h2 className="text-lg font-bold text-stone-800 mb-4 pb-3 border-b border-stone-100">{pick("ข้อมูลจำเพาะสินค้า", "Product Specifications")}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-0 text-sm divide-y divide-stone-50">
               {specs.map(([name, values]) => (
                 <div key={name} className="flex gap-3 py-2.5">
@@ -502,10 +510,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       {/* Reviews Section */}
       <div className="mt-12">
         <h2 className="text-2xl font-bold text-stone-800 mb-6">
-          รีวิวสินค้า
+          {pick("รีวิวสินค้า", "Product Reviews")}
           {reviews.length > 0 && (
             <span className="ml-3 text-base font-normal text-stone-500">
-              ({reviews.length} รีวิว •{" "}
+              ({reviews.length} {pick("รีวิว", "reviews")} •{" "}
               {(reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)} ⭐)
             </span>
           )}
@@ -514,9 +522,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         {/* Write Review */}
         {user ? (
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-100 mb-8">
-            <h3 className="font-semibold text-stone-800 mb-4">เขียนรีวิว</h3>
+            <h3 className="font-semibold text-stone-800 mb-4">{pick("เขียนรีวิว", "Write a Review")}</h3>
             <div className="mb-4">
-              <label className="text-sm text-stone-600 block mb-2">คะแนน</label>
+              <label className="text-sm text-stone-600 block mb-2">{pick("คะแนน", "Rating")}</label>
               <div className="flex gap-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
@@ -530,17 +538,20 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   </button>
                 ))}
                 <span className="ml-2 text-sm text-stone-500 self-center">
-                  {["", "แย่มาก", "แย่", "ปานกลาง", "ดี", "ดีมาก"][reviewRating]}
+                  {pick(
+                    ["", "แย่มาก", "แย่", "ปานกลาง", "ดี", "ดีมาก"][reviewRating],
+                    ["", "Very Bad", "Bad", "Okay", "Good", "Excellent"][reviewRating]
+                  )}
                 </span>
               </div>
             </div>
             <div className="mb-4">
-              <label className="text-sm text-stone-600 block mb-2">ความคิดเห็น (ไม่บังคับ)</label>
+              <label className="text-sm text-stone-600 block mb-2">{pick("ความคิดเห็น (ไม่บังคับ)", "Comment (optional)")}</label>
               <textarea
                 rows={3}
                 className="input w-full text-sm resize-none"
                 style={{ padding: "0.625rem 0.75rem" }}
-                placeholder="บอกเล่าประสบการณ์การใช้สินค้า..."
+                placeholder={pick("บอกเล่าประสบการณ์การใช้สินค้า...", "Share your experience with this product...")}
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}
               />
@@ -550,14 +561,14 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               disabled={submittingReview}
               className="btn-primary px-6 py-2.5 text-sm"
             >
-              {submittingReview ? "กำลังส่ง..." : "ส่งรีวิว"}
+              {submittingReview ? pick("กำลังส่ง...", "Submitting...") : pick("ส่งรีวิว", "Submit Review")}
             </button>
           </div>
         ) : (
           <div className="bg-orange-50 rounded-2xl p-5 mb-8 text-center">
             <p className="text-stone-600 text-sm">
-              <Link href="/login" className="text-orange-500 font-medium hover:underline">เข้าสู่ระบบ</Link>
-              {" "}เพื่อเขียนรีวิวสินค้า
+              <Link href="/login" className="text-orange-500 font-medium hover:underline">{pick("เข้าสู่ระบบ", "Log in")}</Link>
+              {" "}{pick("เพื่อเขียนรีวิวสินค้า", "to write a review")}
             </p>
           </div>
         )}
@@ -566,7 +577,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         {reviews.length === 0 ? (
           <div className="text-center py-12 text-stone-400">
             <div className="text-5xl mb-3">💬</div>
-            <p>ยังไม่มีรีวิว เป็นคนแรกที่รีวิวสินค้านี้!</p>
+            <p>{pick("ยังไม่มีรีวิว เป็นคนแรกที่รีวิวสินค้านี้!", "No reviews yet. Be the first to review this product!")}</p>
           </div>
         ) : (
           <div className="space-y-4">

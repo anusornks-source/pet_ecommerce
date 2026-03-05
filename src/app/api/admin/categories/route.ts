@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   if (isNextResponse(auth)) return auth;
 
   const body = await request.json();
-  const { name, slug, icon } = body;
+  const { name, name_th, slug, icon } = body;
 
   if (!name || !slug) {
     return NextResponse.json(
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   }
 
   const category = await prisma.category.create({
-    data: { name, slug, icon: icon || null },
+    data: { name, name_th: name_th || null, slug, icon: icon || null },
   });
 
   return NextResponse.json({ success: true, data: category }, { status: 201 });

@@ -261,7 +261,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         {/* Info */}
         <div className="space-y-5">
           <div>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
               <span className="text-sm text-orange-500 font-medium bg-orange-50 px-3 py-1 rounded-full">
                 {product.category.icon} {pick((product.category as { name_th?: string | null }).name_th, product.category.name)}
               </span>
@@ -270,22 +270,17 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   {product.petType.icon} {pick((product.petType as { name_th?: string | null }).name_th, product.petType.name)}
                 </span>
               )}
+              {product.tags && product.tags.map((tag) => (
+                <span
+                  key={tag.id}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                    ({ orange: "bg-orange-100 text-orange-700 border-orange-200", red: "bg-red-100 text-red-700 border-red-200", green: "bg-green-100 text-green-700 border-green-200", blue: "bg-blue-100 text-blue-700 border-blue-200", purple: "bg-purple-100 text-purple-700 border-purple-200", yellow: "bg-yellow-100 text-yellow-800 border-yellow-200" })[tag.color] ?? "bg-orange-100 text-orange-700 border-orange-200"
+                  }`}
+                >
+                  {tag.icon} {tag.name}
+                </span>
+              ))}
             </div>
-            {/* Tag badges */}
-            {product.tags && product.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2 mb-1">
-                {product.tags.map((tag) => (
-                  <span
-                    key={tag.id}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                      ({ orange: "bg-orange-100 text-orange-700 border-orange-200", red: "bg-red-100 text-red-700 border-red-200", green: "bg-green-100 text-green-700 border-green-200", blue: "bg-blue-100 text-blue-700 border-blue-200", purple: "bg-purple-100 text-purple-700 border-purple-200", yellow: "bg-yellow-100 text-yellow-800 border-yellow-200" })[tag.color] ?? "bg-orange-100 text-orange-700 border-orange-200"
-                    }`}
-                  >
-                    {tag.icon} {tag.name}
-                  </span>
-                ))}
-              </div>
-            )}
             <div className="flex items-start justify-between gap-3">
               <h1 className="text-2xl md:text-3xl font-bold text-stone-800">{pick(product.name_th, product.name)}</h1>
               {user && (
@@ -312,30 +307,38 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             )}
           </div>
 
-          {/* Stock */}
-          <div className="flex items-center gap-2">
-            {displayStock > 0 ? (
-              <>
-                <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />
-                <span className="text-sm text-green-600 font-medium">
-                  {pick("มีสินค้า", "In Stock")} {displayStock <= 5 ? pick(`(เหลือ ${displayStock} ชิ้น)`, `(${displayStock} left)`) : ""}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" />
-                <span className="text-sm text-red-500 font-medium">{pick("สินค้าหมด", "Out of Stock")}</span>
-              </>
+          {/* Short description */}
+          {(product.shortDescription || (product as { shortDescription_th?: string | null }).shortDescription_th) && (() => {
+            const displayShort = pick((product as { shortDescription_th?: string | null }).shortDescription_th, product.shortDescription);
+            return displayShort ? (
+              <p className="text-stone-500 text-sm leading-relaxed">{displayShort}</p>
+            ) : null;
+          })()}
+
+          {/* Stock + Delivery time */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <div className="flex items-center gap-2">
+              {displayStock > 0 ? (
+                <>
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />
+                  <span className="text-sm text-green-600 font-medium">
+                    {pick("มีสินค้า", "In Stock")} {displayStock <= 5 ? pick(`(เหลือ ${displayStock} ชิ้น)`, `(${displayStock} left)`) : ""}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" />
+                  <span className="text-sm text-red-500 font-medium">{pick("สินค้าหมด", "Out of Stock")}</span>
+                </>
+              )}
+            </div>
+            {product.deliveryDays && (
+              <div className="flex items-center gap-1.5 text-sm text-stone-500">
+                <span>🚚</span>
+                <span>{pick("จัดส่งภายใน", "Ships within")} <span className="font-medium text-stone-700">{product.deliveryDays} {pick("วัน", "days")}</span></span>
+              </div>
             )}
           </div>
-
-          {/* Delivery time */}
-          {product.deliveryDays && (
-            <div className="flex items-center gap-1.5 text-sm text-stone-500">
-              <span>🚚</span>
-              <span>{pick("จัดส่งภายใน", "Ships within")} <span className="font-medium text-stone-700">{product.deliveryDays} {pick("วัน", "days")}</span></span>
-            </div>
-          )}
 
           {/* Variant selector */}
           {hasVariants && (

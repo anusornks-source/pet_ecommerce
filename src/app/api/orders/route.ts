@@ -115,6 +115,7 @@ export async function POST(request: NextRequest) {
             productName: item.product.name,
             variantLabel: [item.variant?.size, item.variant?.color].filter(Boolean).join(" / ") || null,
             source: item.variant?.fulfillmentMethod ?? item.product.fulfillmentMethod ?? "SELF",
+            fulfillmentMethod: item.variant?.fulfillmentMethod ?? item.product.fulfillmentMethod ?? "SELF",
           })),
         },
       },

@@ -32,8 +32,9 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         user: { select: { name: true, email: true } },
-        items: { select: { id: true, quantity: true, productName: true, source: true, product: { select: { name: true, cjProductId: true } }, variant: { select: { cjVid: true } } } },
+        items: { select: { id: true, quantity: true, productName: true, source: true, fulfillmentMethod: true, product: { select: { name: true, cjProductId: true } }, variant: { select: { cjVid: true, fulfillmentMethod: true } } } },
         payment: { select: { method: true, status: true } },
+        cjApiLogs: { select: { id: true, action: true, success: true, error: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 5 },
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,

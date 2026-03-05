@@ -9,10 +9,22 @@ interface Order {
   status: string;
   total: number;
   createdAt: string;
+  phone: string;
+  address: string;
+  city: string | null;
+  province: string | null;
+  note: string | null;
   statusHistory: { status: string; timestamp: string }[] | null;
+  cjOrderId: string | null;
+  cjStatus: string | null;
+  trackingNumber: string | null;
+  trackingCarrier: string | null;
+  selfTrackingNumber: string | null;
+  selfTrackingCarrier: string | null;
   user: { name: string; email: string };
-  items: { id: string; quantity: number; productName: string | null; source: string | null; product: { name: string; cjProductId: string | null }; variant: { cjVid: string | null } | null }[];
+  items: { id: string; quantity: number; productName: string | null; source: string | null; fulfillmentMethod: string | null; product: { name: string; cjProductId: string | null }; variant: { cjVid: string | null; fulfillmentMethod: string | null } | null }[];
   payment: { method: string; status: string } | null;
+  cjApiLogs: { id: string; action: string; success: boolean; error: string | null; createdAt: string }[];
 }
 
 const statusConfig: Record<string, { label: string; icon: string; color: string }> = {
@@ -43,6 +55,7 @@ export default function AdminOrdersPage() {
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"simple" | "grouped" | "tracking">("grouped");
 
   const pageSize = 50;
   const totalPages = Math.ceil(total / pageSize);
@@ -118,6 +131,29 @@ export default function AdminOrdersPage() {
             </button>
           ))}
         </div>
+
+        <div className="w-px h-6 bg-stone-200 shrink-0" />
+
+        {/* View mode */}
+        <div className="flex gap-0.5 items-center shrink-0 bg-stone-100 rounded-lg p-0.5">
+          {([
+            { key: "simple",   label: "🛒 รายการ" },
+            { key: "grouped",  label: "📋 จัดกลุ่ม" },
+            { key: "tracking", label: "🚚 Tracking" },
+          ] as const).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setViewMode(key)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
+                viewMode === key
+                  ? "bg-white text-stone-800 shadow-sm"
+                  : "text-stone-500 hover:text-stone-700"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Row 2: Status + Payment */}
@@ -184,26 +220,125 @@ export default function AdminOrdersPage() {
             <tbody className="divide-y divide-stone-50">
               {orders.map((order) => (
                 <tr key={order.id} className="hover:bg-stone-50 transition-colors">
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-stone-800">{order.user.name}</p>
+                  <td className="px-4 py-3 min-w-36">
+                    <p className="font-medium text-stone-800 text-sm">{order.user.name}</p>
                     <p className="text-xs text-stone-400">{order.user.email}</p>
-                    <p className="text-[10px] font-mono text-stone-300 select-all">#{order.id.slice(-8)}</p>
+                    <p className="text-xs text-stone-500 mt-0.5">📞 {order.phone}</p>
+                    {order.province && <p className="text-xs text-stone-400">📍 {order.city ? `${order.city}, ` : ""}{order.province}</p>}
+                    {order.note && <p className="text-[10px] text-amber-600 mt-0.5 truncate max-w-36">📝 {order.note}</p>}
+                    <p className="text-[10px] font-mono text-stone-300 select-all mt-0.5">#{order.id.slice(-8)}</p>
                   </td>
-                  <td className="px-4 py-3 hidden sm:table-cell max-w-50">
-                    {order.items.slice(0, 2).map((item) => {
-                      const isCJ = item.source === "CJ" || !!(item.variant?.cjVid || item.product.cjProductId);
-                      const displayName = item.productName ?? item.product.name;
-                      return (
-                        <p key={item.id} className="text-xs text-stone-600 truncate flex items-center gap-1">
-                          {item.quantity > 1 && <span className="text-stone-400 shrink-0">{item.quantity}×</span>}
-                          {isCJ && <span className="shrink-0 text-[9px] font-bold bg-blue-100 text-blue-600 px-1 rounded">CJ</span>}
-                          <span className="truncate">{displayName}</span>
-                        </p>
+                  <td className="px-4 py-3 hidden sm:table-cell max-w-xs">
+                    {(() => {
+                      const classify = (item: Order["items"][0]) => {
+                        // Prefer snapshotted fulfillmentMethod, fallback to live variant, then source
+                        const fm = item.fulfillmentMethod ?? item.variant?.fulfillmentMethod ?? item.source;
+                        if (fm === "SUPPLIER") return "supplier" as const;
+                        if (fm === "CJ") return "cj" as const;
+                        // Legacy fallback: check CJ IDs if no explicit fm
+                        if (!item.fulfillmentMethod && fm !== "SELF" && !!(item.variant?.cjVid || item.product.cjProductId)) return "cj" as const;
+                        return "self" as const;
+                      };
+
+                      // --- SIMPLE MODE ---
+                      if (viewMode === "simple") {
+                        return (
+                          <div className="space-y-1">
+                            {order.items.slice(0, 4).map(item => {
+                              const type = classify(item);
+                              return (
+                                <div key={item.id} className="min-w-0">
+                                  <p className="text-xs text-stone-600 flex items-center gap-1 min-w-0">
+                                    <span className="text-stone-400 shrink-0">{item.quantity}×</span>
+                                    {type === "cj" && <span className="shrink-0 text-[9px] font-bold bg-blue-100 text-blue-600 px-1 rounded">CJ</span>}
+                                    {type === "self" && <span className="shrink-0 text-[9px] font-bold bg-orange-100 text-orange-600 px-1 rounded">✋</span>}
+                                    {type === "supplier" && <span className="shrink-0 text-[9px] font-bold bg-purple-100 text-purple-600 px-1 rounded">SUP</span>}
+                                    <span className="truncate min-w-0">{item.productName ?? item.product.name}</span>
+                                  </p>
+                                  <div className="flex gap-1.5 flex-wrap mt-0.5 pl-0.5">
+                                    {item.product.cjProductId && <span className="text-[9px] font-mono text-stone-400 select-all">P:{item.product.cjProductId.slice(-10)}</span>}
+                                    {item.variant?.cjVid && <span className="text-[9px] font-mono text-stone-400 select-all">V:{item.variant.cjVid.slice(-10)}</span>}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            {order.items.length > 4 && <p className="text-xs text-stone-400">+{order.items.length - 4} รายการ</p>}
+                          </div>
+                        );
+                      }
+
+                      const cjItems = order.items.filter(i => classify(i) === "cj");
+                      const selfItems = order.items.filter(i => classify(i) === "self");
+                      const supplierItems = order.items.filter(i => classify(i) === "supplier");
+                      const needsStatus = ["CONFIRMED", "SHIPPING", "DELIVERED"].includes(order.status);
+
+                      const showIds = viewMode === "grouped";
+                      const showTracking = viewMode === "tracking";
+
+                      const renderItem = (item: Order["items"][0], type: "cj" | "self" | "supplier") => (
+                        <div key={item.id} className="min-w-0">
+                          <p className="text-xs text-stone-600 flex items-center gap-1 min-w-0">
+                            <span className="text-stone-400 shrink-0">{item.quantity}×</span>
+                            {type === "cj" && <span className="shrink-0 text-[9px] font-bold bg-blue-100 text-blue-600 px-1 rounded">CJ</span>}
+                            {type === "self" && <span className="shrink-0 text-[9px] font-bold bg-orange-100 text-orange-600 px-1 rounded">✋</span>}
+                            {type === "supplier" && <span className="shrink-0 text-[9px] font-bold bg-purple-100 text-purple-600 px-1 rounded">SUP</span>}
+                            <span className="truncate min-w-0">{item.productName ?? item.product.name}</span>
+                          </p>
+                          {showIds && (
+                            <div className="flex gap-1.5 flex-wrap mt-0.5 pl-0.5">
+                              {item.product.cjProductId && <span className="text-[9px] font-mono text-stone-400 select-all">P:{item.product.cjProductId.slice(-10)}</span>}
+                              {item.variant?.cjVid && <span className="text-[9px] font-mono text-stone-400 select-all">V:{item.variant.cjVid.slice(-10)}</span>}
+                            </div>
+                          )}
+                        </div>
                       );
-                    })}
-                    {order.items.length > 2 && (
-                      <p className="text-xs text-stone-400">+{order.items.length - 2} รายการ</p>
-                    )}
+
+                      return (
+                        <div className="space-y-1.5">
+                          {/* CJ group */}
+                          {cjItems.length > 0 && (
+                            <div className="bg-blue-50/60 rounded-lg px-2 py-1.5 space-y-0.5">
+                              {cjItems.slice(0, 3).map(i => renderItem(i, "cj"))}
+                              {cjItems.length > 3 && <p className="text-[10px] text-stone-400">+{cjItems.length - 3} รายการ</p>}
+                              {/* tracking footer — only in tracking mode */}
+                              {showTracking && (order.cjOrderId ? (
+                                <div className="flex items-center gap-1.5 flex-wrap pt-0.5 border-t border-blue-100 mt-1">
+                                  <span className="text-[9px] font-mono text-blue-400 select-all">{order.cjOrderId.slice(-12)}</span>
+                                  {order.cjStatus && <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">{order.cjStatus}</span>}
+                                  {order.trackingNumber && <span className="text-[9px] font-mono text-blue-600">📦 {order.trackingCarrier ? `${order.trackingCarrier}: ` : ""}{order.trackingNumber}</span>}
+                                </div>
+                              ) : needsStatus && (
+                                <p className="text-[9px] text-amber-600 pt-0.5 border-t border-blue-100 mt-1">⚠ ยังไม่มี CJ order</p>
+                              ))}
+                              {showTracking && order.cjApiLogs.some(l => !l.success) && (
+                                <p className="text-[9px] text-red-500">⚠ {order.cjApiLogs.find(l => !l.success)?.error?.slice(0, 45)}</p>
+                              )}
+                            </div>
+                          )}
+                          {/* Self group */}
+                          {selfItems.length > 0 && (
+                            <div className="bg-orange-50/60 rounded-lg px-2 py-1.5 space-y-0.5">
+                              {selfItems.slice(0, 3).map(i => renderItem(i, "self"))}
+                              {selfItems.length > 3 && <p className="text-[10px] text-stone-400">+{selfItems.length - 3} รายการ</p>}
+                              {showTracking && (order.selfTrackingNumber || (!order.cjOrderId && order.trackingNumber)) && (
+                                <div className="pt-0.5 border-t border-orange-100 mt-1">
+                                  <p className="text-[9px] font-mono text-orange-600">
+                                    📦 {(() => { const trk = order.selfTrackingNumber ?? order.trackingNumber; const cr = order.selfTrackingCarrier ?? order.trackingCarrier; return cr ? `${cr}: ${trk}` : trk; })()}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {/* Supplier group */}
+                          {supplierItems.length > 0 && (
+                            <div className="bg-purple-50/60 rounded-lg px-2 py-1.5 space-y-0.5">
+                              {supplierItems.slice(0, 3).map(i => renderItem(i, "supplier"))}
+                              {supplierItems.length > 3 && <p className="text-[10px] text-stone-400">+{supplierItems.length - 3} รายการ</p>}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3 text-right font-semibold text-stone-800">
                     ฿{order.total.toLocaleString("th-TH")}

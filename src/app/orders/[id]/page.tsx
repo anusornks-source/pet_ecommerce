@@ -21,7 +21,7 @@ interface OrderItem {
   productName: string | null;
   variantLabel: string | null;
   product: { id: string; name: string; images: string[]; category: { icon: string } };
-  variant?: { size?: string | null; color?: string | null } | null;
+  variant?: { size?: string | null; color?: string | null; variantImage?: string | null } | null;
 }
 
 interface OrderDetail {
@@ -344,7 +344,7 @@ function OrderTrackingContent({ id }: { id: string }) {
         {order.items.map((item) => {
           const displayName = item.productName ?? item.product?.name ?? "";
           const displayVariant = item.variantLabel ?? (item.variant ? [item.variant.size, item.variant.color].filter(Boolean).join(" / ") : null);
-          const img = item.product?.images?.[0] || `https://placehold.co/80x80/fff7ed/f97316?text=${encodeURIComponent(displayName)}`;
+          const img = item.variant?.variantImage || item.product?.images?.[0] || `https://placehold.co/80x80/fff7ed/f97316?text=${encodeURIComponent(displayName)}`;
           return (
             <div key={item.id} className="flex items-center gap-3">
               <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-orange-50">

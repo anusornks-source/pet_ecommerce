@@ -78,6 +78,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState(false);
+  const [generatingFullDesc, setGeneratingFullDesc] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -314,10 +315,49 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
       <div>
         <div className="flex items-center justify-between mb-1.5">
           <label className="block text-sm font-medium text-stone-700">คำอธิบายเต็ม</label>
-          <button type="button" onClick={() => setDescPreview((v) => !v)}
-            className="text-xs text-stone-400 hover:text-orange-500 transition-colors">
-            {descPreview ? "✏️ แก้ไข" : "👁 ดูตัวอย่าง HTML"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={generatingFullDesc}
+              onClick={async () => {
+                setGeneratingFullDesc(true);
+                try {
+                  const res = await fetch("/api/admin/ai/generate-desc", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      name: form.name,
+                      description: form.sourceDescription || form.description,
+                    }),
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                    setForm((f) => ({ ...f, description: data.description }));
+                  } else {
+                    toast.error(data.error || "AI generation ไม่สำเร็จ");
+                  }
+                } catch {
+                  toast.error("เกิดข้อผิดพลาด");
+                } finally {
+                  setGeneratingFullDesc(false);
+                }
+              }}
+              className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 border border-violet-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            >
+              {generatingFullDesc ? (
+                <>
+                  <span className="inline-block w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
+                  กำลังสร้าง...
+                </>
+              ) : (
+                <>✨ AI สร้างให้</>
+              )}
+            </button>
+            <button type="button" onClick={() => setDescPreview((v) => !v)}
+              className="text-xs text-stone-400 hover:text-orange-500 transition-colors">
+              {descPreview ? "✏️ แก้ไข" : "👁 ดูตัวอย่าง HTML"}
+            </button>
+          </div>
         </div>
         {descPreview ? (
           <div

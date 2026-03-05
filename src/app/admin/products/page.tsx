@@ -74,6 +74,40 @@ export default function AdminProductsPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [filterTag, setFilterTag] = useState("");
+  const [editingCell, setEditingCell] = useState<{ productId: string; field: "category" | "petType" } | null>(null);
+  const [savingCell, setSavingCell] = useState<string | null>(null);
+
+  const handleInlineEdit = async (productId: string, field: "category" | "petType", value: string) => {
+    setSavingCell(productId + field);
+    const body = field === "category" ? { categoryId: value } : { petTypeId: value || null };
+    try {
+      const res = await fetch(`/api/admin/products/${productId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setProducts((prev) => prev.map((p) => {
+          if (p.id !== productId) return p;
+          if (field === "category") {
+            const cat = categories.find((c) => c.id === value);
+            return cat ? { ...p, category: cat } : p;
+          } else {
+            const pt = petTypes.find((t) => t.id === value) ?? null;
+            return { ...p, petType: pt, petTypeId: value || null };
+          }
+        }));
+      } else {
+        toast.error(data.error || "บันทึกไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("เกิดข้อผิดพลาด");
+    } finally {
+      setSavingCell(null);
+      setEditingCell(null);
+    }
+  };
 
   const pageSize = 50;
   const totalPages = Math.ceil(total / pageSize);
@@ -333,14 +367,47 @@ export default function AdminProductsPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-stone-500 hidden md:table-cell">
-                    {product.category.name}
-                  </td>
-                  <td className="px-4 py-3 text-stone-500 hidden lg:table-cell">
-                    {product.petType ? (
-                      <span>{product.petType.icon} {product.petType.name}</span>
+                  <td className="px-4 py-3 hidden md:table-cell">
+                    {editingCell?.productId === product.id && editingCell.field === "category" ? (
+                      <select
+                        autoFocus
+                        defaultValue={product.category.id}
+                        disabled={savingCell === product.id + "category"}
+                        onChange={(e) => handleInlineEdit(product.id, "category", e.target.value)}
+                        onBlur={() => setEditingCell(null)}
+                        className="text-xs border border-orange-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
+                      >
+                        {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
                     ) : (
-                      <span className="text-stone-300">—</span>
+                      <button
+                        onClick={() => setEditingCell({ productId: product.id, field: "category" })}
+                        className="text-sm text-stone-500 hover:text-orange-500 hover:underline text-left"
+                      >
+                        {product.category.name}
+                      </button>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell">
+                    {editingCell?.productId === product.id && editingCell.field === "petType" ? (
+                      <select
+                        autoFocus
+                        defaultValue={product.petTypeId ?? ""}
+                        disabled={savingCell === product.id + "petType"}
+                        onChange={(e) => handleInlineEdit(product.id, "petType", e.target.value)}
+                        onBlur={() => setEditingCell(null)}
+                        className="text-xs border border-orange-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
+                      >
+                        <option value="">— ไม่ระบุ —</option>
+                        {petTypes.map((t) => <option key={t.id} value={t.id}>{t.icon} {t.name}</option>)}
+                      </select>
+                    ) : (
+                      <button
+                        onClick={() => setEditingCell({ productId: product.id, field: "petType" })}
+                        className="text-sm text-stone-500 hover:text-orange-500 hover:underline text-left"
+                      >
+                        {product.petType ? `${product.petType.icon} ${product.petType.name}` : <span className="text-stone-300">—</span>}
+                      </button>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right font-medium text-stone-800">

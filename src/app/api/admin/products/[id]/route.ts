@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { FulfillmentMethod } from "@prisma/client";
 
 export async function GET(
   request: NextRequest,
@@ -49,6 +50,7 @@ export async function PUT(
     featured,
     deliveryDays,
     warehouseCountry,
+    fulfillmentMethod,
     variants,
     tagIds,
   } = body;
@@ -58,6 +60,7 @@ export async function PUT(
     sku?: string; cjVid?: string; variantImage?: string;
     attributes?: { name: string; value: string }[] | null;
     active?: boolean;
+    fulfillmentMethod?: string | null;
   };
 
   if (variants !== undefined) {
@@ -75,6 +78,7 @@ export async function PUT(
           variantImage: v.variantImage || null,
           attributes: v.attributes ?? null,
           active: v.active !== false,
+          fulfillmentMethod: (v.fulfillmentMethod as FulfillmentMethod | null) ?? null,
         })),
       });
     }
@@ -97,6 +101,7 @@ export async function PUT(
       ...(featured !== undefined && { featured: !!featured }),
       ...(deliveryDays !== undefined && { deliveryDays: parseInt(deliveryDays) }),
       ...(warehouseCountry !== undefined && { warehouseCountry: warehouseCountry || null }),
+      ...(fulfillmentMethod !== undefined && { fulfillmentMethod: fulfillmentMethod as FulfillmentMethod }),
       ...(tagIds !== undefined && { tags: { set: (tagIds as string[]).map((tid) => ({ id: tid })) } }),
     },
     include: { category: true, petType: true, variants: { orderBy: { createdAt: "asc" } }, tags: true },

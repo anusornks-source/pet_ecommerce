@@ -23,6 +23,7 @@ interface Product {
   createdAt: string;
   source: string | null;
   sourceData: object | null;
+  fulfillmentMethod: string;
   petTypeId: string | null;
   petType: { id: string; name: string; slug: string; icon: string | null } | null;
   category: { id: string; name: string };
@@ -74,7 +75,7 @@ export default function AdminProductsPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [filterTag, setFilterTag] = useState("");
-  const [editingCell, setEditingCell] = useState<{ productId: string; field: "category" | "petType" } | null>(null);
+  const [editingCell, setEditingCell] = useState<{ productId: string; field: "category" | "petType" | "tags" } | null>(null);
   const [savingCell, setSavingCell] = useState<string | null>(null);
 
   const handleInlineEdit = async (productId: string, field: "category" | "petType", value: string) => {
@@ -165,6 +166,46 @@ export default function AdminProductsPage() {
       toast.error(data.error || "เกิดข้อผิดพลาด");
     }
     setDeleting(null);
+  };
+
+  const handleToggleFeatured = async (product: Product) => {
+    const res = await fetch(`/api/admin/products/${product.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ featured: !product.featured }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, featured: !product.featured } : p))
+      );
+    } else {
+      toast.error(data.error || "เกิดข้อผิดพลาด");
+    }
+  };
+
+  const handleToggleTag = async (product: Product, tagId: string) => {
+    const currentIds = product.tags.map((t) => t.id);
+    const newIds = currentIds.includes(tagId)
+      ? currentIds.filter((id) => id !== tagId)
+      : [...currentIds, tagId];
+    const res = await fetch(`/api/admin/products/${product.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tagIds: newIds }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      setProducts((prev) =>
+        prev.map((p) => {
+          if (p.id !== product.id) return p;
+          const newTags = newIds.map((id) => tags.find((t) => t.id === id)!).filter(Boolean);
+          return { ...p, tags: newTags };
+        })
+      );
+    } else {
+      toast.error(data.error || "เกิดข้อผิดพลาด");
+    }
   };
 
   const handleToggleActive = async (product: Product) => {
@@ -351,8 +392,11 @@ export default function AdminProductsPage() {
                         <span className="font-medium text-stone-800 line-clamp-1">
                           {product.name}
                         </span>
-                        {product.tags && product.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-0.5">
+                        <div className="relative mt-0.5">
+                          <div
+                            className="flex flex-wrap gap-1 cursor-pointer"
+                            onClick={() => setEditingCell({ productId: product.id, field: "tags" })}
+                          >
                             {product.tags.map((tag) => (
                               <span
                                 key={tag.id}
@@ -362,8 +406,42 @@ export default function AdminProductsPage() {
                                 {tag.name}
                               </span>
                             ))}
+                            <span className="inline-flex items-center text-[10px] px-1 py-0.5 rounded-full text-stone-300 hover:text-orange-400 hover:bg-orange-50">
+                              + tag
+                            </span>
                           </div>
-                        )}
+                          {editingCell?.productId === product.id && editingCell.field === "tags" && (
+                            <div
+                              className="absolute left-0 top-full mt-1 z-20 bg-white border border-stone-200 rounded-xl shadow-lg p-2 min-w-40"
+                              onMouseDown={(e) => e.preventDefault()}
+                            >
+                              {tags.length === 0 ? (
+                                <p className="text-xs text-stone-400 px-1">ไม่มี tag</p>
+                              ) : tags.map((tag) => {
+                                const active = product.tags.some((t) => t.id === tag.id);
+                                return (
+                                  <button
+                                    key={tag.id}
+                                    type="button"
+                                    onClick={() => handleToggleTag(product, tag.id)}
+                                    className={`flex items-center gap-1.5 w-full text-left px-2 py-1 rounded-lg text-xs transition-colors ${active ? "bg-orange-50 text-orange-700 font-medium" : "hover:bg-stone-50 text-stone-600"}`}
+                                  >
+                                    <span className={`w-2 h-2 rounded-full ${active ? "bg-orange-400" : "bg-stone-200"}`} />
+                                    {tag.icon && <span>{tag.icon}</span>}
+                                    {tag.name}
+                                  </button>
+                                );
+                              })}
+                              <button
+                                type="button"
+                                onClick={() => setEditingCell(null)}
+                                className="mt-1 w-full text-center text-[10px] text-stone-400 hover:text-stone-600"
+                              >
+                                ปิด
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -417,23 +495,31 @@ export default function AdminProductsPage() {
                     {product.stock}
                   </td>
                   <td className="px-4 py-3 text-center hidden lg:table-cell">
-                    {product.featured ? (
-                      <span className="text-orange-500">⭐</span>
-                    ) : (
-                      <span className="text-stone-200">—</span>
-                    )}
+                    <button
+                      onClick={() => handleToggleFeatured(product)}
+                      title={product.featured ? "ยกเลิกแนะนำ" : "ตั้งเป็นแนะนำ"}
+                      className="hover:scale-125 transition-transform"
+                    >
+                      {product.featured ? (
+                        <span className="text-orange-400 text-base leading-none">★</span>
+                      ) : (
+                        <span className="text-stone-300 hover:text-orange-300 text-base leading-none">☆</span>
+                      )}
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-center hidden lg:table-cell">
-                    {product.source === "CJ" ? (
-                      <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-600">CJ</span>
-                    ) : (
-                      <div className="flex flex-col items-center gap-0.5">
-                        <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-500">Our Product</span>
-                        {product.sourceData && (
-                          <span className="text-[9px] text-blue-400">เคย CJ</span>
-                        )}
-                      </div>
-                    )}
+                    <div className="flex flex-col items-center gap-0.5">
+                      {product.fulfillmentMethod === "CJ" ? (
+                        <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-600">CJ</span>
+                      ) : product.fulfillmentMethod === "SUPPLIER" ? (
+                        <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-600">Supplier</span>
+                      ) : (
+                        <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-500">ส่งเอง</span>
+                      )}
+                      {product.sourceData && product.fulfillmentMethod !== "CJ" && (
+                        <span className="text-[9px] text-blue-400">เคย CJ</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-center text-stone-400 text-xs hidden xl:table-cell whitespace-nowrap">
                     {formatDate(product.createdAt)}

@@ -33,6 +33,12 @@ const TAG_COLORS: Record<string, string> = {
   yellow: "bg-yellow-100 text-yellow-800 border-yellow-200",
 };
 
+const FULFILLMENT_LABELS: Record<string, string> = {
+  SELF: "ส่งเอง",
+  CJ: "CJ Dropship",
+  SUPPLIER: "Supplier",
+};
+
 interface VariantRow {
   id?: string;
   size: string;
@@ -45,6 +51,7 @@ interface VariantRow {
   variantImage: string;
   attributes?: { name: string; value: string }[] | null;
   active: boolean;
+  fulfillmentMethod?: string | null;
 }
 
 interface ProductFormProps {
@@ -64,6 +71,7 @@ interface ProductFormProps {
     featured: boolean;
     deliveryDays?: string;
     warehouseCountry?: string;
+    fulfillmentMethod?: string;
     variants?: VariantRow[];
     tagIds?: string[];
   };
@@ -95,6 +103,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
     featured: false,
     deliveryDays: "2",
     warehouseCountry: "",
+    fulfillmentMethod: "SELF",
     ...initialData,
   });
   const [showSourceDesc, setShowSourceDesc] = useState(false); // always collapsed by default
@@ -382,9 +391,21 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
         {field("จำนวนสต็อก", "stock", { required: true, type: "number", min: "0", placeholder: "0" })}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         {field("ระยะเวลาจัดส่ง (วัน)", "deliveryDays", { type: "number", min: "1", placeholder: "2" })}
         {field("คลังสินค้า (admin)", "warehouseCountry", { placeholder: "CN, US, ฯลฯ" })}
+        <div>
+          <label className="block text-sm font-medium text-stone-700 mb-1.5">วิธีจัดส่ง</label>
+          <select
+            value={form.fulfillmentMethod}
+            onChange={(e) => setForm((f) => ({ ...f, fulfillmentMethod: e.target.value }))}
+            className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
+          >
+            <option value="SELF">ส่งเอง</option>
+            <option value="CJ">CJ Dropship</option>
+            <option value="SUPPLIER">Supplier</option>
+          </select>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -511,15 +532,15 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
         {variants.length > 0 && (
           <div className="space-y-3">
             {/* Header */}
-            <div className="grid grid-cols-[70px_70px_80px_60px_80px_100px_54px_44px_32px] gap-2 text-xs text-stone-400 px-1">
-              <span>ขนาด</span><span>สี</span><span>ราคา (฿)</span><span>สต็อก</span><span>SKU</span><span>CJ VID</span><span>CJ Stock</span><span>แสดง</span><span />
+            <div className="grid grid-cols-[70px_70px_80px_60px_80px_100px_54px_80px_44px_32px] gap-2 text-xs text-stone-400 px-1">
+              <span>ขนาด</span><span>สี</span><span>ราคา (฿)</span><span>สต็อก</span><span>SKU</span><span>CJ VID</span><span>CJ Stock</span><span>ส่ง</span><span>แสดง</span><span />
             </div>
             {variants.map((v, idx) => {
               const isValidImg = (() => { try { new URL(v.variantImage ?? ""); return true; } catch { return false; } })();
               return (
                 <div key={idx} className={`space-y-1.5 ${!v.active ? "opacity-50" : ""}`}>
                   {/* Main row */}
-                  <div className="grid grid-cols-[70px_70px_80px_60px_80px_100px_54px_44px_32px] gap-2 items-center">
+                  <div className="grid grid-cols-[70px_70px_80px_60px_80px_100px_54px_80px_44px_32px] gap-2 items-center">
                     <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
                       placeholder="S/M/L" value={v.size} onChange={(e) => updateVariant(idx, "size", e.target.value)} />
                     <input className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-orange-200"
@@ -535,6 +556,17 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
                     <div className="text-xs text-center text-stone-400 tabular-nums">
                       {v.cjStock != null ? v.cjStock.toLocaleString() : "—"}
                     </div>
+                    <select
+                      value={v.fulfillmentMethod ?? ""}
+                      onChange={(e) => updateVariant(idx, "fulfillmentMethod", e.target.value || null as unknown as string)}
+                      className="border border-stone-200 rounded-lg px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-orange-200 bg-white w-full"
+                      title="วิธีจัดส่ง variant นี้"
+                    >
+                      <option value="">ตาม Product ({FULFILLMENT_LABELS[form.fulfillmentMethod] ?? form.fulfillmentMethod})</option>
+                      <option value="SELF">ส่งเอง</option>
+                      <option value="CJ">CJ</option>
+                      <option value="SUPPLIER">Supplier</option>
+                    </select>
                     <button
                       type="button"
                       onClick={() => setVariants((vs) => vs.map((row, i) => i === idx ? { ...row, active: !row.active } : row))}

@@ -18,6 +18,7 @@ interface ProductVariant {
   variantImage: string | null;
   attributes: { name: string; value: string }[] | null;
   active: boolean;
+  fulfillmentMethod: string | null;
 }
 
 interface Product {
@@ -40,6 +41,7 @@ interface Product {
   tags: { id: string }[];
   source: string | null;
   sourceData: object | null;
+  fulfillmentMethod: string;
 }
 
 export default function EditProductPage({
@@ -203,6 +205,7 @@ export default function EditProductPage({
             featured: product.featured,
             deliveryDays: product.deliveryDays.toString(),
             warehouseCountry: product.warehouseCountry ?? "",
+            fulfillmentMethod: product.fulfillmentMethod ?? "SELF",
             variants: product.variants.map((v) => ({
               id: v.id,
               size: v.size ?? "",
@@ -215,6 +218,7 @@ export default function EditProductPage({
               variantImage: v.variantImage ?? "",
               attributes: v.attributes ?? null,
               active: v.active,
+              fulfillmentMethod: v.fulfillmentMethod ?? null,
             })),
             tagIds: product.tags.map((t) => t.id),
           }}

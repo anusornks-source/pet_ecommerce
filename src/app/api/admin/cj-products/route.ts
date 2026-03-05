@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
+import { Prisma, FulfillmentMethod } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 import { searchCJProducts, getCJProductDetail, getCJProductDetailBySku, getCJInventory } from "@/lib/cjDropshipping";
@@ -176,6 +176,7 @@ export async function POST(request: NextRequest) {
         cjVid: v.vid,
         variantImage: v.variantImage ?? null,
         attributes: attributes ?? Prisma.JsonNull,
+        fulfillmentMethod: FulfillmentMethod.CJ,
         costUSD,
       };
     });
@@ -204,6 +205,7 @@ export async function POST(request: NextRequest) {
         cjProductId: detail.pid,
         costPrice: costPriceUSD,
         source: "CJ",
+        fulfillmentMethod: FulfillmentMethod.CJ,
         sourceData: detail as object,
         ...(deliveryDays !== undefined && { deliveryDays: Number(deliveryDays) }),
         ...(warehouseCountry && { warehouseCountry: String(warehouseCountry) }),

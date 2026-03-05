@@ -69,6 +69,7 @@ model Product {
   cjProductId         String?
   costPrice           Float?
   source              String?
+  fulfillmentMethod   FulfillmentMethod   @default(SELF)
   sourceDescription   String?   // original CJ description (HTML) — for admin reference
   sourceData          Json?
   deliveryDays        Int       @default(2)
@@ -98,10 +99,11 @@ model ProductVariant {
   stock     Int      @default(0)
   cjStock   Int?
   sku       String?
-  cjVid        String?
-  variantImage String?  // per-variant image URL (from CJ or manual)
-  attributes   Json?    // flexible attributes [{name, value}] e.g. flavor, material, weight
-  active       Boolean  @default(true)
+  cjVid             String?
+  variantImage      String?  // per-variant image URL (from CJ or manual)
+  attributes        Json?    // flexible attributes [{name, value}] e.g. flavor, material, weight
+  active            Boolean  @default(true)
+  fulfillmentMethod FulfillmentMethod?  // null = inherit from Product
   createdAt    DateTime @default(now())
 
   product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -248,6 +250,12 @@ model Payment {
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@map("payments")
+}
+
+enum FulfillmentMethod {
+  SELF
+  CJ
+  SUPPLIER
 }
 
 enum Role {

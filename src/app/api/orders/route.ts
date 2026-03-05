@@ -92,17 +92,6 @@ export async function POST(request: NextRequest) {
   const displayStockMin = siteSettings?.displayStockMin ?? 50;
   const displayStockMax = siteSettings?.displayStockMax ?? 100;
 
-  // Find which variant IDs in cart are CJ dropshipping (have cjVid) — only these get auto-reset
-  const cartVariantIds = cart.items.filter((i) => i.variantId).map((i) => i.variantId!);
-  const cjVariantIds = cartVariantIds.length > 0
-    ? new Set(
-        (await prisma.productVariant.findMany({
-          where: { id: { in: cartVariantIds }, cjVid: { not: null } },
-          select: { id: true },
-        })).map((v) => v.id)
-      )
-    : new Set<string>();
-
   // Create order + payment in transaction
   const order = await prisma.$transaction(async (tx) => {
     const newOrder = await tx.order.create({
@@ -125,7 +114,7 @@ export async function POST(request: NextRequest) {
             price: item.variant?.price ?? item.product.price,
             productName: item.product.name,
             variantLabel: [item.variant?.size, item.variant?.color].filter(Boolean).join(" / ") || null,
-            source: (item.variant?.cjVid || item.product.cjProductId) ? "CJ" : null,
+            source: item.variant?.fulfillmentMethod ?? item.product.fulfillmentMethod ?? "SELF",
           })),
         },
       },
@@ -151,8 +140,9 @@ export async function POST(request: NextRequest) {
           where: { id: item.variantId },
           data: { stock: { decrement: item.quantity } },
         });
-        // Auto-reset display stock only for CJ dropshipping variants (not own products)
-        if (cjVariantIds.has(item.variantId) && updated.stock <= 0) {
+        // Auto-reset display stock only for CJ dropshipping variants (not own stock)
+        const effectiveMethod = item.variant?.fulfillmentMethod ?? item.product.fulfillmentMethod;
+        if (effectiveMethod === "CJ" && updated.stock <= 0) {
           const newStock = Math.floor(Math.random() * (displayStockMax - displayStockMin + 1)) + displayStockMin;
           await tx.productVariant.update({
             where: { id: item.variantId },

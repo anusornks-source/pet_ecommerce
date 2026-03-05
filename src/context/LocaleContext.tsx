@@ -36,6 +36,10 @@ export function LocaleProvider({ children, initialLang = "th" }: { children: Rea
   useEffect(() => {
     const cookieLang = getCookieLang();
     setLangState(cookieLang);
+    // Persist default "th" cookie if none exists yet
+    if (!document.cookie.match(new RegExp(`(?:^|; )${COOKIE_NAME}=`))) {
+      setCookieLang("th");
+    }
   }, []);
 
   const setLang = useCallback((l: Lang) => {

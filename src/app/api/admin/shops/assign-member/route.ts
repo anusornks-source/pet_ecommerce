@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { verifyToken } from "@/lib/auth";
 
 /**
  * POST /api/admin/shops/assign-member
@@ -59,11 +60,15 @@ export async function POST(request: NextRequest) {
 
 /**
  * GET /api/admin/shops/assign-member?email=xxx
- * Lookup user's current shop assignments (for preview before assigning)
+ * Lookup user by email/name for preview. Accessible to any shop admin (not just platform ADMIN).
  */
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const token = request.cookies.get("token")?.value;
+  if (!token) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  const payload = await verifyToken(token);
+  if (!payload) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  const hasAccess = payload.role === "ADMIN" || (payload.shopRoles && Object.keys(payload.shopRoles).length > 0);
+  if (!hasAccess) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("email") ?? searchParams.get("q") ?? "";

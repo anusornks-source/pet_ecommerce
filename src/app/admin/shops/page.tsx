@@ -20,6 +20,9 @@ export default function ShopsPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", name_th: "", slug: "", description: "", usePetType: false});
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [filterActive, setFilterActive] = useState<"" | "true" | "false">("");
+  const [filterPetType, setFilterPetType] = useState<"" | "true" | "false">("");
 
   const fetchShops = () => {
     fetch("/api/admin/shops")
@@ -58,6 +61,14 @@ export default function ShopsPage() {
     fetchShops();
   };
 
+  const filteredShops = shops.filter((s) => {
+    const q = search.toLowerCase();
+    if (q && !s.name.toLowerCase().includes(q) && !(s.name_th ?? "").toLowerCase().includes(q) && !s.slug.includes(q)) return false;
+    if (filterActive && String(s.active) !== filterActive) return false;
+    if (filterPetType && String(s.usePetType) !== filterPetType) return false;
+    return true;
+  });
+
   if (loading) return <div className="animate-pulse space-y-4"><div className="h-8 bg-stone-100 rounded w-48" /><div className="h-40 bg-stone-100 rounded-2xl" /></div>;
 
   return (
@@ -70,6 +81,35 @@ export default function ShopsPage() {
         >
           + New Shop
         </button>
+      </div>
+
+      {/* Search + Filter */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="ค้นหาร้าน..."
+          className="flex-1 min-w-48 border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+        />
+        <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as "" | "true" | "false")}
+          className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white">
+          <option value="">สถานะ: ทั้งหมด</option>
+          <option value="true">Active</option>
+          <option value="false">Inactive</option>
+        </select>
+        <select value={filterPetType} onChange={(e) => setFilterPetType(e.target.value as "" | "true" | "false")}
+          className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white">
+          <option value="">Pet Type: ทั้งหมด</option>
+          <option value="true">ใช้ Pet Type</option>
+          <option value="false">ไม่ใช้</option>
+        </select>
+        {(search || filterActive || filterPetType) && (
+          <button onClick={() => { setSearch(""); setFilterActive(""); setFilterPetType(""); }}
+            className="text-xs px-3 py-2 rounded-xl border border-stone-200 text-stone-500 hover:bg-stone-50">
+            ล้าง
+          </button>
+        )}
       </div>
 
       {showForm && (
@@ -106,8 +146,11 @@ export default function ShopsPage() {
         </div>
       )}
 
+      {filteredShops.length === 0 && (
+        <div className="text-center py-16 text-stone-400 text-sm">ไม่พบร้านที่ตรงกับเงื่อนไข</div>
+      )}
       <div className="grid gap-4">
-        {shops.map((shop) => (
+        {filteredShops.map((shop) => (
           <div key={shop.id} className="bg-white rounded-2xl border border-stone-100 p-5 flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center text-2xl shrink-0">
               {shop.logoUrl ? (
@@ -123,6 +166,9 @@ export default function ShopsPage() {
                 <span className={`text-xs px-2 py-0.5 rounded-full ${shop.active ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
                   {shop.active ? "Active" : "Inactive"}
                 </span>
+                {shop.usePetType && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-600">🐾 Pet Type</span>
+                )}
               </div>
               <p className="text-sm text-stone-500">/{shop.slug}</p>
               <div className="flex gap-4 mt-1 text-xs text-stone-400">

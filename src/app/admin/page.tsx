@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useShopAdmin } from "@/context/ShopAdminContext";
 import { PAYMENT_METHOD_LABEL } from "@/lib/utils";
 
 interface RecentOrder {
@@ -45,17 +46,21 @@ const paymentStatusConfig: Record<string, { label: string; icon: string; color: 
 };
 
 export default function AdminDashboard() {
+  const { activeShop, shops, isAdmin } = useShopAdmin();
+  const [shopFilter, setShopFilter] = useState<string>("");
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetch("/api/admin/stats")
+  const fetchStats = useCallback(() => {
+    setLoading(true);
+    const url = shopFilter ? `/api/admin/stats?shopId=${shopFilter}` : "/api/admin/stats";
+    fetch(url)
       .then((r) => r.json())
-      .then((d) => {
-        if (d.success) setStats(d.data);
-      })
+      .then((d) => { if (d.success) setStats(d.data); })
       .finally(() => setLoading(false));
-  }, []);
+  }, [shopFilter]);
+
+  useEffect(() => { fetchStats(); }, [fetchStats]);
 
   const statCards = [
     {
@@ -102,8 +107,21 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-2xl font-bold text-stone-800">Dashboard</h1>
+        {(isAdmin || shops.length > 1) ? (
+          <select
+            value={shopFilter}
+            onChange={(e) => setShopFilter(e.target.value)}
+            className="text-xs border border-stone-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-200 bg-white text-stone-600"
+          >
+            <option value="">ร้าน: {activeShop?.name ?? "..."}</option>
+            {isAdmin && <option value="all">ทั้งหมด (ทุกร้าน)</option>}
+            {shops.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        ) : activeShop ? (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 font-medium">ร้าน: {activeShop.name}</span>
+        ) : null}
       </div>
 
       {/* Revenue Banner */}

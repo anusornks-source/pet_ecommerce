@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { useShopAdmin } from "@/context/ShopAdminContext";
 
 interface CJItem {
   pid: string;
@@ -39,6 +40,29 @@ interface Category { id: string; name: string; icon: string | null }
 interface PetType { id: string; name: string; slug: string; icon: string | null }
 
 export default function CJImportPage() {
+  const { activeShop, shops } = useShopAdmin();
+  const [selectedShopId, setSelectedShopId] = useState<string>("");
+  const selectedShop = shops.find((s) => s.id === selectedShopId) ?? activeShop;
+
+  // Set default shop once loaded
+  useEffect(() => {
+    if (activeShop && !selectedShopId) setSelectedShopId(activeShop.id);
+  }, [activeShop, selectedShopId]);
+
+  // Reload categories when shop changes
+  useEffect(() => {
+    if (!selectedShopId) return;
+    setCategories([]);
+    fetch(`/api/admin/shops/${selectedShopId}/categories`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) {
+          const enabled = d.data.filter((c: { enabled: boolean }) => c.enabled);
+          setCategories(enabled.length > 0 ? enabled : d.data);
+        }
+      });
+  }, [selectedShopId]);
+
   const [keyword, setKeyword] = useState("");
   const [searchMode, setSearchMode] = useState<"name" | "pid" | "sku">("name");
   const [searching, setSearching] = useState(false);
@@ -137,9 +161,8 @@ export default function CJImportPage() {
     if (!keyword.trim()) return;
     setSearching(true);
     setResults([]);
-    // Fetch categories/pet types once
-    if (categories.length === 0) {
-      fetch("/api/admin/categories").then((r) => r.json()).then((d) => { if (d.success) setCategories(d.data); });
+    // Fetch pet types once
+    if (petTypes.length === 0) {
       fetch("/api/admin/pet-types").then((r) => r.json()).then((d) => { if (d.success) setPetTypes(d.data); });
     }
     try {
@@ -200,7 +223,8 @@ export default function CJImportPage() {
     }
 
     try {
-      const res = await fetch("/api/admin/cj-products", {
+      const importShopId = selectedShopId || activeShop?.id;
+      const res = await fetch(`/api/admin/cj-products${importShopId ? `?shopId=${importShopId}` : ""}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -232,6 +256,21 @@ export default function CJImportPage() {
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-stone-800">นำเข้าสินค้าจาก CJ</h1>
+          {shops.length > 1 && (
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs text-stone-500">นำเข้าไปยัง:</span>
+              <select
+                value={selectedShopId}
+                onChange={(e) => setSelectedShopId(e.target.value)}
+                className="text-xs border border-stone-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-200 bg-white text-stone-700 font-medium"
+              >
+                {shops.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+          )}
+          {shops.length === 1 && activeShop && (
+            <p className="text-xs text-stone-400 mt-0.5">ร้าน: <span className="text-orange-500 font-medium">{activeShop.name}</span></p>
+          )}
         </div>
 
         {/* Price settings — compact popover */}
@@ -587,24 +626,29 @@ export default function CJImportPage() {
                       })()}
 
                       <div>
-                        <label className="block text-xs text-stone-500 mb-1">หมวดหมู่</label>
+                        <label className="block text-xs text-stone-500 mb-1">
+                          หมวดหมู่{selectedShop?.name ? <span className="text-orange-500 ml-1">({selectedShop.name})</span> : ""}
+                        </label>
                         <select value={form.categoryId}
                           onChange={(e) => setImportForm((f) => ({ ...f, [item.pid]: { ...form, categoryId: e.target.value } }))}
                           className="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-300">
+                          <option value="">— เลือกหมวดหมู่ —</option>
                           {categories.map((c) => (
-                            <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                            <option key={c.id} value={c.id}>{(c as { icon?: string | null }).icon} {c.name}</option>
                           ))}
                         </select>
                       </div>
-                      <div>
-                        <label className="block text-xs text-stone-500 mb-1">ประเภทสัตว์</label>
-                        <select value={form.petTypeId}
-                          onChange={(e) => setImportForm((f) => ({ ...f, [item.pid]: { ...form, petTypeId: e.target.value } }))}
-                          className="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-300">
-                          <option value="">ไม่ระบุ</option>
-                          {petTypes.map((p) => <option key={p.id} value={p.id}>{p.icon} {p.name}</option>)}
-                        </select>
-                      </div>
+                      {selectedShop?.usePetType !== false && (
+                        <div>
+                          <label className="block text-xs text-stone-500 mb-1">ประเภทสัตว์</label>
+                          <select value={form.petTypeId}
+                            onChange={(e) => setImportForm((f) => ({ ...f, [item.pid]: { ...form, petTypeId: e.target.value } }))}
+                            className="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-300">
+                            <option value="">ไม่ระบุ</option>
+                            {petTypes.map((p) => <option key={p.id} value={p.id}>{p.icon} {p.name}</option>)}
+                          </select>
+                        </div>
+                      )}
                       <button onClick={() => handleImport(item)}
                         className="w-full bg-orange-500 hover:bg-orange-600 text-white text-xs py-1.5 rounded-lg font-medium transition-colors">
                         ยืนยันนำเข้า (฿{sellTHB.toLocaleString("th-TH")})

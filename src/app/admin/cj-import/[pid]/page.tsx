@@ -77,9 +77,10 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
   const [resyncing, setResyncing] = useState(false);
 
   // Recent CJ logs
-  const [logs, setLogs] = useState<{ id: string; action: string; success: boolean; error: string | null; createdAt: string }[]>([]);
+  const [logs, setLogs] = useState<{ id: string; action: string; success: boolean; error: string | null; request: unknown; response: unknown; createdAt: string }[]>([]);
   const [showLogs, setShowLogs] = useState(false);
   const [logsLoading, setLogsLoading] = useState(false);
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [petTypes, setPetTypes] = useState<PetType[]>([]);
@@ -339,13 +340,42 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
           ) : logs.length === 0 ? (
             <div className="text-stone-500">ไม่มี log</div>
           ) : (
-            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+            <div className="space-y-1 max-h-96 overflow-y-auto">
               {logs.map((log) => (
-                <div key={log.id} className={`flex items-start gap-2 px-2 py-1.5 rounded-lg ${log.success ? "bg-stone-800" : "bg-red-950"}`}>
-                  <span className={`shrink-0 ${log.success ? "text-green-400" : "text-red-400"}`}>{log.success ? "✓" : "✗"}</span>
-                  <span className="text-stone-300 flex-1 truncate">{log.action}</span>
-                  {log.error && <span className="text-red-400 text-[10px] truncate max-w-48" title={log.error}>{log.error}</span>}
-                  <span className="text-stone-600 shrink-0 text-[10px]">{new Date(log.createdAt).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+                <div key={log.id}>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
+                    className={`w-full flex items-start gap-2 px-2 py-1.5 rounded-lg text-left transition-colors ${log.success ? "bg-stone-800 hover:bg-stone-700" : "bg-red-950 hover:bg-red-900"}`}
+                  >
+                    <span className={`shrink-0 ${log.success ? "text-green-400" : "text-red-400"}`}>{log.success ? "✓" : "✗"}</span>
+                    <span className="text-stone-300 flex-1 truncate">{log.action}</span>
+                    {log.error && <span className="text-red-400 text-[10px] truncate max-w-48" title={log.error}>{log.error}</span>}
+                    <span className="text-stone-600 shrink-0 text-[10px]">{new Date(log.createdAt).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+                    <span className="text-stone-600 text-[10px] shrink-0">{expandedLogId === log.id ? "▲" : "▼"}</span>
+                  </button>
+                  {expandedLogId === log.id && (
+                    <div className="bg-stone-950 rounded-b-lg px-3 py-2 space-y-2 border-t border-stone-700">
+                      {log.request && (
+                        <div>
+                          <p className="text-stone-500 text-[10px] mb-0.5">REQUEST</p>
+                          <pre className="text-green-300 text-[10px] overflow-x-auto whitespace-pre-wrap break-all">{JSON.stringify(log.request, null, 2)}</pre>
+                        </div>
+                      )}
+                      {log.response && (
+                        <div>
+                          <p className="text-stone-500 text-[10px] mb-0.5">RESPONSE</p>
+                          <pre className="text-sky-300 text-[10px] overflow-x-auto whitespace-pre-wrap break-all">{JSON.stringify(log.response, null, 2)}</pre>
+                        </div>
+                      )}
+                      {log.error && (
+                        <div>
+                          <p className="text-stone-500 text-[10px] mb-0.5">ERROR</p>
+                          <pre className="text-red-400 text-[10px] whitespace-pre-wrap break-all">{log.error}</pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

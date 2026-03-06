@@ -60,6 +60,7 @@ const navEntries: NavEntry[] = [
     minRole: "OWNER",
     items: [
       { href: "/admin/settings", label: "ตั้งค่าร้าน", icon: "⚙️" },
+      { href: "/admin/shops/__active__", label: "แก้ไขข้อมูลร้าน", icon: "🏪", minRole: "OWNER" },
       { href: "/admin/system-integration", label: "System Integration", icon: "🔌", adminOnly: true },
       { href: "/admin/api-logs", label: "API & Webhook Logs", icon: "🗂️", adminOnly: true },
       { href: "/admin/cj-logs", label: "CJ Logs", icon: "📋" },
@@ -88,8 +89,13 @@ export default function AdminSidebar() {
     });
   };
 
-  const isItemActive = (href: string, exact?: boolean) =>
-    exact ? pathname === href : pathname.startsWith(href);
+  const resolveHref = (href: string) =>
+    href.includes("__active__") && activeShop ? href.replace("__active__", activeShop.id) : href;
+
+  const isItemActive = (href: string, exact?: boolean) => {
+    const resolved = resolveHref(href);
+    return exact ? pathname === resolved : pathname.startsWith(resolved);
+  };
 
   const userLevel = isAdmin ? 99 : ROLE_LEVEL[shopRole ?? ""] ?? 0;
 
@@ -173,7 +179,7 @@ export default function AdminSidebar() {
                     {visibleItems.map((item) => (
                       <Link
                         key={item.href}
-                        href={item.href}
+                        href={resolveHref(item.href)}
                         className={`flex items-center gap-3 pl-8 pr-3 py-2 rounded-xl text-xs font-medium transition-colors ${
                           isItemActive(item.href, item.exact)
                             ? "bg-orange-50 text-orange-600"

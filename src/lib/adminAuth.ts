@@ -23,6 +23,36 @@ export async function requireAdmin(
   return payload;
 }
 
+const ROLE_LEVEL: Record<string, number> = { STAFF: 1, MANAGER: 2, OWNER: 3 };
+
+/**
+ * Allows ADMIN or a shop member with at least `minRole` for the given shopId.
+ */
+export async function requireShopOwner(
+  request: NextRequest,
+  shopId: string,
+  minRole: "STAFF" | "MANAGER" | "OWNER" = "OWNER"
+): Promise<CustomJWTPayload | NextResponse> {
+  const token = request.cookies.get("token")?.value;
+  if (!token) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const payload = await verifyToken(token);
+  if (!payload) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (payload.role === "ADMIN") return payload;
+
+  const shopRole = payload.shopRoles?.[shopId];
+  if (!shopRole || (ROLE_LEVEL[shopRole] ?? 0) < (ROLE_LEVEL[minRole] ?? 0)) {
+    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+  }
+
+  return payload;
+}
+
 export function isNextResponse(value: unknown): value is NextResponse {
   return value instanceof NextResponse;
 }

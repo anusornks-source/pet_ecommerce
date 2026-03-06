@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { requireAdmin, requireShopOwner, isNextResponse } from "@/lib/adminAuth";
 
-/** GET /api/admin/shops/[id] — get shop detail */
+/** GET /api/admin/shops/[id] — get shop detail (ADMIN or shop OWNER/MANAGER) */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
-
   const { id } = await params;
+  const auth = await requireShopOwner(request, id, "MANAGER");
+  if (isNextResponse(auth)) return auth;
   const shop = await prisma.shop.findUnique({
     where: { id },
     include: {
@@ -28,15 +27,14 @@ export async function GET(
   return NextResponse.json({ success: true, data: shop });
 }
 
-/** PUT /api/admin/shops/[id] — update shop */
+/** PUT /api/admin/shops/[id] — update shop (ADMIN or shop OWNER) */
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
-
   const { id } = await params;
+  const auth = await requireShopOwner(request, id, "OWNER");
+  if (isNextResponse(auth)) return auth;
   const body = await request.json();
   const { name, name_th, slug, description, description_th, logoUrl, coverUrl, usePetType, active } = body;
 

@@ -15,8 +15,13 @@ export async function GET(request: NextRequest) {
   const maxPrice = searchParams.get("maxPrice");
   const sort = searchParams.get("sort") || "newest";
 
+  const shopSlug = searchParams.get("shopSlug");
+
   const where: Record<string, unknown> = { active: true };
 
+  if (shopSlug) {
+    where.shop = { slug: shopSlug };
+  }
   if (category) {
     where.category = { slug: category };
   }

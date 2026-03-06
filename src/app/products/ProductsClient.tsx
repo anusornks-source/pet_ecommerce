@@ -18,6 +18,7 @@ export default function ProductsClient() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
 
+  const shopSlug = searchParams.get("shopSlug") || "";
   const category = searchParams.get("category") || "";
   const petType = searchParams.get("petType") || "";
   const search = searchParams.get("search") || "";
@@ -31,6 +32,7 @@ export default function ProductsClient() {
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
+    if (shopSlug) params.set("shopSlug", shopSlug);
     if (category) params.set("category", category);
     if (petType) params.set("petType", petType);
     if (search) params.set("search", search);
@@ -51,13 +53,14 @@ export default function ProductsClient() {
   }, [category, petType, search, featured, minPrice, maxPrice, sort, page]);
 
   useEffect(() => {
-    fetch("/api/categories")
+    const catUrl = shopSlug ? `/api/categories?shopSlug=${shopSlug}` : "/api/categories";
+    fetch(catUrl)
       .then((r) => r.json())
       .then((d) => d.success && setCategories(d.data));
     fetch("/api/pet-types")
       .then((r) => r.json())
       .then((d) => d.success && setPetTypeList(d.data));
-  }, []);
+  }, [shopSlug]);
 
   useEffect(() => {
     fetchProducts();
@@ -75,7 +78,7 @@ export default function ProductsClient() {
   const clearFilters = () => {
     setPage(1);
     setPriceRange(["", ""]);
-    router.push("/products");
+    router.push(shopSlug ? `/products?shopSlug=${shopSlug}` : "/products");
   };
 
   const applyPriceFilter = () => {

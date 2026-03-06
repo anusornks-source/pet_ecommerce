@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useShopAdmin } from "@/context/ShopAdminContext";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -47,7 +47,8 @@ const emptyForm = {
 };
 
 export default function AdminBannersPage() {
-  const { activeShop } = useShopAdmin();
+  const { activeShop, shops, isAdmin } = useShopAdmin();
+  const [shopFilter, setShopFilter] = useState<string>("");
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(emptyForm);
@@ -57,14 +58,15 @@ export default function AdminBannersPage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const load = () => {
-    fetch("/api/admin/banners")
+  const load = useCallback(() => {
+    const url = shopFilter ? `/api/admin/banners?shopId=${shopFilter}` : "/api/admin/banners";
+    fetch(url)
       .then((r) => r.json())
       .then((d) => { if (d.success) setBanners(d.data); })
       .finally(() => setLoading(false));
-  };
+  }, [shopFilter]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
   const handleUpload = async (file: File) => {
     setUploading(true);
@@ -166,12 +168,26 @@ export default function AdminBannersPage() {
           <h1 className="text-xl font-bold text-stone-800">🖼️ Hero Banner</h1>
           <p className="text-xs text-stone-400 mt-0.5">
             Slider บนหน้าแรก — เรียงลำดับตาม Order
-            {activeShop && (
-              <span className="ml-2 px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 font-medium">
+          </p>
+          <div className="flex items-center gap-2 mt-0.5">
+            {isAdmin ? (
+              <select
+                value={shopFilter}
+                onChange={(e) => setShopFilter(e.target.value)}
+                className="text-xs border border-stone-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-200 bg-white text-stone-600"
+              >
+                <option value="">ร้าน: {activeShop?.name ?? "..."}</option>
+                <option value="all">ทั้งหมด (ทุกร้าน)</option>
+                {shops.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            ) : activeShop ? (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 font-medium">
                 ร้าน: {activeShop.name}
               </span>
-            )}
-          </p>
+            ) : null}
+          </div>
         </div>
         {!showForm && (
           <button

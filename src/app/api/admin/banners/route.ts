@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   if (isShopAuthResponse(auth)) return auth;
   const { shopId } = auth;
 
-  const banners = await prisma.heroBanner.findMany({ where: { shopId }, orderBy: { order: "asc" } });
+  const banners = await prisma.heroBanner.findMany({ where: shopId === "all" ? {} : { shopId }, orderBy: { order: "asc" } });
   return NextResponse.json({ success: true, data: banners });
 }
 

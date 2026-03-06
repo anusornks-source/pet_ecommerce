@@ -517,7 +517,7 @@ export default function ProductForm({ productId, productShopId, initialData }: P
         </div>
       </div>
 
-      <div className={`grid gap-4 ${activeShop?.usePetType !== false ? "grid-cols-2" : "grid-cols-1"}`}>
+      <div className={`grid gap-4 ${effectiveShop?.usePetType !== false ? "grid-cols-2" : "grid-cols-1"}`}>
         <div>
           <label className="block text-sm font-medium text-stone-700 mb-1.5">
             หมวดหมู่
@@ -536,7 +536,7 @@ export default function ProductForm({ productId, productShopId, initialData }: P
             ))}
           </select>
         </div>
-        {activeShop?.usePetType !== false && (
+        {effectiveShop?.usePetType !== false && (
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-1.5">
               ประเภทสัตว์เลี้ยง

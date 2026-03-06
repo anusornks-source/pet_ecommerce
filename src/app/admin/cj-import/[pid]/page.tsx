@@ -356,13 +356,13 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
                   </button>
                   {expandedLogId === log.id && (
                     <div className="bg-stone-950 rounded-b-lg px-3 py-2 space-y-2 border-t border-stone-700">
-                      {log.request && (
+                      {!!log.request && (
                         <div>
                           <p className="text-stone-500 text-[10px] mb-0.5">REQUEST</p>
                           <pre className="text-green-300 text-[10px] overflow-x-auto whitespace-pre-wrap break-all">{JSON.stringify(log.request, null, 2)}</pre>
                         </div>
                       )}
-                      {log.response && (
+                      {!!log.response && (
                         <div>
                           <p className="text-stone-500 text-[10px] mb-0.5">RESPONSE</p>
                           <pre className="text-sky-300 text-[10px] overflow-x-auto whitespace-pre-wrap break-all">{JSON.stringify(log.response, null, 2)}</pre>

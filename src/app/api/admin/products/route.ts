@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
   const [products, total] = await Promise.all([
     prisma.product.findMany({
       where,
-      include: { category: true, petType: true, tags: true },
+      include: { category: true, petType: true, tags: true, shop: shopId === "all" },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,

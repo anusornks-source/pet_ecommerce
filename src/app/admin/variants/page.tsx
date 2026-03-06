@@ -143,14 +143,14 @@ export default function AdminVariantsPage() {
           <h1 className="text-xl font-bold text-stone-800">Variants</h1>
           <div className="flex items-center gap-2 mt-0.5">
             <p className="text-sm text-stone-500">รายการ variant ทั้งหมด {total > 0 && `(${total.toLocaleString()} รายการ)`}</p>
-            {isAdmin ? (
+            {(isAdmin || shops.length > 1) ? (
               <select
                 value={shopFilter}
                 onChange={(e) => { setShopFilter(e.target.value); setPage(1); }}
                 className="text-xs border border-stone-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-200 bg-white text-stone-600"
               >
                 <option value="">ร้าน: {activeShop?.name ?? "..."}</option>
-                <option value="all">ทั้งหมด (ทุกร้าน)</option>
+                {isAdmin && <option value="all">ทั้งหมด (ทุกร้าน)</option>}
                 {shops.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useShopAdmin } from "@/context/ShopAdminContext";
+import toast from "react-hot-toast";
 
 interface Member {
   id: string;
@@ -11,13 +12,57 @@ interface Member {
 }
 
 export default function StaffPage() {
-  const { activeShop, isAdmin } = useShopAdmin();
+  const { activeShop, shops, isAdmin } = useShopAdmin();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("STAFF");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
+
+  // Multi-shop assignment (admin only)
+  const [assignEmail, setAssignEmail] = useState("");
+  const [assignRole, setAssignRole] = useState("STAFF");
+  const [assignShopIds, setAssignShopIds] = useState<string[]>([]);
+  const [assigning, setAssigning] = useState(false);
+  const [assignPreview, setAssignPreview] = useState<{ name: string; email: string; shopMemberships: { shopId: string; shopName: string; role: string }[] } | null>(null);
+  const [assignError, setAssignError] = useState("");
+
+  const lookupUser = useCallback(async (emailVal: string) => {
+    if (!emailVal.trim()) { setAssignPreview(null); return; }
+    const res = await fetch(`/api/admin/shops/assign-member?email=${encodeURIComponent(emailVal.trim())}`);
+    const data = await res.json();
+    if (data.success) setAssignPreview(data.data);
+    else setAssignPreview(null);
+  }, []);
+
+  const handleAssign = async () => {
+    if (!assignEmail.trim() || assignShopIds.length === 0) return;
+    setAssigning(true);
+    setAssignError("");
+    const res = await fetch("/api/admin/shops/assign-member", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: assignEmail.trim(), role: assignRole, shopIds: assignShopIds }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast.success(`Assigned ${data.data.user.name} to ${data.data.assignments.length} shop(s)`);
+      setAssignEmail("");
+      setAssignShopIds([]);
+      setAssignPreview(null);
+      fetchMembers();
+    } else {
+      setAssignError(data.error || "Failed");
+    }
+    setAssigning(false);
+  };
+
+  const toggleShop = (shopId: string) => {
+    setAssignShopIds((prev) =>
+      prev.includes(shopId) ? prev.filter((id) => id !== shopId) : [...prev, shopId]
+    );
+  };
 
   const shopId = activeShop?.id;
 
@@ -76,6 +121,74 @@ export default function StaffPage() {
       <h1 className="text-2xl font-bold text-stone-800 mb-6">
         Staff Management — {activeShop?.name}
       </h1>
+
+      {/* Multi-shop Assignment — Admin Only */}
+      {isAdmin && shops.length > 0 && (
+        <div className="bg-white rounded-2xl border border-violet-100 p-5 mb-6">
+          <h2 className="font-semibold text-stone-800 mb-1">Assign to Multiple Shops</h2>
+          <p className="text-xs text-stone-400 mb-4">เพิ่ม user ให้ดูแลหลายร้านพร้อมกัน — เฉพาะ Super Admin</p>
+          <div className="space-y-3">
+            <div className="flex gap-3 items-end flex-wrap">
+              <div className="flex-1 min-w-48">
+                <label className="text-sm text-stone-600 block mb-1">Email</label>
+                <input
+                  className="input w-full"
+                  value={assignEmail}
+                  onChange={(e) => setAssignEmail(e.target.value)}
+                  onBlur={(e) => lookupUser(e.target.value)}
+                  placeholder="user@email.com"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-stone-600 block mb-1">Role</label>
+                <select className="input" value={assignRole} onChange={(e) => setAssignRole(e.target.value)}>
+                  <option value="STAFF">Staff</option>
+                  <option value="MANAGER">Manager</option>
+                  <option value="OWNER">Owner</option>
+                </select>
+              </div>
+            </div>
+
+            {assignPreview && (
+              <div className="text-xs bg-violet-50 rounded-xl px-3 py-2 text-violet-700">
+                พบ: <strong>{assignPreview.name}</strong> ({assignPreview.email})
+                {assignPreview.shopMemberships.length > 0 && (
+                  <span className="ml-2 text-violet-500">
+                    — ปัจจุบันดูแล: {assignPreview.shopMemberships.map((m) => m.shopName).join(", ")}
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div>
+              <label className="text-sm text-stone-600 block mb-2">เลือกร้านที่จะให้ดูแล</label>
+              <div className="flex flex-wrap gap-2">
+                {shops.map((s) => (
+                  <label key={s.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border cursor-pointer text-sm transition-colors ${assignShopIds.includes(s.id) ? "border-violet-300 bg-violet-50 text-violet-700" : "border-stone-200 text-stone-600 hover:bg-stone-50"}`}>
+                    <input
+                      type="checkbox"
+                      checked={assignShopIds.includes(s.id)}
+                      onChange={() => toggleShop(s.id)}
+                      className="accent-violet-500"
+                    />
+                    {s.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {assignError && <p className="text-xs text-red-500">{assignError}</p>}
+
+            <button
+              onClick={handleAssign}
+              disabled={assigning || !assignEmail.trim() || assignShopIds.length === 0}
+              className="bg-violet-500 hover:bg-violet-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              {assigning ? "กำลัง Assign..." : `Assign (${assignShopIds.length} ร้าน)`}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Add Member */}
       <div className="bg-white rounded-2xl border border-stone-100 p-5 mb-6">

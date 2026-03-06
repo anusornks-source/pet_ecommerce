@@ -12,6 +12,9 @@ export async function GET(request: NextRequest) {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
   thirtyDaysAgo.setHours(0, 0, 0, 0);
 
+  const shopWhere = shopId === "all" ? {} : { shopId };
+  const orderWhere = shopId === "all" ? {} : { order: { shopId } };
+
   const [
     ordersByStatus,
     recentOrders,
@@ -20,17 +23,18 @@ export async function GET(request: NextRequest) {
     paymentMethods,
     userGrowth,
   ] = await Promise.all([
+
     // Orders grouped by status
     prisma.order.groupBy({
       by: ["status"],
-      where: { shopId },
+      where: shopWhere,
       _count: { id: true },
       _sum: { total: true },
     }),
 
     // All orders in last 30 days for revenue-by-day chart
     prisma.order.findMany({
-      where: { shopId, createdAt: { gte: thirtyDaysAgo } },
+      where: { ...shopWhere, createdAt: { gte: thirtyDaysAgo } },
       select: { createdAt: true, total: true, status: true },
       orderBy: { createdAt: "asc" },
     }),
@@ -38,7 +42,7 @@ export async function GET(request: NextRequest) {
     // Top 5 products by quantity sold
     prisma.orderItem.groupBy({
       by: ["productId"],
-      where: { order: { shopId } },
+      where: orderWhere,
       _sum: { quantity: true, price: true },
       orderBy: { _sum: { quantity: "desc" } },
       take: 5,
@@ -46,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     // Revenue by category
     prisma.orderItem.findMany({
-      where: { order: { shopId } },
+      where: orderWhere,
       include: {
         product: { include: { category: true } },
       },
@@ -55,7 +59,7 @@ export async function GET(request: NextRequest) {
     // Payment method distribution
     prisma.payment.groupBy({
       by: ["method"],
-      where: { order: { shopId } },
+      where: orderWhere,
       _count: { id: true },
       _sum: { amount: true },
     }),

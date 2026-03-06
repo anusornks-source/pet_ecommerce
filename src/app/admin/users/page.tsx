@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import toast from "react-hot-toast";
 
 interface User {
   id: string;
@@ -17,6 +18,9 @@ export default function AdminUsersPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", password: "", phone: "", role: "USER" });
+  const [saving, setSaving] = useState(false);
 
   const pageSize = 50;
   const totalPages = Math.ceil(total / pageSize);
@@ -31,12 +35,74 @@ export default function AdminUsersPage() {
 
   useEffect(() => { fetchUsers(1); }, [fetchUsers]);
 
+  const handleCreate = async () => {
+    if (!form.name || !form.email || !form.password) return toast.error("กรุณากรอกข้อมูลให้ครบ");
+    setSaving(true);
+    const res = await fetch("/api/admin/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast.success("สร้างผู้ใช้งานสำเร็จ");
+      setForm({ name: "", email: "", password: "", phone: "", role: "USER" });
+      setShowForm(false);
+      fetchUsers(1);
+    } else {
+      toast.error(data.error || "เกิดข้อผิดพลาด");
+    }
+    setSaving(false);
+  };
+
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-stone-800">ผู้ใช้งาน</h1>
-        <p className="text-stone-500 text-sm mt-1">{total.toLocaleString()} คน</p>
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-stone-800">ผู้ใช้งาน</h1>
+          <p className="text-stone-500 text-sm mt-1">{total.toLocaleString()} คน</p>
+        </div>
+        <button onClick={() => setShowForm(!showForm)} className="btn-primary px-4 py-2 text-sm">
+          + เพิ่มผู้ใช้
+        </button>
       </div>
+
+      {showForm && (
+        <div className="bg-white rounded-2xl border border-stone-100 p-6 mb-6">
+          <h2 className="font-semibold text-stone-800 mb-4">สร้างผู้ใช้งานใหม่</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-stone-600 block mb-1">ชื่อ *</label>
+              <input className="input w-full" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="ชื่อผู้ใช้" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-stone-600 block mb-1">อีเมล *</label>
+              <input className="input w-full" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@example.com" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-stone-600 block mb-1">รหัสผ่าน * (อย่างน้อย 6 ตัว)</label>
+              <input className="input w-full" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="••••••" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-stone-600 block mb-1">เบอร์โทร</label>
+              <input className="input w-full" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="0812345678" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-stone-600 block mb-1">สิทธิ์</label>
+              <select className="input w-full" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+                <option value="USER">User</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            </div>
+          </div>
+          <div className="mt-4 flex gap-2">
+            <button onClick={handleCreate} disabled={saving} className="btn-primary px-4 py-2 text-sm">
+              {saving ? "กำลังสร้าง..." : "สร้างผู้ใช้"}
+            </button>
+            <button onClick={() => setShowForm(false)} className="btn-outline px-4 py-2 text-sm">ยกเลิก</button>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl border border-stone-100 overflow-hidden">
         {loading ? (

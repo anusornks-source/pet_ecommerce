@@ -6,23 +6,34 @@ import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
 import { searchCJProducts, getCJProductDetail, getCJProductDetailBySku, getCJInventory } from "@/lib/cjDropshipping";
 import Anthropic from "@anthropic-ai/sdk";
 
-async function generateShortDesc(name: string, sourceDescription: string): Promise<string | null> {
-  if (!process.env.ANTHROPIC_API_KEY) return null;
+async function generateShortDescs(name: string, sourceDescription: string): Promise<{ en: string | null; th: string | null }> {
+  if (!process.env.ANTHROPIC_API_KEY) return { en: null, th: null };
   try {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const clean = sourceDescription.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 1500);
-    const msg = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 200,
-      messages: [{
-        role: "user",
-        content: `คุณเป็นนักเขียนคอนเทนต์ร้านขายของออนไลน์ภาษาไทย\n\nชื่อสินค้า: ${name}\nรายละเอียด: ${clean}\n\nเขียนคำอธิบายสั้นๆ ภาษาไทย ไม่เกิน 2-3 ประโยค (ไม่เกิน 120 ตัวอักษร) เน้นจุดเด่นหลัก ตอบเป็น plain text เท่านั้น`,
-      }],
-    });
-    const text = msg.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
-    return text || null;
+    const [enMsg, thMsg] = await Promise.all([
+      client.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 200,
+        messages: [{
+          role: "user",
+          content: `You are a copywriter for an online pet store.\n\nProduct name: ${name}\nDetails: ${clean}\n\nWrite a short English description in 2-3 sentences (max 120 characters), highlighting key features. Plain text only.`,
+        }],
+      }),
+      client.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 200,
+        messages: [{
+          role: "user",
+          content: `คุณเป็นนักเขียนคอนเทนต์ร้านขายของออนไลน์ภาษาไทย\n\nชื่อสินค้า: ${name}\nรายละเอียด: ${clean}\n\nเขียนคำอธิบายสั้นๆ ภาษาไทย ไม่เกิน 2-3 ประโยค (ไม่เกิน 120 ตัวอักษร) เน้นจุดเด่นหลัก ตอบเป็น plain text เท่านั้น`,
+        }],
+      }),
+    ]);
+    const en = enMsg.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim() || null;
+    const th = thMsg.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim() || null;
+    return { en, th };
   } catch {
-    return null;
+    return { en: null, th: null };
   }
 }
 
@@ -188,13 +199,14 @@ export async function POST(request: NextRequest) {
 
     const variantData = variants.map(({ costUSD: _c, ...rest }) => rest);
 
-    // Generate short description (TH) with AI (best-effort, non-blocking)
-    const shortDescription_th = await generateShortDesc(detail.productNameEn, sourceDescription);
+    // Generate short descriptions (EN + TH) with AI in parallel (best-effort, non-blocking)
+    const { en: shortDescription, th: shortDescription_th } = await generateShortDescs(detail.productNameEn, sourceDescription);
 
     const product = await prisma.product.create({
       data: {
         name: detail.productNameEn,
         description: sourceDescription,
+        shortDescription,
         shortDescription_th,
         sourceDescription,
         price: sellPrice,

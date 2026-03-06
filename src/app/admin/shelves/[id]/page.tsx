@@ -29,6 +29,7 @@ interface Shelf {
   description: string | null;
   color: string;
   active: boolean;
+  shop: { id: string; name: string } | null;
 }
 
 export default function ShelfDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -154,10 +155,15 @@ export default function ShelfDetailPage({ params }: { params: Promise<{ id: stri
           ← กลับรายการ Shelves
         </Link>
         {shelf && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="w-4 h-4 rounded-full border border-stone-200" style={{ backgroundColor: shelf.color }} />
             <h1 className="text-xl font-bold text-stone-800">{shelf.name}</h1>
             <span className="text-xs text-stone-400 font-mono">/{shelf.slug}</span>
+            {shelf.shop && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 font-medium">
+                {shelf.shop.name}
+              </span>
+            )}
           </div>
         )}
       </div>

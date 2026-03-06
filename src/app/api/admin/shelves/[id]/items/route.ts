@@ -12,7 +12,10 @@ export async function GET(
   const { id } = await params;
   const search = request.nextUrl.searchParams.get("search") ?? "";
 
-  const shelf = await prisma.shelf.findUnique({ where: { id } });
+  const shelf = await prisma.shelf.findUnique({
+    where: { id },
+    include: { shop: { select: { id: true, name: true } } },
+  });
   if (!shelf) {
     return NextResponse.json({ success: false, error: "ไม่พบ shelf" }, { status: 404 });
   }
@@ -30,6 +33,7 @@ export async function GET(
   const available = await prisma.product.findMany({
     where: {
       active: true,
+      shopId: shelf.shopId,
       id: { notIn: inShelfProductIds },
       ...(search ? { name: { contains: search, mode: "insensitive" } } : {}),
     },

@@ -3,23 +3,24 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import { useShopAdmin } from "@/context/ShopAdminContext";
 
 export default function AdminSettingsPage() {
+  const { isAdmin } = useShopAdmin();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const heroInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState<"logo" | "hero" | null>(null);
+  const [uploading, setUploading] = useState<"logo" | null>(null);
 
   const [form, setForm] = useState({
     storeName: "",
     logoUrl: "",
-    heroImageUrl: "",
     adminEmail: "",
     promptpayId: "",
     bankName: "",
     bankAccount: "",
     bankAccountName: "",
+    useGlobalPayment: true,
     displayStockMin: "50",
     displayStockMax: "100",
   });
@@ -32,12 +33,12 @@ export default function AdminSettingsPage() {
           setForm({
             storeName: d.data.storeName ?? "",
             logoUrl: d.data.logoUrl ?? "",
-            heroImageUrl: d.data.heroImageUrl ?? "",
             adminEmail: d.data.adminEmail ?? "",
             promptpayId: d.data.promptpayId ?? "",
             bankName: d.data.bankName ?? "",
             bankAccount: d.data.bankAccount ?? "",
             bankAccountName: d.data.bankAccountName ?? "",
+            useGlobalPayment: d.data.useGlobalPayment ?? true,
             displayStockMin: String(d.data.displayStockMin ?? 50),
             displayStockMax: String(d.data.displayStockMax ?? 100),
           });
@@ -46,17 +47,16 @@ export default function AdminSettingsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleUpload = async (file: File, target: "logo" | "hero") => {
-    setUploading(target);
+  const handleUpload = async (file: File) => {
+    setUploading("logo");
     const fd = new FormData();
     fd.append("file", file);
     const res = await fetch("/api/upload", { method: "POST", body: fd });
     const data = await res.json();
     setUploading(null);
     if (data.success) {
-      if (target === "logo") setForm((f) => ({ ...f, logoUrl: data.url }));
-      else setForm((f) => ({ ...f, heroImageUrl: data.url }));
-      toast.success(target === "logo" ? "อัปโหลด logo สำเร็จ" : "อัปโหลดรูป Hero สำเร็จ");
+      setForm((f) => ({ ...f, logoUrl: data.url }));
+      toast.success("อัปโหลด logo สำเร็จ");
     } else {
       toast.error(data.error ?? "อัปโหลดไม่สำเร็จ");
     }
@@ -125,7 +125,7 @@ export default function AdminSettingsPage() {
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], "logo")}
+                  onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
                 />
                 {uploading === "logo" ? (
                   <div className="flex items-center justify-center gap-2">
@@ -152,48 +152,6 @@ export default function AdminSettingsPage() {
             />
           </div>
 
-          {/* Hero Image */}
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1.5">รูปหน้าแรก (Hero)</label>
-            <div
-              onClick={() => heroInputRef.current?.click()}
-              className="relative border-2 border-dashed border-stone-200 rounded-xl overflow-hidden cursor-pointer hover:border-orange-300 hover:bg-stone-50 transition-colors"
-              style={{ height: "140px" }}
-            >
-              <input
-                ref={heroInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], "hero")}
-              />
-              {form.heroImageUrl && isValidUrl(form.heroImageUrl) ? (
-                <>
-                  <Image src={form.heroImageUrl} alt="Hero" fill className="object-cover" sizes="640px" />
-                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <span className="text-white text-sm font-medium">📷 เปลี่ยนรูป</span>
-                  </div>
-                </>
-              ) : uploading === "hero" ? (
-                <div className="h-full flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-sm text-orange-500">กำลังอัปโหลด...</span>
-                </div>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center gap-1 text-stone-400">
-                  <span className="text-3xl">🖼️</span>
-                  <p className="text-sm">คลิกเพื่ออัปโหลดรูป Hero หน้าแรก</p>
-                  <p className="text-xs">แนะนำ: 1200×600px ขึ้นไป</p>
-                </div>
-              )}
-            </div>
-            <input
-              value={form.heroImageUrl}
-              onChange={(e) => setForm((f) => ({ ...f, heroImageUrl: e.target.value }))}
-              placeholder="หรือวาง URL รูป Hero โดยตรง"
-              className={`${inputCls} mt-2`}
-            />
-          </div>
         </div>
 
         {/* Email */}
@@ -306,15 +264,43 @@ EMAIL_FROM="Shop Name <your@gmail.com>"`}</pre>
           </p>
         </div>
 
-        {/* Stripe */}
-        <div className="bg-white rounded-2xl border border-stone-100 p-6">
-          <h2 className="text-base font-semibold text-stone-700 mb-4">💳 Stripe (บัตรเครดิต/เดบิต)</h2>
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <p className="text-sm font-medium text-blue-700 mb-2">⚙️ ตั้งค่า Stripe ใน .env</p>
-            <pre className="text-xs text-blue-600 font-mono leading-relaxed">{`STRIPE_SECRET_KEY="sk_live_..."
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_live_..."`}</pre>
-            <p className="text-xs text-blue-600 mt-2">สร้าง API keys ได้ที่ dashboard.stripe.com → Developers → API keys</p>
+        {/* Stripe / Payment */}
+        <div className="bg-white rounded-2xl border border-stone-100 p-6 space-y-4">
+          <h2 className="text-base font-semibold text-stone-700">💳 Stripe (บัตรเครดิต/เดบิต)</h2>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-stone-700">ใช้ Stripe ส่วนกลาง</p>
+              <p className="text-xs text-stone-400 mt-0.5">
+                {form.useGlobalPayment
+                  ? "ร้านใช้บัญชี Stripe กลางของระบบ"
+                  : "ร้านใช้บัญชี Stripe ของตัวเอง"}
+              </p>
+            </div>
+            {isAdmin ? (
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, useGlobalPayment: !f.useGlobalPayment }))}
+                className={`relative w-11 h-6 rounded-full transition-colors ${form.useGlobalPayment ? "bg-green-400" : "bg-stone-300"}`}
+              >
+                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.useGlobalPayment ? "translate-x-5" : "translate-x-0.5"}`} />
+              </button>
+            ) : (
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${form.useGlobalPayment ? "bg-green-50 text-green-600" : "bg-orange-50 text-orange-600"}`}>
+                {form.useGlobalPayment ? "ส่วนกลาง" : "ของร้าน"}
+              </span>
+            )}
           </div>
+
+          {form.useGlobalPayment ? (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+              <p className="text-sm text-green-700">ระบบจะใช้ Stripe API keys จาก .env ส่วนกลาง — ไม่ต้องตั้งค่าเพิ่ม</p>
+            </div>
+          ) : (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <p className="text-sm text-amber-700">ฟีเจอร์ Stripe แยกต่อร้านยังไม่เปิดใช้งาน — ติดต่อ Admin เพื่อตั้งค่า</p>
+            </div>
+          )}
         </div>
 
         <button

@@ -22,38 +22,132 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  cart      Cart?
-  orders    Order[]
-  reviews   Review[]
-  wishlists Wishlist[]
-  addresses Address[]
+  cart            Cart?
+  orders          Order[]
+  reviews         Review[]
+  wishlists       Wishlist[]
+  addresses       Address[]
+  shopMemberships ShopMember[]
 
   @@unique([provider, oauthId])
   @@map("users")
 }
 
+// ─── Multi-Shop Models ────────────────────────────────────────
+
+model Shop {
+  id             String   @id @default(cuid())
+  name           String
+  name_th        String?
+  slug           String   @unique
+  description    String?
+  description_th String?
+  logoUrl        String?
+  coverUrl       String?
+  usePetType     Boolean  @default(true)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  members        ShopMember[]
+  settings       ShopSettings?
+  shopCategories ShopCategory[]
+  products       Product[]
+  heroBanners    HeroBanner[]
+  shelves        Shelf[]
+  articles       Article[]
+  coupons        Coupon[]
+  orders         Order[]
+  tags           Tag[]
+  cjApiLogs      CjApiLog[]
+
+  @@map("shops")
+}
+
+enum ShopRole {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+model ShopMember {
+  id        String   @id @default(cuid())
+  userId    String
+  shopId    String
+  role      ShopRole @default(STAFF)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, shopId])
+  @@map("shop_members")
+}
+
+model ShopSettings {
+  id                    String    @id @default(cuid())
+  shopId                String    @unique
+  promptpayId           String?
+  bankName              String?
+  bankAccount           String?
+  bankAccountName       String?
+  adminEmail            String?
+  useGlobalPayment      Boolean   @default(true)
+  stripeSecretKey       String?
+  stripePublishableKey  String?
+  stripeWebhookSecret   String?
+  cjAccessToken         String?
+  cjTokenExpiresAt      DateTime?
+  cjPriceFactor         Float     @default(3)
+  usdToThb              Float     @default(36)
+  displayStockMin       Int       @default(50)
+  displayStockMax       Int       @default(100)
+  updatedAt             DateTime  @updatedAt
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("shop_settings")
+}
+
+model ShopCategory {
+  id         String @id @default(cuid())
+  shopId     String
+  categoryId String
+
+  shop     Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, categoryId])
+  @@map("shop_categories")
+}
+
+// ─── Taxonomy (Global) ────────────────────────────────────────
+
 model Category {
-  id       String    @id @default(cuid())
-  name     String    @unique
-  name_th  String?
-  slug     String    @unique
-  icon     String?
-  products Product[]
+  id             String         @id @default(cuid())
+  name           String         @unique
+  name_th        String?
+  slug           String         @unique
+  icon           String?
+  products       Product[]
+  shopCategories ShopCategory[]
 
   @@map("categories")
 }
 
 model PetType {
   id       String    @id @default(cuid())
-  name     String    @unique  // English name e.g. "Dog"
-  name_th  String?            // Thai name e.g. "สุนัข"
-  slug     String    @unique  // "dog", "cat"
-  icon     String?            // emoji e.g. "🐕"
+  name     String    @unique
+  name_th  String?
+  slug     String    @unique
+  icon     String?
   order    Int       @default(0)
   products Product[]
 
   @@map("pet_types")
 }
+
+// ─── Products ─────────────────────────────────────────────────
 
 model Product {
   id                  String   @id @default(cuid())
@@ -69,19 +163,21 @@ model Product {
   images      String[]
   categoryId  String
   petTypeId   String?
+  shopId      String
   active          Boolean  @default(true)
   featured        Boolean  @default(false)
   cjProductId         String?
   costPrice           Float?
   source              String?
   fulfillmentMethod   FulfillmentMethod   @default(SELF)
-  sourceDescription   String?   // original CJ description (HTML) — for admin reference
+  sourceDescription   String?
   sourceData          Json?
   deliveryDays        Int       @default(2)
   warehouseCountry    String?
   createdAt       DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  shop       Shop             @relation(fields: [shopId], references: [id])
   category   Category         @relation(fields: [categoryId], references: [id])
   petType    PetType?         @relation(fields: [petTypeId], references: [id])
   cartItems  CartItem[]
@@ -92,6 +188,7 @@ model Product {
   shelfItems ShelfItem[]
   tags       Tag[]            @relation("ProductTags")
 
+  @@index([shopId])
   @@map("products")
 }
 
@@ -105,10 +202,10 @@ model ProductVariant {
   cjStock   Int?
   sku       String?
   cjVid             String?
-  variantImage      String?  // per-variant image URL (from CJ or manual)
-  attributes        Json?    // flexible attributes [{name, value}] e.g. flavor, material, weight
+  variantImage      String?
+  attributes        Json?
   active            Boolean  @default(true)
-  fulfillmentMethod FulfillmentMethod?  // null = inherit from Product
+  fulfillmentMethod FulfillmentMethod?
   createdAt    DateTime @default(now())
 
   product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -117,6 +214,8 @@ model ProductVariant {
 
   @@map("product_variants")
 }
+
+// ─── Customer ─────────────────────────────────────────────────
 
 model Address {
   id        String   @id @default(cuid())
@@ -192,9 +291,12 @@ model CartItem {
   @@map("cart_items")
 }
 
+// ─── Orders ───────────────────────────────────────────────────
+
 model Order {
   id            String      @id @default(cuid())
   userId        String
+  shopId        String
   status        OrderStatus @default(PENDING)
   total         Float
   discount      Float       @default(0)
@@ -217,10 +319,12 @@ model Order {
   updatedAt     DateTime    @updatedAt
 
   user      User        @relation(fields: [userId], references: [id])
+  shop      Shop        @relation(fields: [shopId], references: [id])
   items     OrderItem[]
   payment   Payment?
   cjApiLogs CjApiLog[]
 
+  @@index([shopId])
   @@map("orders")
 }
 
@@ -258,6 +362,8 @@ model Payment {
   @@map("payments")
 }
 
+// ─── Enums ────────────────────────────────────────────────────
+
 enum FulfillmentMethod {
   SELF
   CJ
@@ -268,7 +374,6 @@ enum Role {
   USER
   ADMIN
 }
-
 
 enum OrderStatus {
   PENDING
@@ -298,6 +403,8 @@ enum CouponType {
   FIXED
 }
 
+// ─── Site & Content ───────────────────────────────────────────
+
 model SiteSettings {
   id              String   @id @default("default")
   storeName       String   @default("PetShop")
@@ -323,6 +430,7 @@ model SiteSettings {
 
 model HeroBanner {
   id                   String   @id @default(cuid())
+  shopId               String
   imageUrl             String
   badge                String?
   badge_th             String?
@@ -342,11 +450,15 @@ model HeroBanner {
   active               Boolean  @default(true)
   createdAt            DateTime @default(now())
 
+  shop Shop @relation(fields: [shopId], references: [id])
+
+  @@index([shopId])
   @@map("hero_banners")
 }
 
 model Article {
   id         String   @id @default(cuid())
+  shopId     String
   title      String
   title_th   String?
   slug       String   @unique
@@ -360,6 +472,9 @@ model Article {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  shop Shop @relation(fields: [shopId], references: [id])
+
+  @@index([shopId])
   @@map("articles")
 }
 
@@ -382,7 +497,8 @@ model Store {
 model CjApiLog {
   id        String   @id @default(cuid())
   orderId   String?
-  action    String   // "createOrder" | "syncTracking"
+  shopId    String?
+  action    String
   request   Json?
   response  Json?
   success   Boolean
@@ -390,12 +506,15 @@ model CjApiLog {
   createdAt DateTime @default(now())
 
   order Order? @relation(fields: [orderId], references: [id])
+  shop  Shop?  @relation(fields: [shopId], references: [id])
 
+  @@index([shopId])
   @@map("cj_api_logs")
 }
 
 model Coupon {
   id        String     @id @default(cuid())
+  shopId    String
   code      String     @unique
   type      CouponType
   value     Float
@@ -406,12 +525,14 @@ model Coupon {
   expiresAt DateTime?
   createdAt DateTime   @default(now())
 
+  shop Shop @relation(fields: [shopId], references: [id])
+
+  @@index([shopId])
   @@map("coupons")
 }
 
-// Stores processed Stripe event IDs to prevent duplicate processing
 model ProcessedStripeEvent {
-  id        String   @id // Stripe event ID (evt_xxx)
+  id        String   @id
   createdAt DateTime @default(now())
 
   @@map("processed_stripe_events")
@@ -419,6 +540,7 @@ model ProcessedStripeEvent {
 
 model Shelf {
   id          String      @id @default(cuid())
+  shopId      String
   name        String
   slug        String      @unique
   description String?
@@ -429,6 +551,9 @@ model Shelf {
   updatedAt   DateTime    @updatedAt
   items       ShelfItem[]
 
+  shop Shop @relation(fields: [shopId], references: [id])
+
+  @@index([shopId])
   @@map("shelves")
 }
 
@@ -447,30 +572,34 @@ model ShelfItem {
 
 model Tag {
   id        String    @id @default(cuid())
-  name      String                       // ชื่อไทย: "สินค้าใหม่"
-  nameEn    String?                      // ชื่ออังกฤษ: "New"
-  slug      String    @unique            // "new", "bestseller", "sale"
-  color     String    @default("orange") // orange|red|green|blue|purple|yellow
-  icon      String?                      // emoji: "✨", "🔥", "⚡"
+  shopId    String?
+  name      String
+  nameEn    String?
+  slug      String    @unique
+  color     String    @default("orange")
+  icon      String?
   products  Product[] @relation("ProductTags")
   createdAt DateTime  @default(now())
 
+  shop Shop? @relation(fields: [shopId], references: [id])
+
+  @@index([shopId])
   @@map("tags")
 }
 
 model ApiLog {
   id         String   @id @default(cuid())
-  type       String   // "API" | "WEBHOOK"
-  source     String?  // "STRIPE" | "CJ" | "INTERNAL"
-  method     String?  // GET | POST | PUT | DELETE
+  type       String
+  source     String?
+  method     String?
   path       String
   statusCode Int?
   userId     String?
-  eventType  String?  // webhook: "payment_intent.succeeded"
-  eventId    String?  // webhook: Stripe event ID (evt_xxx)
+  eventType  String?
+  eventId    String?
   request    Json?
   response   Json?
-  duration   Int?     // ms
+  duration   Int?
   success    Boolean  @default(true)
   error      String?
   ip         String?
@@ -478,5 +607,3 @@ model ApiLog {
 
   @@map("api_logs")
 }
-
-

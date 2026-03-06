@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const now = new Date();
   const thirtyDaysAgo = new Date(now);
@@ -22,13 +23,14 @@ export async function GET(request: NextRequest) {
     // Orders grouped by status
     prisma.order.groupBy({
       by: ["status"],
+      where: { shopId },
       _count: { id: true },
       _sum: { total: true },
     }),
 
     // All orders in last 30 days for revenue-by-day chart
     prisma.order.findMany({
-      where: { createdAt: { gte: thirtyDaysAgo } },
+      where: { shopId, createdAt: { gte: thirtyDaysAgo } },
       select: { createdAt: true, total: true, status: true },
       orderBy: { createdAt: "asc" },
     }),
@@ -36,6 +38,7 @@ export async function GET(request: NextRequest) {
     // Top 5 products by quantity sold
     prisma.orderItem.groupBy({
       by: ["productId"],
+      where: { order: { shopId } },
       _sum: { quantity: true, price: true },
       orderBy: { _sum: { quantity: "desc" } },
       take: 5,
@@ -43,6 +46,7 @@ export async function GET(request: NextRequest) {
 
     // Revenue by category
     prisma.orderItem.findMany({
+      where: { order: { shopId } },
       include: {
         product: { include: { category: true } },
       },
@@ -51,6 +55,7 @@ export async function GET(request: NextRequest) {
     // Payment method distribution
     prisma.payment.groupBy({
       by: ["method"],
+      where: { order: { shopId } },
       _count: { id: true },
       _sum: { amount: true },
     }),

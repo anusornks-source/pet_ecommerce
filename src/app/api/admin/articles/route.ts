@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
 
 function toSlug(title: string) {
   return title
@@ -12,8 +12,9 @@ function toSlug(title: string) {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const { searchParams } = new URL(request.url);
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
@@ -21,6 +22,7 @@ export async function GET(request: NextRequest) {
 
   const [articles, total] = await Promise.all([
     prisma.article.findMany({
+      where: { shopId },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -36,15 +38,16 @@ export async function GET(request: NextRequest) {
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     }),
-    prisma.article.count(),
+    prisma.article.count({ where: { shopId } }),
   ]);
 
   return NextResponse.json({ success: true, data: articles, total, page, pageSize: PAGE_SIZE });
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const body = await request.json();
   const { title, title_th, slug, excerpt, excerpt_th, content, content_th, coverImage, published, tags } = body;
@@ -68,6 +71,7 @@ export async function POST(request: NextRequest) {
 
   const article = await prisma.article.create({
     data: {
+      shopId,
       title,
       title_th: title_th || null,
       slug: finalSlug,

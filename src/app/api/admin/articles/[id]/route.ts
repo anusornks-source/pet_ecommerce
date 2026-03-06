@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const { id } = await params;
-  const article = await prisma.article.findUnique({ where: { id } });
+  const article = await prisma.article.findFirst({ where: { id, shopId } });
 
   if (!article) {
     return NextResponse.json({ success: false, error: "ไม่พบบทความ" }, { status: 404 });
@@ -23,12 +24,19 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const { id } = await params;
   const body = await request.json();
   const { title, title_th, slug, excerpt, excerpt_th, content, content_th, coverImage, published, tags } = body;
+
+  // Verify article belongs to this shop
+  const existingArticle = await prisma.article.findFirst({ where: { id, shopId } });
+  if (!existingArticle) {
+    return NextResponse.json({ success: false, error: "ไม่พบบทความ" }, { status: 404 });
+  }
 
   const article = await prisma.article.update({
     where: { id },
@@ -53,10 +61,17 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const { id } = await params;
+  // Verify article belongs to this shop
+  const existingArticleDel = await prisma.article.findFirst({ where: { id, shopId } });
+  if (!existingArticleDel) {
+    return NextResponse.json({ success: false, error: "ไม่พบบทความ" }, { status: 404 });
+  }
+
   await prisma.article.delete({ where: { id } });
 
   return NextResponse.json({ success: true });

@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const { id } = await params;
 
-  const product = await prisma.product.findUnique({
-    where: { id },
+  const product = await prisma.product.findFirst({
+    where: { id, shopId },
     include: { variants: true, tags: true },
   });
 
@@ -22,6 +23,7 @@ export async function POST(
 
   const newProduct = await prisma.product.create({
     data: {
+      shopId,
       name: `สำเนา: ${product.name}`,
       description: product.description,
       shortDescription: product.shortDescription,

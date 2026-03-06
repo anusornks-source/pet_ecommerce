@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import { useShopAdmin } from "@/context/ShopAdminContext";
 
 interface Category {
   id: string;
@@ -82,6 +83,7 @@ interface ProductFormProps {
 
 export default function ProductForm({ productId, initialData }: ProductFormProps) {
   const router = useRouter();
+  const { activeShop } = useShopAdmin();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [petTypes, setPetTypes] = useState<PetType[]>([]);
@@ -130,13 +132,22 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
     setVariants((v) => v.map((row, i) => (i === idx ? { ...row, [key]: value } : row)));
 
   useEffect(() => {
-    fetch("/api/admin/categories")
-      .then((r) => r.json())
-      .then((d) => { if (d.success) setCategories(d.data); });
+    if (!activeShop) return;
 
-    fetch("/api/admin/pet-types")
+    // Fetch shop-scoped categories (only enabled ones for this shop)
+    fetch(`/api/admin/shops/${activeShop.id}/categories`)
       .then((r) => r.json())
-      .then((d) => { if (d.success) setPetTypes(d.data); });
+      .then((d) => {
+        if (d.success) setCategories(d.data.filter((c: { enabled: boolean }) => c.enabled));
+      });
+
+    if (activeShop.usePetType) {
+      fetch("/api/admin/pet-types")
+        .then((r) => r.json())
+        .then((d) => { if (d.success) setPetTypes(d.data); });
+    } else {
+      setPetTypes([]);
+    }
 
     fetch("/api/admin/settings")
       .then((r) => r.json())
@@ -152,7 +163,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
     fetch("/api/admin/tags")
       .then((r) => r.json())
       .then((d) => { if (d.success) setAllTags(d.data); });
-  }, []);
+  }, [activeShop]);
 
   const imageList = form.images.split(",").map((u) => u.trim()).filter(Boolean);
 
@@ -468,7 +479,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className={`grid gap-4 ${activeShop?.usePetType !== false ? "grid-cols-2" : "grid-cols-1"}`}>
         <div>
           <label className="block text-sm font-medium text-stone-700 mb-1.5">
             หมวดหมู่
@@ -487,23 +498,25 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
             ))}
           </select>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1.5">
-            ประเภทสัตว์เลี้ยง
-          </label>
-          <select
-            value={form.petTypeId}
-            onChange={(e) => setForm((f) => ({ ...f, petTypeId: e.target.value }))}
-            className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
-          >
-            <option value="">ทุกสัตว์เลี้ยง</option>
-            {petTypes.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.icon} {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {activeShop?.usePetType !== false && (
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1.5">
+              ประเภทสัตว์เลี้ยง
+            </label>
+            <select
+              value={form.petTypeId}
+              onChange={(e) => setForm((f) => ({ ...f, petTypeId: e.target.value }))}
+              className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
+            >
+              <option value="">ทุกสัตว์เลี้ยง</option>
+              {petTypes.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.icon} {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Image Upload */}

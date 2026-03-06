@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const { id } = await params;
   const body = await request.json();
@@ -16,6 +17,12 @@ export async function PUT(
     subtitle, subtitle_th, ctaLabel, ctaLabel_th, ctaUrl,
     secondaryCtaLabel, secondaryCtaLabel_th, secondaryCtaUrl, order, active,
   } = body;
+
+  // Verify banner belongs to this shop
+  const existingBanner = await prisma.heroBanner.findFirst({ where: { id, shopId } });
+  if (!existingBanner) {
+    return NextResponse.json({ success: false, error: "ไม่พบแบนเนอร์" }, { status: 404 });
+  }
 
   const banner = await prisma.heroBanner.update({
     where: { id },
@@ -47,10 +54,17 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const { id } = await params;
+  // Verify banner belongs to this shop
+  const existingBannerDel = await prisma.heroBanner.findFirst({ where: { id, shopId } });
+  if (!existingBannerDel) {
+    return NextResponse.json({ success: false, error: "ไม่พบแบนเนอร์" }, { status: 404 });
+  }
+
   await prisma.heroBanner.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }

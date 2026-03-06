@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
 import { FulfillmentMethod } from "@prisma/client";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const { id } = await params;
-  const product = await prisma.product.findUnique({
-    where: { id },
+  const product = await prisma.product.findFirst({
+    where: { id, shopId },
     include: { category: true, petType: true, variants: { orderBy: { createdAt: "asc" } }, tags: true },
   });
 
@@ -30,8 +31,9 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const { id } = await params;
   const body = await request.json();
@@ -65,6 +67,12 @@ export async function PUT(
     active?: boolean;
     fulfillmentMethod?: string | null;
   };
+
+  // Verify product belongs to this shop
+  const existing = await prisma.product.findFirst({ where: { id, shopId } });
+  if (!existing) {
+    return NextResponse.json({ success: false, error: "ไม่พบสินค้า" }, { status: 404 });
+  }
 
   if (variants !== undefined) {
     await prisma.productVariant.deleteMany({ where: { productId: id } });
@@ -120,10 +128,17 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const { id } = await params;
+
+  // Verify product belongs to this shop
+  const existingProduct = await prisma.product.findFirst({ where: { id, shopId } });
+  if (!existingProduct) {
+    return NextResponse.json({ success: false, error: "ไม่พบสินค้า" }, { status: 404 });
+  }
 
   await prisma.cartItem.deleteMany({ where: { productId: id } });
   await prisma.product.delete({ where: { id } });

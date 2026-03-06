@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search") || "";
@@ -13,13 +14,13 @@ export async function GET(request: NextRequest) {
   const outOfStock = searchParams.get("outOfStock") === "true";
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = {};
+  const where: any = { product: { shopId } };
 
   if (search) {
     where.OR = [
       { sku: { contains: search, mode: "insensitive" } },
       { cjVid: { contains: search, mode: "insensitive" } },
-      { product: { name: { contains: search, mode: "insensitive" } } },
+      { product: { name: { contains: search, mode: "insensitive" }, shopId } },
     ];
   }
   if (fulfillmentMethod === "INHERIT") {
@@ -58,11 +59,18 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const { id, active } = await request.json();
   if (!id) return NextResponse.json({ success: false, error: "id required" }, { status: 400 });
+
+  // Verify variant belongs to a product in this shop
+  const existingVariant = await prisma.productVariant.findFirst({ where: { id, product: { shopId } } });
+  if (!existingVariant) {
+    return NextResponse.json({ success: false, error: "ไม่พบตัวเลือกสินค้า" }, { status: 404 });
+  }
 
   const variant = await prisma.productVariant.update({
     where: { id },

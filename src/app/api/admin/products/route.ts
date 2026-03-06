@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search") || "";
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
   const tagId = searchParams.get("tagId") || "";
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = {};
+  const where: any = { shopId };
 
   if (search) {
     where.OR = [
@@ -52,8 +53,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const body = await request.json();
   const {
@@ -82,6 +84,7 @@ export async function POST(request: NextRequest) {
   type VariantInput = { size?: string; color?: string; price: string; stock: string; sku?: string };
   const product = await prisma.product.create({
     data: {
+      shopId,
       name,
       name_th: name_th || null,
       description,

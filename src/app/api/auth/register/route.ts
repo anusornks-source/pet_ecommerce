@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { signToken, setAuthCookie } from "@/lib/auth";
+import { signToken, setAuthCookie, buildTokenPayload } from "@/lib/auth";
 
 const registerSchema = z.object({
   name: z.string().min(2, "ชื่อต้องมีอย่างน้อย 2 ตัวอักษร"),
@@ -28,11 +28,7 @@ export async function POST(request: NextRequest) {
       data: { name, email, password: hashed },
     });
 
-    const token = await signToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    });
+    const token = await signToken(await buildTokenPayload(user));
 
     await setAuthCookie(token);
 

@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
-  const coupons = await prisma.coupon.findMany({ orderBy: { createdAt: "desc" } });
+  const coupons = await prisma.coupon.findMany({ where: { shopId }, orderBy: { createdAt: "desc" } });
   return NextResponse.json({ success: true, data: coupons });
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const { code, type, value, minOrder, maxUses, active, expiresAt } = await request.json();
 
@@ -22,6 +24,7 @@ export async function POST(request: NextRequest) {
 
   const coupon = await prisma.coupon.create({
     data: {
+      shopId,
       code: code.toUpperCase().trim(),
       type,
       value: parseFloat(value),

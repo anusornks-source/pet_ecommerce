@@ -94,9 +94,12 @@ export async function POST(request: NextRequest) {
 
   // Create order + payment in transaction
   const order = await prisma.$transaction(async (tx) => {
+    // Use shopId from first cart item's product
+    const orderShopId = cart.items[0].product.shopId;
     const newOrder = await tx.order.create({
       data: {
         userId: session.userId,
+        shopId: orderShopId,
         address,
         city,
         province,

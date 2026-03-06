@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify, JWTPayload } from "jose";
 import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
 
 const SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "fallback-secret-min-32-chars-long!!"
@@ -9,6 +10,7 @@ export interface CustomJWTPayload {
   userId: string;
   email: string;
   role: string;
+  shopRoles?: Record<string, string>; // { shopId: ShopRole }
 }
 
 export async function signToken(payload: CustomJWTPayload): Promise<string> {
@@ -51,4 +53,21 @@ export async function setAuthCookie(token: string): Promise<void> {
 export async function removeAuthCookie(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete("token");
+}
+
+/** Build JWT payload with shop roles for a user */
+export async function buildTokenPayload(user: {
+  id: string;
+  email: string;
+  role: string;
+}): Promise<CustomJWTPayload> {
+  const memberships = await prisma.shopMember.findMany({
+    where: { userId: user.id },
+    select: { shopId: true, role: true },
+  });
+  const shopRoles =
+    memberships.length > 0
+      ? Object.fromEntries(memberships.map((m) => [m.shopId, m.role]))
+      : undefined;
+  return { userId: user.id, email: user.email, role: user.role, shopRoles };
 }

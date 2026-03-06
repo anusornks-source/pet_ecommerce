@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
-  const banners = await prisma.heroBanner.findMany({ orderBy: { order: "asc" } });
+  const banners = await prisma.heroBanner.findMany({ where: { shopId }, orderBy: { order: "asc" } });
   return NextResponse.json({ success: true, data: banners });
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const body = await request.json();
   const {
@@ -27,6 +29,7 @@ export async function POST(request: NextRequest) {
 
   const banner = await prisma.heroBanner.create({
     data: {
+      shopId,
       imageUrl: imageUrl.trim(),
       badge: badge?.trim() || null,
       badge_th: badge_th?.trim() || null,

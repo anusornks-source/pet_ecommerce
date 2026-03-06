@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
 import { createCJOrder, getCJInventory, getCJFreight, cancelCJOrder } from "@/lib/cjDropshipping";
 import { logApi } from "@/lib/apiLogger";
 
@@ -8,12 +8,13 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const { id } = await params;
-  const order = await prisma.order.findUnique({
-    where: { id },
+  const order = await prisma.order.findFirst({
+    where: { id, shopId },
     include: {
       user: { select: { name: true, email: true, phone: true } },
       items: { include: { product: true, variant: true } },
@@ -35,8 +36,9 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const { id } = await params;
   const dryRun = request.nextUrl.searchParams.get("dryRun") === "true";
@@ -53,8 +55,8 @@ export async function PUT(
   }
 
   // Get current order to build statusHistory + CJ data + items with stock
-  const current = await prisma.order.findUnique({
-    where: { id },
+  const current = await prisma.order.findFirst({
+    where: { id, shopId },
     select: {
       status: true,
       statusHistory: true,
@@ -302,7 +304,7 @@ export async function PUT(
 
   await logApi({
     type: "API", source: "ADMIN", method: "PUT", path: `/api/admin/orders/${id}`,
-    statusCode: 200, userId: auth.userId, success: true,
+    statusCode: 200, userId: auth.payload.userId, success: true,
     request: { orderId: id, fromStatus: current.status, toStatus: status, note, trackingNumber, trackingCarrier },
     response: { status: order.status, cjOrderId: order.cjOrderId },
   });

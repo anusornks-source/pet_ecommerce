@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma, FulfillmentMethod } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
 import { searchCJProducts, getCJProductDetail, getCJProductDetailBySku, getCJInventory } from "@/lib/cjDropshipping";
 import Anthropic from "@anthropic-ai/sdk";
 
@@ -91,8 +92,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/admin/cj-products — import product to DB
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request);
-  if (isNextResponse(auth)) return auth;
+  const auth = await requireShopAdmin(request);
+  if (isShopAuthResponse(auth)) return auth;
+  const { shopId } = auth;
 
   const { pid, categoryId, petTypeId, priceFactor = 3, usdToThb = 36, fallbackCostUSD = 0, deliveryDays, warehouseCountry } = await request.json();
 
@@ -199,6 +201,7 @@ export async function POST(request: NextRequest) {
         normalPrice: sellPrice,
         stock: variantData.reduce((s, v) => s + (v.stock as number), 0),
         images: allImages,
+        shopId,
         categoryId,
         petTypeId: petTypeId || null,
         active: false,

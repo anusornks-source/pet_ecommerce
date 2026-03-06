@@ -205,7 +205,7 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
             { icon: "🖼️", label: "Hero Banner", sub: "สไลด์หน้าแรก", href: "/admin/banners" },
             { icon: "🛍️", label: "สินค้า", sub: "จัดการสินค้า", href: "/admin/products" },
             { icon: "📚", label: "บทความ", sub: "บทความ / บล็อก", href: "/admin/articles" },
-            { icon: "📦", label: "Shelves", sub: "ชั้นวางสินค้า", href: "/admin/shelves" },
+            { icon: "📦", label: "Shelves", sub: "ชั้นวางสินค้า", href: `/admin/shelves?shopId=${id}` },
             { icon: "🏪", label: "สาขา", sub: "แผนที่สาขา", href: "/admin/stores" },
             { icon: "🎟️", label: "คูปอง", sub: "โค้ดส่วนลด", href: "/admin/coupons" },
           ].map((item) => (

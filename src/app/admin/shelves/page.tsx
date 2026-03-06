@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { useShopAdmin } from "@/context/ShopAdminContext";
 import Image from "next/image";
 import Link from "next/link";
@@ -50,7 +51,8 @@ const toSlug = (name: string) =>
 
 export default function AdminShelvesPage() {
   const { activeShop, shops, isAdmin } = useShopAdmin();
-  const [shopFilter, setShopFilter] = useState<string>("");
+  const searchParams = useSearchParams();
+  const [shopFilter, setShopFilter] = useState<string>(searchParams.get("shopId") ?? "");
   const [shelves, setShelves] = useState<Shelf[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -100,7 +102,8 @@ export default function AdminShelvesPage() {
   const handleCreate = async () => {
     if (!form.name || !form.slug) return toast.error("กรุณากรอก name และ slug");
     setSubmitting(true);
-    const res = await fetch("/api/admin/shelves", {
+    const createUrl = shopFilter && shopFilter !== "all" ? `/api/admin/shelves?shopId=${shopFilter}` : "/api/admin/shelves";
+    const res = await fetch(createUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
@@ -120,7 +123,8 @@ export default function AdminShelvesPage() {
   // ── Update ────────────────────────────────────────────────────────────────
   const handleUpdate = async (id: string) => {
     setSubmitting(true);
-    const res = await fetch(`/api/admin/shelves/${id}`, {
+    const qs = shopFilter && shopFilter !== "all" ? `?shopId=${shopFilter}` : "";
+    const res = await fetch(`/api/admin/shelves/${id}${qs}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(editForm),
@@ -138,7 +142,8 @@ export default function AdminShelvesPage() {
 
   // ── Toggle active ─────────────────────────────────────────────────────────
   const handleToggle = async (shelf: Shelf) => {
-    await fetch(`/api/admin/shelves/${shelf.id}`, {
+    const qs = shopFilter && shopFilter !== "all" ? `?shopId=${shopFilter}` : "";
+    await fetch(`/api/admin/shelves/${shelf.id}${qs}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ active: !shelf.active }),
@@ -149,7 +154,8 @@ export default function AdminShelvesPage() {
   // ── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`ลบ shelf "${name}" และสินค้าทั้งหมดในนั้น?`)) return;
-    const res = await fetch(`/api/admin/shelves/${id}`, { method: "DELETE" });
+    const qs = shopFilter && shopFilter !== "all" ? `?shopId=${shopFilter}` : "";
+    const res = await fetch(`/api/admin/shelves/${id}${qs}`, { method: "DELETE" });
     const data = await res.json();
     if (data.success) {
       toast.success("ลบสำเร็จ");

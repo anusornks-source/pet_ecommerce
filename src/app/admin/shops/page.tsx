@@ -18,7 +18,7 @@ export default function ShopsPage() {
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: "", name_th: "", slug: "", description: "", usePetType: true });
+  const [form, setForm] = useState({ name: "", name_th: "", slug: "", description: "", usePetType: false});
   const [saving, setSaving] = useState(false);
 
   const fetchShops = () => {
@@ -42,7 +42,7 @@ export default function ShopsPage() {
     });
     const data = await res.json();
     if (data.success) {
-      setForm({ name: "", name_th: "", slug: "", description: "", usePetType: true });
+      setForm({ name: "", name_th: "", slug: "", description: "", usePetType: false});
       setShowForm(false);
       fetchShops();
     }

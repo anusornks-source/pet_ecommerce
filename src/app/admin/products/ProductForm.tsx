@@ -91,6 +91,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState<"en" | "th" | false>(false);
+  const [generatingName, setGeneratingName] = useState<"en" | "th" | false>(false);
   const [generatingFullDesc, setGeneratingFullDesc] = useState<"en" | "th" | false>(false);
 
   const [form, setForm] = useState({
@@ -261,7 +262,38 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="grid grid-cols-2 gap-4">
         {field("ชื่อสินค้า (EN)", "name", { required: true, placeholder: "e.g. Genuine Leather Dog Leash" })}
-        {field("ชื่อสินค้า (TH)", "name_th", { placeholder: "เช่น สายจูงหนังแท้" })}
+        {/* ชื่อสินค้า TH — with AI translate button */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-sm font-medium text-stone-700">ชื่อสินค้า (TH)</label>
+            <button
+              type="button"
+              disabled={!!generatingName || !form.name}
+              onClick={async () => {
+                setGeneratingName("th");
+                try {
+                  const res = await fetch("/api/admin/ai/suggest-field", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ field: "name_th", name: form.name }),
+                  });
+                  const data = await res.json();
+                  if (data.success) setForm((f) => ({ ...f, name_th: data.value }));
+                  else toast.error(data.error || "AI generation failed");
+                } catch { toast.error("Error"); } finally { setGeneratingName(false); }
+              }}
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 border border-violet-200 transition-colors disabled:opacity-50 shrink-0"
+            >
+              {generatingName === "th" ? <><span className="inline-block w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" /> TH...</> : <>✨ AI TH</>}
+            </button>
+          </div>
+          <input
+            value={form.name_th}
+            onChange={(e) => setForm((f) => ({ ...f, name_th: e.target.value }))}
+            placeholder="เช่น สายจูงหนังแท้"
+            className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+          />
+        </div>
       </div>
 
       {/* Source Description — paste raw content for AI/reference */}

@@ -270,26 +270,32 @@ export default function StaffPage() {
                   </div>
                 </td>
                 <td className="px-5 py-3">
-                  <select
-                    value={m.role}
-                    onChange={(e) => handleUpdateRole(m.id, e.target.value)}
-                    className="text-xs border border-stone-200 rounded-lg px-2 py-1"
-                  >
-                    <option value="STAFF">Staff</option>
-                    <option value="MANAGER">Manager</option>
-                    <option value="OWNER">Owner</option>
-                  </select>
+                  {m.user.role === "ADMIN" ? (
+                    <span className="text-xs text-stone-400">—</span>
+                  ) : (
+                    <select
+                      value={m.role}
+                      onChange={(e) => handleUpdateRole(m.id, e.target.value)}
+                      className="text-xs border border-stone-200 rounded-lg px-2 py-1"
+                    >
+                      <option value="STAFF">Staff</option>
+                      <option value="MANAGER">Manager</option>
+                      <option value="OWNER">Owner</option>
+                    </select>
+                  )}
                 </td>
                 <td className="px-5 py-3 text-stone-400 text-xs">
                   {new Date(m.createdAt).toLocaleDateString()}
                 </td>
                 <td className="px-5 py-3 text-right">
-                  <button
-                    onClick={() => handleRemove(m.id)}
-                    className="text-xs text-red-400 hover:text-red-600"
-                  >
-                    Remove
-                  </button>
+                  {m.user.role !== "ADMIN" && (
+                    <button
+                      onClick={() => handleRemove(m.id)}
+                      className="text-xs text-red-400 hover:text-red-600"
+                    >
+                      Remove
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

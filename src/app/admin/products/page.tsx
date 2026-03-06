@@ -151,7 +151,12 @@ export default function AdminProductsPage() {
     setFilterCategory("");
     fetch(url)
       .then((r) => r.json())
-      .then((d) => { if (d.success) setCategories(d.data); });
+      .then((d) => {
+        if (d.success) {
+          const list = resolvedShopId ? d.data.filter((c: { enabled: boolean }) => c.enabled) : d.data;
+          setCategories(list);
+        }
+      });
   }, [shopFilter, activeShop?.id]);
 
   useEffect(() => {

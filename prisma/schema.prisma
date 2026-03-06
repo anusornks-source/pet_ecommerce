@@ -123,12 +123,27 @@ model ShopCategory {
 
 // ─── Taxonomy (Global) ────────────────────────────────────────
 
+model CategoryGroup {
+  id         String     @id @default(cuid())
+  name       String     @unique
+  name_th    String?
+  slug       String     @unique
+  icon       String?
+  order      Int        @default(0)
+  categories Category[]
+
+  @@map("category_groups")
+}
+
 model Category {
   id             String         @id @default(cuid())
   name           String         @unique
   name_th        String?
   slug           String         @unique
   icon           String?
+  order          Int            @default(0)
+  groupId        String?
+  group          CategoryGroup? @relation(fields: [groupId], references: [id])
   products       Product[]
   shopCategories ShopCategory[]
 

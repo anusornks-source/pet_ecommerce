@@ -14,9 +14,10 @@ export async function GET(
 
   // All global categories + which ones are enabled for this shop
   const categories = await prisma.category.findMany({
-    orderBy: { name: "asc" },
+    orderBy: { order: "asc" },
     include: {
       shopCategories: { where: { shopId: id }, select: { id: true } },
+      group: true,
     },
   });
 
@@ -26,6 +27,8 @@ export async function GET(
     name_th: cat.name_th,
     slug: cat.slug,
     icon: cat.icon,
+    groupId: cat.groupId,
+    group: cat.group ? { id: cat.group.id, name: cat.group.name, name_th: cat.group.name_th, icon: cat.group.icon } : null,
     enabled: cat.shopCategories.length > 0,
   }));
 

@@ -11,7 +11,7 @@ export async function PUT(
 
   const { id } = await params;
   const body = await request.json();
-  const { name, name_th, slug, icon } = body;
+  const { name, name_th, slug, icon, groupId } = body;
 
   const category = await prisma.category.update({
     where: { id },
@@ -20,6 +20,7 @@ export async function PUT(
       ...(name_th !== undefined && { name_th: name_th || null }),
       ...(slug !== undefined && { slug }),
       ...(icon !== undefined && { icon: icon || null }),
+      ...("groupId" in body && { groupId: groupId || null }),
     },
   });
 

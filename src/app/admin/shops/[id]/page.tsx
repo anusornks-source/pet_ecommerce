@@ -3,12 +3,21 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 
+interface CategoryGroup {
+  id: string;
+  name: string;
+  name_th: string | null;
+  icon: string | null;
+}
+
 interface Category {
   id: string;
   name: string;
   name_th: string | null;
   slug: string;
   icon: string | null;
+  groupId: string | null;
+  group: CategoryGroup | null;
   enabled: boolean;
 }
 
@@ -146,15 +155,71 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
           </button>
         </div>
         <p className="text-sm text-stone-400 mb-3">Select which categories this shop sells. Only checked categories appear in the product form and storefront.</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {categories.map((cat) => (
-            <label key={cat.id} className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border cursor-pointer transition-colors ${cat.enabled ? "border-orange-300 bg-orange-50" : "border-stone-100 hover:bg-stone-50"}`}>
-              <input type="checkbox" checked={cat.enabled} onChange={() => toggleCategory(cat.id)} className="accent-orange-500" />
-              <span className="text-sm">
-                {cat.icon} {cat.name}
-                {cat.name_th && <span className="text-stone-400 ml-1">({cat.name_th})</span>}
-              </span>
-            </label>
+        {(() => {
+          // Build grouped structure
+          const groupMap = new Map<string | null, { group: CategoryGroup | null; cats: Category[] }>();
+          categories.forEach((cat) => {
+            const key = cat.groupId ?? null;
+            if (!groupMap.has(key)) groupMap.set(key, { group: cat.group, cats: [] });
+            groupMap.get(key)!.cats.push(cat);
+          });
+          // Grouped first, then ungrouped
+          const entries = [...groupMap.entries()].sort(([a], [b]) => {
+            if (a === null) return 1;
+            if (b === null) return -1;
+            return 0;
+          });
+          return (
+            <div className="space-y-4">
+              {entries.map(([key, { group, cats }]) => (
+                <div key={key ?? "ungrouped"}>
+                  {group && (
+                    <div className="text-xs font-semibold text-violet-600 mb-1.5 px-1">
+                      {group.icon} {group.name_th || group.name}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {cats.map((cat) => (
+                      <label key={cat.id} className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border cursor-pointer transition-colors ${cat.enabled ? "border-orange-300 bg-orange-50" : "border-stone-100 hover:bg-stone-50"}`}>
+                        <input type="checkbox" checked={cat.enabled} onChange={() => toggleCategory(cat.id)} className="accent-orange-500" />
+                        <span className="text-sm">
+                          {cat.icon} {cat.name}
+                          {cat.name_th && <span className="text-stone-400 ml-1">({cat.name_th})</span>}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Content quick links */}
+      <div className="bg-white rounded-2xl border border-stone-100 p-6">
+        <h2 className="font-semibold text-stone-800 mb-1">จัดการคอนเทนต์ร้าน</h2>
+        <p className="text-sm text-stone-400 mb-4">คลิกเพื่อไปจัดการคอนเทนต์ของร้านนี้ — ระบบจะกรองให้อัตโนมัติตามร้านที่เลือก</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {[
+            { icon: "🖼️", label: "Hero Banner", sub: "สไลด์หน้าแรก", href: "/admin/banners" },
+            { icon: "🛍️", label: "สินค้า", sub: "จัดการสินค้า", href: "/admin/products" },
+            { icon: "📚", label: "บทความ", sub: "บทความ / บล็อก", href: "/admin/articles" },
+            { icon: "📦", label: "Shelves", sub: "ชั้นวางสินค้า", href: "/admin/shelves" },
+            { icon: "🏪", label: "สาขา", sub: "แผนที่สาขา", href: "/admin/stores" },
+            { icon: "🎟️", label: "คูปอง", sub: "โค้ดส่วนลด", href: "/admin/coupons" },
+          ].map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl border border-stone-100 hover:border-orange-200 hover:bg-orange-50 transition-colors group"
+            >
+              <span className="text-2xl">{item.icon}</span>
+              <div>
+                <div className="text-sm font-medium text-stone-700 group-hover:text-orange-600">{item.label}</div>
+                <div className="text-xs text-stone-400">{item.sub}</div>
+              </div>
+            </a>
           ))}
         </div>
       </div>

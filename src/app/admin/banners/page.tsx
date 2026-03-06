@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useShopAdmin } from "@/context/ShopAdminContext";
 import Image from "next/image";
 import toast from "react-hot-toast";
 
@@ -46,6 +47,7 @@ const emptyForm = {
 };
 
 export default function AdminBannersPage() {
+  const { activeShop } = useShopAdmin();
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(emptyForm);
@@ -162,7 +164,14 @@ export default function AdminBannersPage() {
       <div className="mb-5 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-stone-800">🖼️ Hero Banner</h1>
-          <p className="text-xs text-stone-400 mt-0.5">Slider บนหน้าแรก — เรียงลำดับตาม Order</p>
+          <p className="text-xs text-stone-400 mt-0.5">
+            Slider บนหน้าแรก — เรียงลำดับตาม Order
+            {activeShop && (
+              <span className="ml-2 px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 font-medium">
+                ร้าน: {activeShop.name}
+              </span>
+            )}
+          </p>
         </div>
         {!showForm && (
           <button

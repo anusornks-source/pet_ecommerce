@@ -5,7 +5,8 @@ import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
 export async function GET(request: NextRequest) {
   const auth = await requireShopAdmin(request);
   if (isShopAuthResponse(auth)) return auth;
-  const { shopId } = auth;
+  const { shopId, payload } = auth;
+  const includeShop = payload.role === "ADMIN";
 
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search") || "";
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
   const [products, total] = await Promise.all([
     prisma.product.findMany({
       where,
-      include: { category: true, petType: true, tags: true, shop: shopId === "all" },
+      include: { category: true, petType: true, tags: true, shop: includeShop },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,

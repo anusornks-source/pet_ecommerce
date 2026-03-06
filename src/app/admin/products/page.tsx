@@ -79,8 +79,35 @@ export default function AdminProductsPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [filterTag, setFilterTag] = useState("");
-  const [editingCell, setEditingCell] = useState<{ productId: string; field: "category" | "petType" | "tags" } | null>(null);
+  const [editingCell, setEditingCell] = useState<{ productId: string; field: "category" | "petType" | "tags" | "shop" } | null>(null);
   const [savingCell, setSavingCell] = useState<string | null>(null);
+
+  const handleShopTransfer = async (productId: string, newShopId: string) => {
+    if (!newShopId) return;
+    setSavingCell(productId + "shop");
+    try {
+      const res = await fetch(`/api/admin/products/${productId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shopId: newShopId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const newShop = shops.find((s) => s.id === newShopId) ?? null;
+        setProducts((prev) => prev.map((p) =>
+          p.id === productId ? { ...p, shop: newShop } : p
+        ));
+        toast.success("ย้ายร้านสำเร็จ");
+      } else {
+        toast.error(data.error || "ย้ายร้านไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("เกิดข้อผิดพลาด");
+    } finally {
+      setSavingCell(null);
+      setEditingCell(null);
+    }
+  };
 
   const handleInlineEdit = async (productId: string, field: "category" | "petType", value: string) => {
     setSavingCell(productId + field);
@@ -363,6 +390,9 @@ export default function AdminProductsPage() {
                 <th className="text-left px-4 py-3 text-stone-500 font-medium">
                   สินค้า
                 </th>
+                {(isAdmin || shops.length > 1) && (
+                  <th className="text-left px-4 py-3 text-stone-500 font-medium hidden lg:table-cell">ร้าน</th>
+                )}
                 <th className="text-left px-4 py-3 text-stone-500 font-medium hidden md:table-cell">
                   หมวดหมู่
                 </th>
@@ -419,11 +449,6 @@ export default function AdminProductsPage() {
                             className="flex flex-wrap gap-1 cursor-pointer"
                             onClick={() => setEditingCell({ productId: product.id, field: "tags" })}
                           >
-                            {shopFilter === "all" && product.shop && (
-                              <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600 font-medium">
-                                S: {product.shop.name}
-                              </span>
-                            )}
                             {product.tags.map((tag) => (
                               <span
                                 key={tag.id}
@@ -472,6 +497,30 @@ export default function AdminProductsPage() {
                       </div>
                     </div>
                   </td>
+                  {(isAdmin || shops.length > 1) && (
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      {isAdmin && editingCell?.productId === product.id && editingCell.field === "shop" ? (
+                        <select
+                          autoFocus
+                          defaultValue={product.shop?.id ?? ""}
+                          disabled={savingCell === product.id + "shop"}
+                          onChange={(e) => handleShopTransfer(product.id, e.target.value)}
+                          onBlur={() => setEditingCell(null)}
+                          className="text-xs border border-blue-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
+                        >
+                          {shops.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                      ) : (
+                        <button
+                          onClick={() => isAdmin && setEditingCell({ productId: product.id, field: "shop" })}
+                          className={`text-xs px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600 font-medium ${isAdmin ? "hover:bg-blue-200 cursor-pointer" : "cursor-default"}`}
+                          title={isAdmin ? "คลิกเพื่อย้ายร้าน" : ""}
+                        >
+                          {product.shop?.name ?? "—"}
+                        </button>
+                      )}
+                    </td>
+                  )}
                   <td className="px-4 py-3 hidden md:table-cell">
                     {editingCell?.productId === product.id && editingCell.field === "category" ? (
                       <select

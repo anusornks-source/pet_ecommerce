@@ -33,7 +33,8 @@ export async function PUT(
 ) {
   const auth = await requireShopAdmin(request);
   if (isShopAuthResponse(auth)) return auth;
-  const { shopId } = auth;
+  const { shopId, payload } = auth;
+  const isAdmin = payload.role === "ADMIN";
 
   const { id } = await params;
   const body = await request.json();
@@ -58,6 +59,7 @@ export async function PUT(
     fulfillmentMethod,
     variants,
     tagIds,
+    shopId: newShopId,
   } = body;
 
   type VariantInput = {
@@ -68,8 +70,10 @@ export async function PUT(
     fulfillmentMethod?: string | null;
   };
 
-  // Verify product belongs to this shop
-  const existing = await prisma.product.findFirst({ where: { id, shopId } });
+  // Platform ADMIN can access any product; shop members only their shop
+  const existing = await prisma.product.findFirst({
+    where: isAdmin ? { id } : { id, shopId },
+  });
   if (!existing) {
     return NextResponse.json({ success: false, error: "ไม่พบสินค้า" }, { status: 404 });
   }
@@ -117,6 +121,7 @@ export async function PUT(
       ...(warehouseCountry !== undefined && { warehouseCountry: warehouseCountry || null }),
       ...(fulfillmentMethod !== undefined && { fulfillmentMethod: fulfillmentMethod as FulfillmentMethod }),
       ...(tagIds !== undefined && { tags: { set: (tagIds as string[]).map((tid) => ({ id: tid })) } }),
+      ...(isAdmin && newShopId !== undefined && { shopId: newShopId }),
     },
     include: { category: true, petType: true, variants: { orderBy: { createdAt: "asc" } }, tags: true },
   });

@@ -2,6 +2,7 @@
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useShopAdmin } from "@/context/ShopAdminContext";
 import Link from "next/link";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -53,6 +54,11 @@ function daysLabel(opt: ShippingOption) {
 export default function CJImportDetailPage({ params }: { params: Promise<{ pid: string }> }) {
   const { pid } = use(params);
   const router = useRouter();
+  const { activeShop, shops } = useShopAdmin();
+
+  // Selected shop for import
+  const [selectedShopId, setSelectedShopId] = useState<string>("");
+  const selectedShop = shops.find((s) => s.id === selectedShopId) ?? activeShop;
 
   const [detail, setDetail] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,6 +74,12 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
 
   // Inventory loaded separately (CJ inventory API is slow — 150ms/vid)
   const [stockLoading, setStockLoading] = useState(true);
+  const [resyncing, setResyncing] = useState(false);
+
+  // Recent CJ logs
+  const [logs, setLogs] = useState<{ id: string; action: string; success: boolean; error: string | null; createdAt: string }[]>([]);
+  const [showLogs, setShowLogs] = useState(false);
+  const [logsLoading, setLogsLoading] = useState(false);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [petTypes, setPetTypes] = useState<PetType[]>([]);
@@ -77,6 +89,40 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
   const [usdToThb, setUsdToThb] = useState(36);
   const [estShippingUSD, setEstShippingUSD] = useState(2);
   const [importing, setImporting] = useState(false);
+
+  const fetchInventory = useCallback((variants: VariantRow[]) => {
+    const vids = variants.map((v) => v.vid).filter(Boolean);
+    if (vids.length === 0) { setStockLoading(false); return; }
+    setStockLoading(true);
+    fetch(`/api/admin/cj-products/inventory?vids=${vids.join(",")}`)
+      .then((r) => r.json())
+      .then((inv) => {
+        if (inv.success) {
+          setDetail((prev) => {
+            if (!prev) return prev;
+            const updated = prev.variants.map((v) => ({ ...v, stock: inv.data[v.vid] ?? v.stock }));
+            return { ...prev, variants: updated, totalStock: updated.reduce((s, v) => s + v.stock, 0) };
+          });
+        }
+      })
+      .finally(() => setStockLoading(false));
+  }, []);
+
+  const handleResync = useCallback(async () => {
+    if (!detail) return;
+    setResyncing(true);
+    fetchFreight(detail.variants?.[0]?.vid);
+    fetchInventory(detail.variants);
+    setResyncing(false);
+  }, [detail, fetchFreight, fetchInventory]);
+
+  const fetchLogs = useCallback(async () => {
+    setLogsLoading(true);
+    const res = await fetch("/api/admin/cj-logs?page=1");
+    const data = await res.json();
+    if (data.success) setLogs(data.data.slice(0, 10));
+    setLogsLoading(false);
+  }, []);
 
   const fetchFreight = useCallback((firstVid?: string) => {
     setFreightLoading(true);
@@ -139,7 +185,6 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
       })
       .finally(() => setLoading(false));
 
-    fetch("/api/admin/categories").then((r) => r.json()).then((d) => { if (d.success) setCategories(d.data); });
     fetch("/api/admin/pet-types").then((r) => r.json()).then((d) => { if (d.success) setPetTypes(d.data); });
     fetch("/api/admin/settings").then((r) => r.json()).then((d) => {
       if (d.success) {
@@ -152,6 +197,26 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
       if (freightTimerRef.current) clearTimeout(freightTimerRef.current);
     };
   }, [pid, fetchFreight]);
+
+  // Set default shop once activeShop loads
+  useEffect(() => {
+    if (activeShop && !selectedShopId) setSelectedShopId(activeShop.id);
+  }, [activeShop, selectedShopId]);
+
+  // Fetch categories for the selected shop
+  useEffect(() => {
+    if (!selectedShopId) return;
+    setCategoryId("");
+    setCategories([]);
+    fetch(`/api/admin/shops/${selectedShopId}/categories`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) {
+          const enabled = d.data.filter((c: { enabled: boolean }) => c.enabled);
+          setCategories(enabled.length > 0 ? enabled : d.data);
+        }
+      });
+  }, [selectedShopId]);
 
   useEffect(() => {
     if (categories.length > 0 && !categoryId) setCategoryId(categories[0].id);
@@ -166,7 +231,8 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
       const warehouseCountry = best?.warehouseCode ?? undefined;
       const fallbackCostUSD = detail?.variants?.[0]?.priceUSD ?? 0;
 
-      const res = await fetch("/api/admin/cj-products", {
+      const importShopId = selectedShopId || activeShop?.id;
+      const res = await fetch(`/api/admin/cj-products${importShopId ? `?shopId=${importShopId}` : ""}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -223,12 +289,12 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
   return (
     <div>
       {/* Header */}
-      <div className="mb-5 flex items-center gap-3">
+      <div className="mb-5 flex items-center gap-3 flex-wrap">
         <Link href="/admin/cj-import" className="text-stone-400 hover:text-stone-600 transition-colors text-sm">
           ← กลับ
         </Link>
         <span className="text-stone-200">/</span>
-        <h1 className="text-lg font-bold text-stone-800 truncate">{detail.productNameEn}</h1>
+        <h1 className="text-lg font-bold text-stone-800 truncate flex-1">{detail.productNameEn}</h1>
         {isRecommended && (
           <span className="shrink-0 text-[11px] font-bold px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full">
             ✅ น่าเอามาขาย
@@ -237,7 +303,55 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
             </span>
           </span>
         )}
+        {/* Resync + Logs buttons */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={handleResync}
+            disabled={resyncing || freightLoading || stockLoading}
+            className="text-xs px-3 py-1.5 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-40 flex items-center gap-1.5"
+            title="ดึงข้อมูล freight + stock ใหม่จาก CJ"
+          >
+            <span className={resyncing || freightLoading ? "animate-spin inline-block" : ""}>↻</span>
+            Resync
+          </button>
+          <button
+            onClick={() => { setShowLogs((v) => !v); if (!showLogs) fetchLogs(); }}
+            className="text-xs px-3 py-1.5 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
+            title="ดู CJ API logs ล่าสุด"
+          >
+            Logs
+          </button>
+        </div>
       </div>
+
+      {/* CJ Logs Panel */}
+      {showLogs && (
+        <div className="mb-5 bg-stone-900 rounded-2xl p-4 text-xs font-mono">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-stone-400 font-sans">CJ API Logs (ล่าสุด 10 รายการ)</span>
+            <div className="flex gap-2">
+              <button onClick={fetchLogs} className="text-stone-400 hover:text-white text-[10px]">↻ Refresh</button>
+              <Link href="/admin/cj-logs" className="text-blue-400 hover:text-blue-300 text-[10px]">ดูทั้งหมด →</Link>
+            </div>
+          </div>
+          {logsLoading ? (
+            <div className="text-stone-500 animate-pulse">กำลังโหลด...</div>
+          ) : logs.length === 0 ? (
+            <div className="text-stone-500">ไม่มี log</div>
+          ) : (
+            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+              {logs.map((log) => (
+                <div key={log.id} className={`flex items-start gap-2 px-2 py-1.5 rounded-lg ${log.success ? "bg-stone-800" : "bg-red-950"}`}>
+                  <span className={`shrink-0 ${log.success ? "text-green-400" : "text-red-400"}`}>{log.success ? "✓" : "✗"}</span>
+                  <span className="text-stone-300 flex-1 truncate">{log.action}</span>
+                  {log.error && <span className="text-red-400 text-[10px] truncate max-w-48" title={log.error}>{log.error}</span>}
+                  <span className="text-stone-600 shrink-0 text-[10px]">{new Date(log.createdAt).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Images */}
@@ -484,9 +598,25 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
               </div>
             )}
 
+            {/* Shop selector */}
+            {shops.length > 1 && (
+              <div>
+                <label className="block text-xs text-stone-500 mb-1">นำเข้าไปยังร้าน *</label>
+                <select
+                  value={selectedShopId}
+                  onChange={(e) => setSelectedShopId(e.target.value)}
+                  className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
+                >
+                  {shops.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* Category */}
             <div>
-              <label className="block text-xs text-stone-500 mb-1">หมวดหมู่ *</label>
+              <label className="block text-xs text-stone-500 mb-1">หมวดหมู่ * {selectedShop?.name && <span className="text-orange-500">({selectedShop.name})</span>}</label>
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
@@ -494,25 +624,27 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
               >
                 <option value="">— เลือกหมวดหมู่ —</option>
                 {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                  <option key={c.id} value={c.id}>{(c as { icon?: string | null }).icon} {c.name}</option>
                 ))}
               </select>
             </div>
 
-            {/* Pet type */}
-            <div>
-              <label className="block text-xs text-stone-500 mb-1">ประเภทสัตว์</label>
-              <select
-                value={petTypeId}
-                onChange={(e) => setPetTypeId(e.target.value)}
-                className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
-              >
-                <option value="">ไม่ระบุ</option>
-                {petTypes.map((p) => (
-                  <option key={p.id} value={p.id}>{p.icon} {p.name}</option>
-                ))}
-              </select>
-            </div>
+            {/* Pet type — only if shop uses petType */}
+            {selectedShop?.usePetType !== false && (
+              <div>
+                <label className="block text-xs text-stone-500 mb-1">ประเภทสัตว์</label>
+                <select
+                  value={petTypeId}
+                  onChange={(e) => setPetTypeId(e.target.value)}
+                  className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
+                >
+                  <option value="">ไม่ระบุ</option>
+                  {petTypes.map((p) => (
+                    <option key={p.id} value={p.id}>{p.icon} {p.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <button
               onClick={handleImport}

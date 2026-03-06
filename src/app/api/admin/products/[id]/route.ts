@@ -9,11 +9,12 @@ export async function GET(
 ) {
   const auth = await requireShopAdmin(request);
   if (isShopAuthResponse(auth)) return auth;
-  const { shopId } = auth;
+  const { shopId, payload } = auth;
+  const isAdmin = payload.role === "ADMIN";
 
   const { id } = await params;
   const product = await prisma.product.findFirst({
-    where: { id, shopId },
+    where: isAdmin ? { id } : { id, shopId },
     include: { category: true, petType: true, variants: { orderBy: { createdAt: "asc" } }, tags: true },
   });
 

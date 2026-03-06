@@ -35,7 +35,11 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isAdmin && payload.role !== "ADMIN") {
-    return NextResponse.redirect(new URL("/", request.url));
+    // Allow shop members (OWNER/MANAGER/STAFF) — admin layout checks DB access
+    const hasShopRoles = payload.shopRoles && Object.keys(payload.shopRoles).length > 0;
+    if (!hasShopRoles) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
   }
 
   const response = NextResponse.next();

@@ -4,21 +4,67 @@ import { prisma } from "@/lib/prisma";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const SYSTEM_PROMPT = `คุณคือ "Pet Advisor" ผู้เชี่ยวชาญด้านการดูแลสัตว์เลี้ยงที่มีความรู้ลึกด้านสุขภาพ โภชนาการ พฤติกรรม และการเลี้ยงดูสัตว์เลี้ยงทุกชนิด
+interface ShopContext {
+  shopName?: string;
+  categories: string[];
+  petTypes: string[];
+  sampleProducts: string[];
+  articleTopics: string[];
+}
+
+function buildSystemPrompt(ctx: ShopContext) {
+  const { shopName, categories, petTypes, sampleProducts, articleTopics } = ctx;
+
+  const intro = shopName
+    ? `คุณคือที่ปรึกษาของร้าน "${shopName}" ผู้ช่วยให้ข้อมูลสินค้าและคำแนะนำที่เกี่ยวกับสัตว์เลี้ยง`
+    : `คุณคือ "Pet Advisor" ผู้เชี่ยวชาญด้านการดูแลสัตว์เลี้ยง`;
+
+  const shopInfo = shopName && (categories.length > 0 || sampleProducts.length > 0) ? `
+ข้อมูลร้าน "${shopName}":
+- หมวดหมู่สินค้าในร้าน: ${categories.length > 0 ? categories.join(", ") : "หลากหลาย"}
+${petTypes.length > 0 ? `- สัตว์เลี้ยงที่ร้านโฟกัส: ${petTypes.join(", ")}` : ""}
+${sampleProducts.length > 0 ? `- ตัวอย่างสินค้า: ${sampleProducts.slice(0, 8).join(", ")}` : ""}
+${articleTopics.length > 0 ? `- บทความในร้าน: ${articleTopics.slice(0, 5).join(", ")}` : ""}
+
+สำคัญ: ตอบเฉพาะคำถามที่เกี่ยวข้องกับสินค้าและ content ของร้านนี้เท่านั้น ห้ามแนะนำสินค้าประเภทที่ร้านไม่ได้ขาย` : "";
+
+  return `${intro}${shopInfo}
 
 บทบาทของคุณ:
-- ให้คำปรึกษาด้านสุขภาพสัตว์เลี้ยง (อาการป่วย โรค วัคซีน)
-- แนะนำโภชนาการและอาหารที่เหมาะสม
-- อธิบายพฤติกรรมสัตว์เลี้ยงและวิธีแก้ปัญหา
-- แนะนำการดูแลรักษาและทำความสะอาด
-- เมื่อเหมาะสม ให้แนะนำสินค้าในร้านโดยใช้ search_products
-- เมื่อเหมาะสม ให้แนะนำบทความที่เกี่ยวข้องโดยใช้ search_articles
+- ให้ข้อมูลและแนะนำสินค้าในร้านโดยใช้ search_products
+- แนะนำบทความที่เกี่ยวข้องโดยใช้ search_articles
+- ตอบคำถามเกี่ยวกับสัตว์เลี้ยงที่สอดคล้องกับสินค้าของร้าน
+- สำหรับอาการป่วยรุนแรง ให้แนะนำพบสัตวแพทย์
 
 กฎสำคัญ:
-- ตอบเป็นภาษาไทยเสมอ
-- ตอบด้วยความห่วงใยและเป็นมิตร
-- สำหรับอาการป่วยรุนแรง ให้แนะนำพบสัตวแพทย์เสมอ
-- อย่าวินิจฉัยโรคแทนสัตวแพทย์ แต่ให้ข้อมูลเบื้องต้นได้`;
+- ตอบเป็นภาษาไทยเสมอ เป็นมิตรและกระชับ
+- ถ้าถามเรื่องที่ร้านไม่มีสินค้า ให้แจ้งตามตรงและแนะนำสิ่งที่มีแทน`;
+}
+
+async function getShopContext(shopId?: string, shopName?: string): Promise<ShopContext> {
+  if (!shopId) return { shopName, categories: [], petTypes: [], sampleProducts: [], articleTopics: [] };
+
+  const [products, articles] = await Promise.all([
+    prisma.product.findMany({
+      where: { shopId },
+      select: { name: true, category: { select: { name: true } }, petType: { select: { name: true } } },
+      orderBy: { featured: "desc" },
+      take: 30,
+    }),
+    prisma.article.findMany({
+      where: { shopId, published: true },
+      select: { title: true },
+      take: 10,
+    }),
+  ]);
+
+  const categories = [...new Set(products.map((p) => p.category.name))];
+  const petTypes = [...new Set(products.map((p) => p.petType?.name).filter(Boolean))] as string[];
+  const sampleProducts = products.slice(0, 10).map((p) => p.name);
+  const articleTopics = articles.map((a) => a.title);
+
+  return { shopName, categories, petTypes, sampleProducts, articleTopics };
+}
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -31,8 +77,8 @@ async function searchProducts(params: {
   petType?: string;
   maxPrice?: number;
   minPrice?: number;
-}) {
-  const where: Record<string, unknown> = {};
+}, shopId?: string) {
+  const where: Record<string, unknown> = shopId ? { shopId } : {};
 
   if (params.query) {
     where.OR = [
@@ -82,8 +128,8 @@ async function searchProducts(params: {
   }));
 }
 
-async function searchArticles(params: { query?: string; tag?: string }) {
-  const where: Record<string, unknown> = { published: true };
+async function searchArticles(params: { query?: string; tag?: string }, shopId?: string) {
+  const where: Record<string, unknown> = { published: true, ...(shopId ? { shopId } : {}) };
 
   if (params.query) {
     where.OR = [
@@ -105,9 +151,23 @@ async function searchArticles(params: { query?: string; tag?: string }) {
   return articles;
 }
 
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const shopId = searchParams.get("shopId") ?? undefined;
+  const shopName = searchParams.get("shopName") ?? undefined;
+  const ctx = await getShopContext(shopId, shopName);
+  return NextResponse.json({ success: true, data: ctx });
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { messages } = await request.json() as { messages: ChatMessage[] };
+    const { messages, shopId, shopName } = await request.json() as {
+      messages: ChatMessage[];
+      shopId?: string;
+      shopName?: string;
+    };
+
+    const ctx = await getShopContext(shopId, shopName);
 
     let currentMessages: Anthropic.Messages.MessageParam[] = messages.map((m) => ({
       role: m.role,
@@ -122,7 +182,7 @@ export async function POST(request: NextRequest) {
       const response = await client.messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 1024,
-        system: SYSTEM_PROMPT,
+        system: buildSystemPrompt(ctx),
         tools: [
           {
             name: "search_products",
@@ -167,13 +227,13 @@ export async function POST(request: NextRequest) {
           if (block.type === "tool_use") {
             if (block.name === "search_products") {
               const input = block.input as Parameters<typeof searchProducts>[0];
-              const products = await searchProducts(input);
+              const products = await searchProducts(input, shopId);
               if (products.length > foundProducts.length) foundProducts = products;
               toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(products) });
             }
             if (block.name === "search_articles") {
               const input = block.input as Parameters<typeof searchArticles>[0];
-              const articles = await searchArticles(input);
+              const articles = await searchArticles(input, shopId);
               if (articles.length > foundArticles.length) foundArticles = articles;
               toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(articles) });
             }

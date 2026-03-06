@@ -4,7 +4,7 @@ export const translations = {
   nav: {
     home:     { th: 'หน้าแรก',        en: 'Home' },
     products: { th: 'สินค้า',         en: 'Products' },
-    advisor:  { th: '🐾 ที่ปรึกษา AI', en: '🐾 AI Advisor' },
+    advisor:  { th: 'ที่ปรึกษา AI', en: 'AI Advisor' },
     stores:   { th: 'สาขา',           en: 'Stores' },
     articles: { th: 'บทความ',         en: 'Articles' },
   },

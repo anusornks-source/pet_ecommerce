@@ -28,6 +28,8 @@ interface Message {
 interface ChatAssistantProps {
   productContext?: { id: string; name: string; category: string };
   initialMessage?: string;
+  shopId?: string;
+  shopName?: string;
 }
 
 const QUICK_SUGGESTIONS = [
@@ -86,7 +88,7 @@ function SearchingIndicator() {
   );
 }
 
-export default function ChatAssistant({ productContext, initialMessage }: ChatAssistantProps) {
+export default function ChatAssistant({ productContext, initialMessage, shopId, shopName }: ChatAssistantProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -154,7 +156,7 @@ export default function ChatAssistant({ productContext, initialMessage }: ChatAs
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history, productContext }),
+        body: JSON.stringify({ messages: history, productContext, shopId }),
       });
       const data = await res.json();
 
@@ -243,7 +245,10 @@ export default function ChatAssistant({ productContext, initialMessage }: ChatAs
               <div className="flex flex-col items-center justify-center h-full text-center py-8">
                 <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-3xl mb-3">✨</div>
                 <p className="font-semibold text-stone-800 mb-1">ยินดีต้อนรับ!</p>
-                <p className="text-stone-400 text-sm mb-6">ฉันช่วยค้นหาสินค้า<br />และแนะนำสิ่งที่เหมาะสำหรับสัตว์เลี้ยงของคุณ</p>
+                <p className="text-stone-400 text-sm mb-6">
+                  {shopName ? `ฉันช่วยค้นหาสินค้าของ ${shopName}` : "ฉันช่วยค้นหาสินค้า"}<br />
+                  และแนะนำสิ่งที่เหมาะสำหรับสัตว์เลี้ยงของคุณ
+                </p>
 
                 {/* Quick suggestions */}
                 <div className="w-full space-y-2">

@@ -12,9 +12,10 @@ import toast from "react-hot-toast";
 interface NavbarProps {
   storeName?: string;
   logoUrl?: string;
+  shopId?: string;
 }
 
-export default function Navbar({ storeName = "PetShop", logoUrl }: NavbarProps) {
+export default function Navbar({ storeName = "PetShop", logoUrl, shopId }: NavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
@@ -32,7 +33,7 @@ export default function Navbar({ storeName = "PetShop", logoUrl }: NavbarProps) 
   const navLinks = [
     { href: "/", label: t("home", "nav") },
     { href: "/products", label: t("products", "nav") },
-    { href: "/advisor", label: t("advisor", "nav") },
+    { href: shopId ? `/advisor?shopId=${shopId}&shopName=${encodeURIComponent(storeName)}` : "/advisor", label: t("advisor", "nav") },
     { href: "/stores", label: t("stores", "nav") },
     { href: "/articles", label: t("articles", "nav") },
   ];

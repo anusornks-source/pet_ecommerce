@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
@@ -31,19 +32,41 @@ interface Article {
   tags: string[];
 }
 
-const STARTERS = [
+const DEFAULT_STARTERS = [
   "ลูกสุนัขของฉันกินอาหารน้อยลง ควรทำอย่างไร?",
   "แมวของฉันขนร่วงผิดปกติ เป็นเพราะอะไร?",
   "อาหารแบบไหนดีที่สุดสำหรับกระต่าย?",
   "สุนัขพันธุ์เล็กควรออกกำลังกายแค่ไหน?",
 ];
 
-export default function AdvisorPage() {
+interface ShopContext {
+  categories: string[];
+  petTypes: string[];
+  sampleProducts: string[];
+  articleTopics: string[];
+}
+
+function AdvisorContent() {
+  const searchParams = useSearchParams();
+  const shopId = searchParams.get("shopId") ?? undefined;
+  const shopName = searchParams.get("shopName") ?? undefined;
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [shopCtx, setShopCtx] = useState<ShopContext | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!shopId) return;
+    const qs = new URLSearchParams({ shopId });
+    if (shopName) qs.set("shopName", shopName);
+    fetch(`/api/advisor?${qs}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setShopCtx(d.data); })
+      .catch(() => {});
+  }, [shopId, shopName]);
 
   useEffect(() => {
     if (messages.length > 0 && scrollAreaRef.current) {
@@ -66,6 +89,8 @@ export default function AdvisorPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
+          shopId,
+          shopName,
         }),
       });
       const data = await res.json();
@@ -90,18 +115,36 @@ export default function AdvisorPage() {
     }
   }
 
+  const displayName = shopName ?? "Pet Advisor";
+
+  // Build starters from shop context when available
+  const starters = (() => {
+    if (!shopCtx || shopCtx.categories.length === 0) return DEFAULT_STARTERS;
+    const suggestions: string[] = [];
+    if (shopCtx.sampleProducts.length > 0)
+      suggestions.push(`มีสินค้า "${shopCtx.sampleProducts[0]}" แนะนำไหม?`);
+    if (shopCtx.categories.length > 0)
+      suggestions.push(`สินค้าหมวด ${shopCtx.categories[0]} มีอะไรบ้าง?`);
+    if (shopCtx.articleTopics.length > 0)
+      suggestions.push(`อยากอ่านบทความเรื่อง "${shopCtx.articleTopics[0]}"`);
+    if (shopCtx.categories.length > 1)
+      suggestions.push(`แนะนำสินค้าเด่นของร้าน ${shopName ?? ""}`);
+    return suggestions.length >= 2 ? suggestions : DEFAULT_STARTERS;
+  })();
+
   return (
-    // Fixed height = viewport minus global navbar (h-16 = 4rem)
     <div className="flex flex-col bg-stone-50" style={{ height: "calc(100dvh - 4rem)" }}>
 
       {/* Advisor header */}
       <div className="bg-white border-b border-stone-100 shadow-sm shrink-0">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center gap-3">
           <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center text-2xl shrink-0">
-            🐾
+            🤖
           </div>
           <div>
-            <h1 className="font-bold text-lg text-stone-800">Pet Advisor AI</h1>
+            <h1 className="font-bold text-lg text-stone-800">
+              {shopName ? `${shopName} — AI Advisor` : "Pet Advisor AI"}
+            </h1>
             <p className="text-sm text-stone-500">ผู้เชี่ยวชาญด้านการดูแลสัตว์เลี้ยง พร้อมช่วยเหลือคุณ</p>
           </div>
           <div className="ml-auto flex items-center gap-1.5">
@@ -119,16 +162,22 @@ export default function AdvisorPage() {
           {messages.length === 0 && (
             <div className="flex flex-col items-center gap-6 py-8 text-center">
               <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center text-4xl">
-                🐾
+                🤖
               </div>
               <div>
-                <h2 className="text-xl font-bold text-stone-800 mb-1">สวัสดี! ฉันคือ Pet Advisor</h2>
+                <h2 className="text-xl font-bold text-stone-800 mb-1">
+                  สวัสดี! ฉันคือ {displayName}
+                </h2>
                 <p className="text-stone-500 text-sm max-w-md">
-                  ถามฉันได้เลยเกี่ยวกับสุขภาพ โภชนาการ และพฤติกรรมของสัตว์เลี้ยงคุณ
+                  {shopCtx && shopCtx.categories.length > 0
+                    ? `ร้าน${shopName ?? "นี้"}มีสินค้าหมวด: ${shopCtx.categories.slice(0, 3).join(", ")}${shopCtx.categories.length > 3 ? " และอื่นๆ" : ""}`
+                    : shopName
+                      ? `ถามฉันได้เลยเกี่ยวกับสินค้าและบทความของ ${shopName}`
+                      : "ถามฉันได้เลยเกี่ยวกับสุขภาพ โภชนาการ และพฤติกรรมของสัตว์เลี้ยงคุณ"}
                 </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-lg">
-                {STARTERS.map((s) => (
+                {starters.map((s) => (
                   <button
                     key={s}
                     onClick={() => sendMessage(s)}
@@ -146,7 +195,7 @@ export default function AdvisorPage() {
             <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} gap-3`}>
               {msg.role === "assistant" && (
                 <div className="w-9 h-9 bg-orange-100 rounded-xl flex items-center justify-center text-lg shrink-0 mt-1">
-                  🐾
+                  🤖
                 </div>
               )}
               <div className={`max-w-[80%] flex flex-col gap-3 ${msg.role === "user" ? "items-end" : "items-start"}`}>
@@ -224,7 +273,7 @@ export default function AdvisorPage() {
           {loading && (
             <div className="flex justify-start gap-3">
               <div className="w-9 h-9 bg-orange-100 rounded-xl flex items-center justify-center text-lg shrink-0">
-                🐾
+                🤖
               </div>
               <div className="bg-white border border-stone-100 shadow-sm rounded-2xl rounded-tl-sm px-4 py-3">
                 <div className="flex gap-1 items-center h-5">
@@ -239,7 +288,7 @@ export default function AdvisorPage() {
         </div>
       </div>
 
-      {/* Input bar — NOT sticky, part of flex column */}
+      {/* Input bar */}
       <div className="bg-white border-t border-stone-100 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] shrink-0">
         <div className="max-w-3xl mx-auto px-4 py-3 flex gap-2">
           <input
@@ -262,9 +311,17 @@ export default function AdvisorPage() {
           </button>
         </div>
         <p className="text-center text-xs text-stone-400 pb-3">
-          Pet Advisor ใช้ AI — ข้อมูลเบื้องต้นเท่านั้น ปรึกษาสัตวแพทย์สำหรับอาการรุนแรง
+          AI Advisor ให้ข้อมูลเบื้องต้นเท่านั้น — ปรึกษาสัตวแพทย์สำหรับอาการรุนแรง
         </p>
       </div>
     </div>
+  );
+}
+
+export default function AdvisorPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen text-stone-400">กำลังโหลด...</div>}>
+      <AdvisorContent />
+    </Suspense>
   );
 }

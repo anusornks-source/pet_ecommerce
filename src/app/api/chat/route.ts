@@ -21,8 +21,8 @@ async function searchProducts(params: {
   maxPrice?: number;
   minPrice?: number;
   featured?: boolean;
-}) {
-  const where: Record<string, unknown> = {};
+}, shopId?: string) {
+  const where: Record<string, unknown> = shopId ? { shopId } : {};
 
   if (params.query) {
     where.OR = [
@@ -79,9 +79,10 @@ async function searchProducts(params: {
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages, productContext } = await request.json() as {
+    const { messages, productContext, shopId } = await request.json() as {
       messages: ChatMessage[];
       productContext?: { id: string; name: string; category: string };
+      shopId?: string;
     };
 
     const systemPrompt = productContext
@@ -156,7 +157,7 @@ export async function POST(request: NextRequest) {
         for (const block of response.content) {
           if (block.type === "tool_use" && block.name === "search_products") {
             const input = block.input as Parameters<typeof searchProducts>[0];
-            const products = await searchProducts(input);
+            const products = await searchProducts(input, shopId);
             if (products.length > foundProducts.length) {
               foundProducts = products;
             }

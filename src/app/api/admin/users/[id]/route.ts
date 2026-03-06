@@ -7,7 +7,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAdmin(request);
+  const auth = await requireAdmin(request, { strictAdmin: true });
   if (isNextResponse(auth)) return auth;
 
   const { id } = await params;
@@ -43,7 +43,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAdmin(request);
+  const auth = await requireAdmin(request, { strictAdmin: true });
   if (isNextResponse(auth)) return auth;
 
   const { id } = await params;
@@ -62,7 +62,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAdmin(request);
+  const auth = await requireAdmin(request, { strictAdmin: true });
   if (isNextResponse(auth)) return auth;
 
   const { id } = await params;

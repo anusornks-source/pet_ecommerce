@@ -7,7 +7,7 @@ import fs from "fs";
 import path from "path";
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request);
+  const auth = await requireAdmin(request, { strictAdmin: true });
   if (isNextResponse(auth)) return auth;
 
   const thaiAddressPath = path.join(process.cwd(), "public", "data", "thai-address.json");
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request);
+  const auth = await requireAdmin(request, { strictAdmin: true });
   if (isNextResponse(auth)) return auth;
 
   const { test, payload } = await request.json();

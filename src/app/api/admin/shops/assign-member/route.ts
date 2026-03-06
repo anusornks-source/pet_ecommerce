@@ -10,7 +10,7 @@ import { verifyToken } from "@/lib/auth";
  * Platform ADMIN only.
  */
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request);
+  const auth = await requireAdmin(request, { strictAdmin: true });
   if (isNextResponse(auth)) return auth;
 
   const { email, role, shopIds } = await request.json();

@@ -4,7 +4,7 @@ import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 
 /** GET /api/admin/shops — list all shops (ADMIN only) */
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request);
+  const auth = await requireAdmin(request, { strictAdmin: true });
   if (isNextResponse(auth)) return auth;
 
   const shops = await prisma.shop.findMany({
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
 /** POST /api/admin/shops — create a new shop (ADMIN only) */
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request);
+  const auth = await requireAdmin(request, { strictAdmin: true });
   if (isNextResponse(auth)) return auth;
 
   const body = await request.json();

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request);
+  const auth = await requireAdmin(request, { strictAdmin: true });
   if (isNextResponse(auth)) return auth;
 
   const { searchParams } = new URL(request.url);
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request);
+  const auth = await requireAdmin(request, { strictAdmin: true });
   if (isNextResponse(auth)) return auth;
 
   const { name, email, password, phone, role } = await request.json();

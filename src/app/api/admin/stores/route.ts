@@ -6,7 +6,11 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
+  const shopId = new URL(request.url).searchParams.get("shopId");
+  const where = shopId && shopId !== "all" ? { shopId } : shopId === "all" ? {} : {};
+
   const stores = await prisma.store.findMany({
+    where,
     orderBy: { createdAt: "asc" },
   });
 
@@ -18,7 +22,7 @@ export async function POST(request: NextRequest) {
   if (isNextResponse(auth)) return auth;
 
   const body = await request.json();
-  const { name, address, phone, openHours, image, remark, lat, lng } = body;
+  const { name, address, phone, openHours, image, remark, lat, lng, shopId } = body;
 
   if (!name || !address || !phone || !openHours || lat == null || lng == null) {
     return NextResponse.json(
@@ -37,6 +41,7 @@ export async function POST(request: NextRequest) {
       remark: remark || null,
       lat: parseFloat(lat),
       lng: parseFloat(lng),
+      shopId: shopId || null,
     },
   });
 

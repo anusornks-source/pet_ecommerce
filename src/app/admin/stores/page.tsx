@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import { useShopAdmin } from "@/context/ShopAdminContext";
+
+const StoresMap = dynamic(() => import("@/app/stores/StoresMap"), { ssr: false });
 
 interface Store {
   id: string;
@@ -28,6 +32,8 @@ const emptyForm = {
 };
 
 export default function AdminStoresPage() {
+  const { activeShop, shops, isAdmin } = useShopAdmin();
+  const [shopFilter, setShopFilter] = useState<string>("");
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(emptyForm);
@@ -36,17 +42,16 @@ export default function AdminStoresPage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchStores = () => {
+  const fetchStores = useCallback(() => {
     setLoading(true);
-    fetch("/api/admin/stores")
+    const url = shopFilter ? `/api/admin/stores?shopId=${shopFilter}` : "/api/admin/stores";
+    fetch(url)
       .then((r) => r.json())
-      .then((d) => {
-        if (d.success) setStores(d.data);
-      })
+      .then((d) => { if (d.success) setStores(d.data); })
       .finally(() => setLoading(false));
-  };
+  }, [shopFilter]);
 
-  useEffect(() => { fetchStores(); }, []);
+  useEffect(() => { fetchStores(); }, [fetchStores]);
 
   const startEdit = (store: Store) => {
     setEditId(store.id);
@@ -90,6 +95,7 @@ export default function AdminStoresPage() {
       ...form,
       lat: parseFloat(form.lat),
       lng: parseFloat(form.lng),
+      ...(!editId && activeShop && { shopId: activeShop.id }),
     };
 
     const url = editId ? `/api/admin/stores/${editId}` : "/api/admin/stores";
@@ -131,7 +137,22 @@ export default function AdminStoresPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-stone-800">จัดการสาขา</h1>
-          <p className="text-sm text-stone-500 mt-0.5">{stores.length} สาขา</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-sm text-stone-500">{stores.length} สาขา</p>
+            {isAdmin ? (
+              <select
+                value={shopFilter}
+                onChange={(e) => setShopFilter(e.target.value)}
+                className="text-xs border border-stone-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-200 bg-white text-stone-600"
+              >
+                <option value="">ร้าน: {activeShop?.name ?? "..."}</option>
+                <option value="all">ทั้งหมด (ทุกร้าน)</option>
+                {shops.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            ) : activeShop ? (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 font-medium">ร้าน: {activeShop.name}</span>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -295,6 +316,18 @@ export default function AdminStoresPage() {
           </table>
         )}
       </div>
+
+      {/* Map */}
+      {stores.length > 0 && (
+        <div className="bg-white rounded-2xl border border-stone-100 overflow-hidden mt-6">
+          <div className="px-6 py-4 border-b border-stone-100">
+            <h2 className="text-base font-semibold text-stone-700">🗺️ แผนที่สาขา</h2>
+          </div>
+          <div style={{ height: "420px" }}>
+            <StoresMap stores={stores} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

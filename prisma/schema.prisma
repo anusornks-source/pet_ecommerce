@@ -60,6 +60,7 @@ model Shop {
   orders         Order[]
   tags           Tag[]
   cjApiLogs      CjApiLog[]
+  stores         Store[]
 
   @@map("shops")
 }
@@ -503,9 +504,13 @@ model Store {
   remark    String?
   lat       Float
   lng       Float
+  shopId    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  shop Shop? @relation(fields: [shopId], references: [id])
+
+  @@index([shopId])
   @@map("stores")
 }
 

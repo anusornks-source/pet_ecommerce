@@ -17,6 +17,7 @@ model User {
   address   String?
   avatar    String?
   role      Role     @default(USER)
+  active    Boolean  @default(true)
   provider  String?
   oauthId   String?
   createdAt DateTime @default(now())

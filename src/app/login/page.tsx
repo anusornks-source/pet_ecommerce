@@ -26,6 +26,7 @@ function LoginForm() {
         line_token: "LINE login ผิดพลาด กรุณาลองใหม่",
         line_profile: "ไม่สามารถดึงข้อมูล LINE ได้",
         line_failed: "LINE login ผิดพลาด กรุณาลองใหม่",
+        account_suspended: "บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ",
       };
       toast.error(messages[error] ?? "เกิดข้อผิดพลาด กรุณาลองใหม่");
     }

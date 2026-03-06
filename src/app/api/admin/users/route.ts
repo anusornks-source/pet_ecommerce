@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
         email: true,
         role: true,
         phone: true,
+        active: true,
         createdAt: true,
         _count: { select: { orders: true } },
       },

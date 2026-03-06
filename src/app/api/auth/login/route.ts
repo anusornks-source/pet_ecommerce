@@ -38,6 +38,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!user.active) {
+      return NextResponse.json(
+        { success: false, error: "บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ" },
+        { status: 403 }
+      );
+    }
+
     const token = await signToken(await buildTokenPayload(user));
 
     await setAuthCookie(token);

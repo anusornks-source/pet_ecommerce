@@ -64,6 +64,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    if (!user.active) {
+      return NextResponse.redirect(`${APP_URL}/login?error=account_suspended`);
+    }
+
     const token = await signToken(await buildTokenPayload(user));
     await setAuthCookie(token);
 

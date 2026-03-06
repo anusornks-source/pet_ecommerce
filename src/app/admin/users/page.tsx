@@ -9,6 +9,7 @@ interface User {
   email: string;
   role: string;
   phone: string | null;
+  active: boolean;
   createdAt: string;
   _count: { orders: number };
 }
@@ -18,9 +19,16 @@ export default function AdminUsersPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+
+  // Create form
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "", phone: "", role: "USER" });
   const [saving, setSaving] = useState(false);
+
+  // Edit form
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", phone: "", role: "USER", password: "" });
+  const [editSaving, setEditSaving] = useState(false);
 
   const pageSize = 50;
   const totalPages = Math.ceil(total / pageSize);
@@ -55,6 +63,56 @@ export default function AdminUsersPage() {
     setSaving(false);
   };
 
+  const openEdit = (user: User) => {
+    setEditingUser(user);
+    setEditForm({ name: user.name, phone: user.phone ?? "", role: user.role, password: "" });
+    setShowForm(false);
+  };
+
+  const handleUpdate = async () => {
+    if (!editingUser || !editForm.name) return toast.error("กรุณากรอกชื่อ");
+    setEditSaving(true);
+    const res = await fetch(`/api/admin/users/${editingUser.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editForm),
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast.success("อัปเดตผู้ใช้สำเร็จ");
+      setEditingUser(null);
+      fetchUsers(page);
+    } else {
+      toast.error(data.error || "เกิดข้อผิดพลาด");
+    }
+    setEditSaving(false);
+  };
+
+  const handleToggleActive = async (user: User) => {
+    const res = await fetch(`/api/admin/users/${user.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: !user.active }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast.success(user.active ? "ปิดใช้งานแล้ว" : "เปิดใช้งานแล้ว");
+      fetchUsers(page);
+    }
+  };
+
+  const handleDelete = async (user: User) => {
+    if (!confirm(`ลบผู้ใช้ "${user.name}" ใช่หรือไม่?`)) return;
+    const res = await fetch(`/api/admin/users/${user.id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (data.success) {
+      toast.success("ลบผู้ใช้สำเร็จ");
+      fetchUsers(page);
+    } else {
+      toast.error(data.error || "เกิดข้อผิดพลาด");
+    }
+  };
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between gap-4">
@@ -62,7 +120,7 @@ export default function AdminUsersPage() {
           <h1 className="text-2xl font-bold text-stone-800">ผู้ใช้งาน</h1>
           <p className="text-stone-500 text-sm mt-1">{total.toLocaleString()} คน</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="btn-primary px-4 py-2 text-sm">
+        <button onClick={() => { setShowForm(!showForm); setEditingUser(null); }} className="btn-primary px-4 py-2 text-sm">
           + เพิ่มผู้ใช้
         </button>
       </div>
@@ -104,6 +162,39 @@ export default function AdminUsersPage() {
         </div>
       )}
 
+      {editingUser && (
+        <div className="bg-white rounded-2xl border border-orange-200 p-6 mb-6">
+          <h2 className="font-semibold text-stone-800 mb-4">แก้ไขผู้ใช้: <span className="text-orange-600">{editingUser.email}</span></h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-stone-600 block mb-1">ชื่อ *</label>
+              <input className="input w-full" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-stone-600 block mb-1">เบอร์โทร</label>
+              <input className="input w-full" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} placeholder="0812345678" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-stone-600 block mb-1">สิทธิ์</label>
+              <select className="input w-full" value={editForm.role} onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}>
+                <option value="USER">User</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-stone-600 block mb-1">รหัสผ่านใหม่ (เว้นว่างถ้าไม่เปลี่ยน)</label>
+              <input className="input w-full" type="password" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} placeholder="••••••" />
+            </div>
+          </div>
+          <div className="mt-4 flex gap-2">
+            <button onClick={handleUpdate} disabled={editSaving} className="btn-primary px-4 py-2 text-sm">
+              {editSaving ? "กำลังบันทึก..." : "บันทึก"}
+            </button>
+            <button onClick={() => setEditingUser(null)} className="btn-outline px-4 py-2 text-sm">ยกเลิก</button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl border border-stone-100 overflow-hidden">
         {loading ? (
           <div className="text-center py-16 text-stone-400 text-sm">กำลังโหลด...</div>
@@ -118,11 +209,12 @@ export default function AdminUsersPage() {
                 <th className="text-center px-4 py-3 text-stone-500 font-medium">สิทธิ์</th>
                 <th className="text-right px-4 py-3 text-stone-500 font-medium hidden md:table-cell">คำสั่งซื้อ</th>
                 <th className="text-right px-4 py-3 text-stone-500 font-medium hidden lg:table-cell">สมัครเมื่อ</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-50">
               {users.map((user) => (
-                <tr key={user.id} className="hover:bg-stone-50 transition-colors">
+                <tr key={user.id} className={`hover:bg-stone-50 transition-colors ${!user.active ? "opacity-50" : ""}`}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-bold text-sm shrink-0">
@@ -155,6 +247,32 @@ export default function AdminUsersPage() {
                   </td>
                   <td className="px-4 py-3 text-right text-stone-400 text-xs hidden lg:table-cell">
                     {new Date(user.createdAt).toLocaleDateString("th-TH")}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => openEdit(user)}
+                        className="text-xs px-3 py-1.5 rounded-lg border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
+                      >
+                        แก้ไข
+                      </button>
+                      <button
+                        onClick={() => handleToggleActive(user)}
+                        className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                          user.active
+                            ? "border-stone-200 text-stone-500 hover:bg-stone-50"
+                            : "border-green-200 text-green-600 hover:bg-green-50"
+                        }`}
+                      >
+                        {user.active ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(user)}
+                        className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
+                      >
+                        ลบ
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

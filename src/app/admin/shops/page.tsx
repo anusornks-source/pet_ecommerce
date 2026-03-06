@@ -22,7 +22,6 @@ export default function ShopsPage() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [filterActive, setFilterActive] = useState<"" | "true" | "false">("");
-  const [filterPetType, setFilterPetType] = useState<"" | "true" | "false">("");
 
   const fetchShops = () => {
     fetch("/api/admin/shops")
@@ -65,7 +64,6 @@ export default function ShopsPage() {
     const q = search.toLowerCase();
     if (q && !s.name.toLowerCase().includes(q) && !(s.name_th ?? "").toLowerCase().includes(q) && !s.slug.includes(q)) return false;
     if (filterActive && String(s.active) !== filterActive) return false;
-    if (filterPetType && String(s.usePetType) !== filterPetType) return false;
     return true;
   });
 
@@ -98,14 +96,8 @@ export default function ShopsPage() {
           <option value="true">Active</option>
           <option value="false">Inactive</option>
         </select>
-        <select value={filterPetType} onChange={(e) => setFilterPetType(e.target.value as "" | "true" | "false")}
-          className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white">
-          <option value="">Pet Type: ทั้งหมด</option>
-          <option value="true">ใช้ Pet Type</option>
-          <option value="false">ไม่ใช้</option>
-        </select>
-        {(search || filterActive || filterPetType) && (
-          <button onClick={() => { setSearch(""); setFilterActive(""); setFilterPetType(""); }}
+        {(search || filterActive) && (
+          <button onClick={() => { setSearch(""); setFilterActive(""); }}
             className="text-xs px-3 py-2 rounded-xl border border-stone-200 text-stone-500 hover:bg-stone-50">
             ล้าง
           </button>

@@ -27,6 +27,9 @@ const navEntries: NavEntry[] = [
       { href: "/admin/products", label: "สินค้าทั้งหมด", icon: "📦" },
       { href: "/admin/variants", label: "Variants", icon: "🔀" },
       { href: "/admin/shelves", label: "Product Shelves", icon: "🗂️" },
+      { href: "/admin/categories", label: "หมวดหมู่", icon: "🏷️" },
+      { href: "/admin/pet-types", label: "ประเภทสัตว์", icon: "🐾" },
+      { href: "/admin/tags", label: "แท็กสินค้า", icon: "🔖" },
     ],
   },
   {
@@ -47,16 +50,6 @@ const navEntries: NavEntry[] = [
       { href: "/admin/banners", label: "Hero Banner", icon: "🖼️" },
       { href: "/admin/articles", label: "บทความ", icon: "📝" },
       { href: "/admin/stores", label: "สาขา", icon: "📍" },
-    ],
-  },
-  {
-    label: "หมวดหมู่",
-    icon: "🏷️",
-    adminOnly: true,
-    items: [
-      { href: "/admin/categories", label: "หมวดหมู่", icon: "🏷️" },
-      { href: "/admin/pet-types", label: "ประเภทสัตว์", icon: "🐾" },
-      { href: "/admin/tags", label: "แท็กสินค้า", icon: "🔖" },
     ],
   },
   { href: "/admin/staff", label: "Staff", icon: "👤", minRole: "OWNER" },

@@ -23,6 +23,7 @@ interface ProductVariant {
 
 interface Product {
   id: string;
+  shopId: string;
   name: string;
   name_th: string | null;
   description: string;
@@ -193,6 +194,7 @@ export default function EditProductPage({
       <div className="bg-white rounded-2xl border border-stone-100 p-6 max-w-6xl">
         <ProductForm
           productId={id}
+          productShopId={product.shopId}
           initialData={{
             name: product.name,
             name_th: product.name_th ?? "",

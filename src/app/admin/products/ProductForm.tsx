@@ -57,6 +57,8 @@ interface VariantRow {
 
 interface ProductFormProps {
   productId?: string;
+  /** shopId of the product being edited — used to fetch correct categories */
+  productShopId?: string;
   initialData?: {
     name: string;
     name_th?: string;
@@ -81,9 +83,9 @@ interface ProductFormProps {
   };
 }
 
-export default function ProductForm({ productId, initialData }: ProductFormProps) {
+export default function ProductForm({ productId, productShopId, initialData }: ProductFormProps) {
   const router = useRouter();
-  const { activeShop } = useShopAdmin();
+  const { activeShop, shops } = useShopAdmin();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [petTypes, setPetTypes] = useState<PetType[]>([]);
@@ -132,17 +134,21 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
   const updateVariant = (idx: number, key: keyof VariantRow, value: string | boolean) =>
     setVariants((v) => v.map((row, i) => (i === idx ? { ...row, [key]: value } : row)));
 
+  // Use product's own shopId when editing, fallback to activeShop for new products
+  const effectiveShopId = productShopId || activeShop?.id;
+  const effectiveShop = shops.find((s) => s.id === effectiveShopId) ?? activeShop;
+
   useEffect(() => {
-    if (!activeShop) return;
+    if (!effectiveShopId) return;
 
     // Fetch shop-scoped categories (only enabled ones for this shop)
-    fetch(`/api/admin/shops/${activeShop.id}/categories`)
+    fetch(`/api/admin/shops/${effectiveShopId}/categories`)
       .then((r) => r.json())
       .then((d) => {
         if (d.success) setCategories(d.data.filter((c: { enabled: boolean }) => c.enabled));
       });
 
-    if (activeShop.usePetType) {
+    if (effectiveShop?.usePetType) {
       fetch("/api/admin/pet-types")
         .then((r) => r.json())
         .then((d) => { if (d.success) setPetTypes(d.data); });
@@ -164,7 +170,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
     fetch("/api/admin/tags")
       .then((r) => r.json())
       .then((d) => { if (d.success) setAllTags(d.data); });
-  }, [activeShop]);
+  }, [effectiveShopId, effectiveShop]);
 
   const imageList = form.images.split(",").map((u) => u.trim()).filter(Boolean);
 

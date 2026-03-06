@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { use } from "react";
 import { useRouter } from "next/navigation";
 import ProductForm from "../ProductForm";
+import { useShopAdmin } from "@/context/ShopAdminContext";
 import toast from "react-hot-toast";
 
 interface ProductVariant {
@@ -55,6 +56,7 @@ export default function EditProductPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { activeShop, shops } = useShopAdmin();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -152,12 +154,24 @@ export default function EditProductPage({
     );
   }
 
+  const productShop = shops.find((s) => s.id === product.shopId);
+  const isDifferentShop = activeShop && product.shopId !== activeShop.id;
+
   return (
     <div>
+      {isDifferentShop && productShop && (
+        <div className="mb-4 flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+          <span>⚠️</span>
+          <span>กำลังแก้ไขสินค้าของร้าน <strong>{productShop.name}</strong> (ร้านที่ active อยู่คือ {activeShop.name})</span>
+        </div>
+      )}
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-stone-800">แก้ไขสินค้า</h1>
-          <p className="text-stone-500 text-sm mt-1">{product.name}</p>
+          <p className="text-stone-500 text-sm mt-1">
+            {product.name}
+            {productShop && <span className="ml-2 text-xs px-2 py-0.5 bg-stone-100 text-stone-500 rounded-full">{productShop.name}</span>}
+          </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button

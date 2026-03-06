@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   const { shopId } = auth;
 
   const shelves = await prisma.shelf.findMany({
-    where: { shopId },
+    where: shopId === "all" ? {} : { shopId },
     orderBy: { order: "asc" },
     include: { _count: { select: { items: true } } },
   });

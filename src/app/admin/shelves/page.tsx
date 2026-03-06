@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useShopAdmin } from "@/context/ShopAdminContext";
 import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -48,6 +49,8 @@ const toSlug = (name: string) =>
   name.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\w-]/g, "");
 
 export default function AdminShelvesPage() {
+  const { activeShop, shops, isAdmin } = useShopAdmin();
+  const [shopFilter, setShopFilter] = useState<string>("");
   const [shelves, setShelves] = useState<Shelf[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -73,7 +76,8 @@ export default function AdminShelvesPage() {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchShelves = useCallback(async () => {
-    const res = await fetch("/api/admin/shelves");
+    const url = shopFilter ? `/api/admin/shelves?shopId=${shopFilter}` : "/api/admin/shelves";
+    const res = await fetch(url);
     const data = await res.json();
     if (data.success) {
       setShelves(data.data);
@@ -88,7 +92,7 @@ export default function AdminShelvesPage() {
       setShelfItems(map);
     }
     setLoading(false);
-  }, []);
+  }, [shopFilter]);
 
   useEffect(() => { fetchShelves(); }, [fetchShelves]);
 
@@ -225,7 +229,26 @@ export default function AdminShelvesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-stone-800">🗂️ Product Shelves</h1>
-          <p className="text-sm text-stone-400 mt-0.5">จัดการ shelf แสดงสินค้าบน homepage</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-sm text-stone-400">จัดการ shelf แสดงสินค้าบน homepage</p>
+            {isAdmin ? (
+              <select
+                value={shopFilter}
+                onChange={(e) => setShopFilter(e.target.value)}
+                className="text-xs border border-stone-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-200 bg-white text-stone-600"
+              >
+                <option value="">ร้าน: {activeShop?.name ?? "..."}</option>
+                <option value="all">ทั้งหมด (ทุกร้าน)</option>
+                {shops.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            ) : activeShop ? (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 font-medium">
+                ร้าน: {activeShop.name}
+              </span>
+            ) : null}
+          </div>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}

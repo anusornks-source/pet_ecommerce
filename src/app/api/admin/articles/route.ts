@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
   const [articles, total] = await Promise.all([
     prisma.article.findMany({
-      where: { shopId },
+      where: shopId === "all" ? {} : { shopId },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     }),
-    prisma.article.count({ where: { shopId } }),
+    prisma.article.count({ where: shopId === "all" ? {} : { shopId } }),
   ]);
 
   return NextResponse.json({ success: true, data: articles, total, page, pageSize: PAGE_SIZE });

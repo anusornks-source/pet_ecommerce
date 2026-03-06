@@ -166,9 +166,6 @@ export default function AdminBannersPage() {
       <div className="mb-5 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-stone-800">🖼️ Hero Banner</h1>
-          <p className="text-xs text-stone-400 mt-0.5">
-            Slider บนหน้าแรก — เรียงลำดับตาม Order
-          </p>
           <div className="flex items-center gap-2 mt-0.5">
             {isAdmin ? (
               <select

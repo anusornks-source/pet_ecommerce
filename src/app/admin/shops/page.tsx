@@ -145,11 +145,11 @@ export default function ShopsPage() {
       <div className="grid gap-4">
         {filteredShops.map((shop) => (
           <div key={shop.id} className="bg-white rounded-2xl border border-stone-100 p-5 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-stone-100 flex items-center justify-center shrink-0 overflow-hidden">
+            <div className="w-32 h-32 rounded-2xl bg-stone-100 flex items-center justify-center shrink-0 overflow-hidden">
               {shop.logoUrl ? (
                 <img src={shop.logoUrl} alt="" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-lg font-bold text-stone-400">{shop.name[0]?.toUpperCase()}</span>
+                <span className="text-4xl font-bold text-stone-400">{shop.name[0]?.toUpperCase()}</span>
               )}
             </div>
             <div className="w-56 shrink-0">

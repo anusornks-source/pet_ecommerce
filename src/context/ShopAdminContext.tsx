@@ -56,20 +56,25 @@ export function ShopAdminProvider({
   const isAdmin = session.role === "ADMIN";
 
   useEffect(() => {
-    fetch("/api/admin/shops/my-shops")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success && data.data.length > 0) {
-          setShops(data.data);
-          const cookieId = getCookieShopId();
-          const initial =
-            data.data.find((s: Shop) => s.id === cookieId) || data.data[0];
-          setActiveShop(initial);
-          setCookieShopId(initial.id);
-        }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    // Refresh JWT first (fixes stale shopRoles after new shop assignment)
+    fetch("/api/auth/refresh", { method: "POST" })
+      .catch(() => {})
+      .finally(() => {
+        fetch("/api/admin/shops/my-shops")
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.success && data.data.length > 0) {
+              setShops(data.data);
+              const cookieId = getCookieShopId();
+              const initial =
+                data.data.find((s: Shop) => s.id === cookieId) || data.data[0];
+              setActiveShop(initial);
+              setCookieShopId(initial.id);
+            }
+            setLoading(false);
+          })
+          .catch(() => setLoading(false));
+      });
   }, []);
 
   const setActiveShopId = useCallback(

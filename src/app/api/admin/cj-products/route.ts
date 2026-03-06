@@ -188,14 +188,14 @@ export async function POST(request: NextRequest) {
 
     const variantData = variants.map(({ costUSD: _c, ...rest }) => rest);
 
-    // Generate short description with AI (best-effort, non-blocking)
-    const shortDescription = await generateShortDesc(detail.productNameEn, sourceDescription);
+    // Generate short description (TH) with AI (best-effort, non-blocking)
+    const shortDescription_th = await generateShortDesc(detail.productNameEn, sourceDescription);
 
     const product = await prisma.product.create({
       data: {
         name: detail.productNameEn,
         description: sourceDescription,
-        shortDescription,
+        shortDescription_th,
         sourceDescription,
         price: sellPrice,
         normalPrice: sellPrice,

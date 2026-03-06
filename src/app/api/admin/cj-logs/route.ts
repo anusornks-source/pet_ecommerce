@@ -12,7 +12,14 @@ export async function GET(request: NextRequest) {
   const action = searchParams.get("action") ?? undefined;
   const success = searchParams.get("success");
 
+  // Shop scoping: non-ADMIN users only see logs for their shops
+  const shopFilter =
+    auth.role !== "ADMIN" && auth.shopRoles
+      ? { shopId: { in: Object.keys(auth.shopRoles) } }
+      : {};
+
   const where = {
+    ...shopFilter,
     ...(action ? { action } : {}),
     ...(success === "true" ? { success: true } : success === "false" ? { success: false } : {}),
   };

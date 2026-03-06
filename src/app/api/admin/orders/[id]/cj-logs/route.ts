@@ -11,6 +11,17 @@ export async function GET(
 
   const { id } = await params;
 
+  // Shop scoping: non-ADMIN users can only see logs for orders in their shops
+  if (auth.role !== "ADMIN" && auth.shopRoles) {
+    const order = await prisma.order.findUnique({
+      where: { id },
+      select: { shopId: true },
+    });
+    if (!order || !auth.shopRoles[order.shopId]) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
+  }
+
   const logs = await prisma.cjApiLog.findMany({
     where: { orderId: id },
     orderBy: { createdAt: "desc" },

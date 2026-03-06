@@ -152,24 +152,24 @@ export default function AnalyticsPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-stone-800">Analytics</h1>
-        <div className="flex items-center gap-2 mt-1">
-          <p className="text-stone-500 text-sm">ข้อมูล 30 วันย้อนหลัง</p>
-          {(isAdmin || shops.length > 1) ? (
-            <select
-              value={shopFilter}
-              onChange={(e) => setShopFilter(e.target.value)}
-              className="text-xs border border-stone-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-200 bg-white text-stone-600"
-            >
-              <option value="">ร้าน: {activeShop?.name ?? "..."}</option>
-              {isAdmin && <option value="all">ทั้งหมด (ทุกร้าน)</option>}
-              {shops.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          ) : activeShop ? (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 font-medium">ร้าน: {activeShop.name}</span>
-          ) : null}
+      <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-stone-800">Analytics</h1>
+          <p className="text-stone-500 text-sm mt-0.5">ข้อมูล 30 วันย้อนหลัง</p>
         </div>
+        {(isAdmin || shops.length > 1) ? (
+          <select
+            value={shopFilter}
+            onChange={(e) => setShopFilter(e.target.value)}
+            className="text-xs border border-stone-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-200 bg-white text-stone-600"
+          >
+            <option value="">ร้าน: {activeShop?.name ?? "..."}</option>
+            {isAdmin && <option value="all">ทั้งหมด (ทุกร้าน)</option>}
+            {shops.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        ) : activeShop ? (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 font-medium">ร้าน: {activeShop.name}</span>
+        ) : null}
       </div>
 
       {/* KPI Summary */}

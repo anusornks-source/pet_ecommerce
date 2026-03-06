@@ -90,6 +90,22 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
   const [estShippingUSD, setEstShippingUSD] = useState(2);
   const [importing, setImporting] = useState(false);
 
+  const fetchFreight = useCallback((firstVid?: string) => {
+    setFreightLoading(true);
+    setFreightError(null);
+    setFreight(null);
+    const params = new URLSearchParams({ pid });
+    if (firstVid) params.set("vid", firstVid);
+    fetch(`/api/admin/cj-products/freight?${params}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setFreight(d.data);
+        else setFreightError(d.error || "โหลดข้อมูลการจัดส่งไม่สำเร็จ");
+      })
+      .catch(() => setFreightError("เชื่อมต่อ API ไม่สำเร็จ"))
+      .finally(() => setFreightLoading(false));
+  }, [pid]);
+
   const fetchInventory = useCallback((variants: VariantRow[]) => {
     const vids = variants.map((v) => v.vid).filter(Boolean);
     if (vids.length === 0) { setStockLoading(false); return; }
@@ -123,22 +139,6 @@ export default function CJImportDetailPage({ params }: { params: Promise<{ pid: 
     if (data.success) setLogs(data.data.slice(0, 10));
     setLogsLoading(false);
   }, []);
-
-  const fetchFreight = useCallback((firstVid?: string) => {
-    setFreightLoading(true);
-    setFreightError(null);
-    setFreight(null);
-    const params = new URLSearchParams({ pid });
-    if (firstVid) params.set("vid", firstVid);
-    fetch(`/api/admin/cj-products/freight?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success) setFreight(d.data);
-        else setFreightError(d.error || "โหลดข้อมูลการจัดส่งไม่สำเร็จ");
-      })
-      .catch(() => setFreightError("เชื่อมต่อ API ไม่สำเร็จ"))
-      .finally(() => setFreightLoading(false));
-  }, [pid]);
 
   useEffect(() => {
     // 1. Fetch product detail, then freight 1.5s after detail loads (guarantees vid is available)

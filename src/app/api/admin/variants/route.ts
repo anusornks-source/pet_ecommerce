@@ -14,13 +14,13 @@ export async function GET(request: NextRequest) {
   const outOfStock = searchParams.get("outOfStock") === "true";
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = { product: { shopId } };
+  const where: any = shopId === "all" ? {} : { product: { shopId } };
 
   if (search) {
     where.OR = [
       { sku: { contains: search, mode: "insensitive" } },
       { cjVid: { contains: search, mode: "insensitive" } },
-      { product: { name: { contains: search, mode: "insensitive" }, shopId } },
+      { product: { name: { contains: search, mode: "insensitive" }, ...(shopId !== "all" && { shopId }) } },
     ];
   }
   if (fulfillmentMethod === "INHERIT") {
@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
             name: true,
             fulfillmentMethod: true,
             images: true,
+            shop: shopId === "all" ? { select: { id: true, name: true } } : false,
           },
         },
       },

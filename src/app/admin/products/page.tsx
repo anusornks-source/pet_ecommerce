@@ -411,21 +411,19 @@ export default function AdminProductsPage() {
                         )}
                       </div>
                       <div>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-medium text-stone-800 line-clamp-1">
-                            {product.name}
-                          </span>
-                          {shopFilter === "all" && product.shop && (
-                            <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600 font-medium">
-                              {product.shop.name}
-                            </span>
-                          )}
-                        </div>
+                        <span className="font-medium text-stone-800 line-clamp-1">
+                          {product.name}
+                        </span>
                         <div className="relative mt-0.5">
                           <div
                             className="flex flex-wrap gap-1 cursor-pointer"
                             onClick={() => setEditingCell({ productId: product.id, field: "tags" })}
                           >
+                            {shopFilter === "all" && product.shop && (
+                              <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600 font-medium">
+                                S: {product.shop.name}
+                              </span>
+                            )}
                             {product.tags.map((tag) => (
                               <span
                                 key={tag.id}

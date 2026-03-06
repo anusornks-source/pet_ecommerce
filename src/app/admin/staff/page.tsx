@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { useShopAdmin } from "@/context/ShopAdminContext";
 import toast from "react-hot-toast";
 
@@ -15,91 +16,109 @@ export default function StaffPage() {
   const { activeShop, shops, isAdmin } = useShopAdmin();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState("STAFF");
+
+  // Selected shop for viewing members
+  const [selectedShopId, setSelectedShopId] = useState(activeShop?.id ?? "");
+  useEffect(() => {
+    if (activeShop?.id && !selectedShopId) setSelectedShopId(activeShop.id);
+  }, [activeShop?.id]);
+  const selectedShop = shops.find((s) => s.id === selectedShopId) ?? activeShop;
+
+  // Add member form
+  const [addEmail, setAddEmail] = useState("");
+  const [addRole, setAddRole] = useState("STAFF");
+  const [addShopIds, setAddShopIds] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
-  const [error, setError] = useState("");
+  const [addError, setAddError] = useState("");
+  const [preview, setPreview] = useState<{ name: string; email: string; shopMemberships: { shopId: string; shopName: string; role: string }[] } | null>(null);
+  const [suggestions, setSuggestions] = useState<{ id: string; name: string; email: string }[]>([]);
 
-  // Multi-shop assignment (admin only)
-  const [assignEmail, setAssignEmail] = useState("");
-  const [assignRole, setAssignRole] = useState("STAFF");
-  const [assignShopIds, setAssignShopIds] = useState<string[]>([]);
-  const [assigning, setAssigning] = useState(false);
-  const [assignPreview, setAssignPreview] = useState<{ name: string; email: string; shopMemberships: { shopId: string; shopName: string; role: string }[] } | null>(null);
-  const [assignError, setAssignError] = useState("");
+  // Pre-select current shop when selectedShopId changes
+  useEffect(() => {
+    if (selectedShopId) setAddShopIds([selectedShopId]);
+  }, [selectedShopId]);
 
-  const lookupUser = useCallback(async (emailVal: string) => {
-    if (!emailVal.trim()) { setAssignPreview(null); return; }
-    const res = await fetch(`/api/admin/shops/assign-member?email=${encodeURIComponent(emailVal.trim())}`);
+  const lookupUser = useCallback(async (q: string) => {
+    if (!q.trim()) { setPreview(null); setSuggestions([]); return; }
+    const res = await fetch(`/api/admin/shops/assign-member?email=${encodeURIComponent(q.trim())}`);
     const data = await res.json();
-    if (data.success) setAssignPreview(data.data);
-    else setAssignPreview(null);
+    if (data.success) { setPreview(data.data); setSuggestions([]); }
+    else { setPreview(null); setSuggestions(data.suggestions ?? []); }
   }, []);
 
-  const handleAssign = async () => {
-    if (!assignEmail.trim() || assignShopIds.length === 0) return;
-    setAssigning(true);
-    setAssignError("");
-    const res = await fetch("/api/admin/shops/assign-member", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: assignEmail.trim(), role: assignRole, shopIds: assignShopIds }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      toast.success(`Assigned ${data.data.user.name} to ${data.data.assignments.length} shop(s)`);
-      setAssignEmail("");
-      setAssignShopIds([]);
-      setAssignPreview(null);
-      fetchMembers();
-    } else {
-      setAssignError(data.error || "Failed");
-    }
-    setAssigning(false);
-  };
+  useEffect(() => {
+    const t = setTimeout(() => lookupUser(addEmail), 400);
+    return () => clearTimeout(t);
+  }, [addEmail, lookupUser]);
 
-  const toggleShop = (shopId: string) => {
-    setAssignShopIds((prev) =>
-      prev.includes(shopId) ? prev.filter((id) => id !== shopId) : [...prev, shopId]
-    );
-  };
-
-  const shopId = activeShop?.id;
-
-  const fetchMembers = () => {
-    if (!shopId) return;
-    fetch(`/api/admin/shops/${shopId}/members`)
+  const fetchMembers = useCallback(() => {
+    if (!selectedShopId) return;
+    fetch(`/api/admin/shops/${selectedShopId}/members`)
       .then((r) => r.json())
       .then((data) => {
         if (data.success) setMembers(data.data);
         setLoading(false);
       });
-  };
+  }, [selectedShopId]);
 
-  useEffect(() => { fetchMembers(); }, [shopId]);
+  useEffect(() => { fetchMembers(); }, [fetchMembers]);
 
   const handleAdd = async () => {
-    if (!email.trim() || !shopId) return;
+    if (!addEmail.trim()) return;
+    const targetShops = isAdmin ? addShopIds : [selectedShopId];
+    if (targetShops.length === 0) return;
     setAdding(true);
-    setError("");
-    const res = await fetch(`/api/admin/shops/${shopId}/members`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email.trim(), role }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      setEmail("");
-      fetchMembers();
+    setAddError("");
+
+    if (isAdmin) {
+      // Use assign-member endpoint (supports multi-shop)
+      const res = await fetch("/api/admin/shops/assign-member", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: addEmail.trim(), role: addRole, shopIds: targetShops }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const shopNames = data.data.assignments.map((a: { shopName: string }) => a.shopName).join(", ");
+        toast.success(`เพิ่ม ${data.data.user.name} เข้า: ${shopNames}`);
+        setAddEmail(""); setPreview(null);
+        const firstAssigned = data.data.assignments[0]?.shopId;
+        if (firstAssigned && shops.some((s) => s.id === firstAssigned)) {
+          setSelectedShopId(firstAssigned);
+        } else {
+          fetchMembers();
+        }
+      } else {
+        setAddError(data.error || "Failed");
+      }
     } else {
-      setError(data.error || "Failed to add member");
+      // Use shop members endpoint
+      const res = await fetch(`/api/admin/shops/${selectedShopId}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: addEmail.trim(), role: addRole }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("เพิ่มสมาชิกสำเร็จ");
+        setAddEmail(""); setPreview(null);
+        fetchMembers();
+      } else {
+        setAddError(data.error || "Failed to add member");
+      }
     }
     setAdding(false);
   };
 
+  const toggleShop = (sid: string) => {
+    setAddShopIds((prev) =>
+      prev.includes(sid) ? prev.filter((id) => id !== sid) : [...prev, sid]
+    );
+  };
+
   const handleUpdateRole = async (memberId: string, newRole: string) => {
-    if (!shopId) return;
-    await fetch(`/api/admin/shops/${shopId}/members/${memberId}`, {
+    if (!selectedShopId) return;
+    await fetch(`/api/admin/shops/${selectedShopId}/members/${memberId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ role: newRole }),
@@ -108,109 +127,118 @@ export default function StaffPage() {
   };
 
   const handleRemove = async (memberId: string) => {
-    if (!shopId || !confirm("Remove this member?")) return;
-    await fetch(`/api/admin/shops/${shopId}/members/${memberId}`, { method: "DELETE" });
+    if (!selectedShopId || !confirm("Remove this member?")) return;
+    await fetch(`/api/admin/shops/${selectedShopId}/members/${memberId}`, { method: "DELETE" });
     fetchMembers();
   };
 
-  if (!shopId) return <p className="text-stone-500">Please select a shop first.</p>;
+  if (!activeShop && shops.length === 0) return <p className="text-stone-500">Please select a shop first.</p>;
   if (loading) return <div className="animate-pulse"><div className="h-8 bg-stone-100 rounded w-48 mb-4" /><div className="h-40 bg-stone-100 rounded-2xl" /></div>;
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-stone-800 mb-6">
-        Staff Management — {activeShop?.name}
-      </h1>
+      <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+        <h1 className="text-2xl font-bold text-stone-800">Staff Management</h1>
+        {(isAdmin || shops.length > 1) && (
+          <select
+            value={selectedShopId}
+            onChange={(e) => { setSelectedShopId(e.target.value); setLoading(true); }}
+            className="text-sm border border-stone-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white text-stone-600"
+          >
+            {shops.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        )}
+        {!isAdmin && shops.length <= 1 && selectedShop && (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 font-medium">{selectedShop.name}</span>
+        )}
+      </div>
 
-      {/* Multi-shop Assignment — Admin Only */}
-      {isAdmin && shops.length > 0 && (
-        <div className="bg-white rounded-2xl border border-violet-100 p-5 mb-6">
-          <h2 className="font-semibold text-stone-800 mb-1">Assign to Multiple Shops</h2>
-          <p className="text-xs text-stone-400 mb-4">เพิ่ม user ให้ดูแลหลายร้านพร้อมกัน — เฉพาะ Super Admin</p>
-          <div className="space-y-3">
-            <div className="flex gap-3 items-end flex-wrap">
-              <div className="flex-1 min-w-48">
-                <label className="text-sm text-stone-600 block mb-1">Email</label>
+      {/* Add Member */}
+      <div className="bg-white rounded-2xl border border-stone-100 p-5 mb-6">
+        <h2 className="font-semibold text-stone-800 mb-3">Add Member</h2>
+        <div className="space-y-3">
+          <div className="flex gap-3 items-end flex-wrap">
+            <div className="flex-1 min-w-48">
+              <label className="text-sm text-stone-600 block mb-1">ชื่อหรืออีเมล</label>
+              <div className="relative">
                 <input
                   className="input w-full"
-                  value={assignEmail}
-                  onChange={(e) => setAssignEmail(e.target.value)}
-                  onBlur={(e) => lookupUser(e.target.value)}
-                  placeholder="user@email.com"
+                  value={addEmail}
+                  onChange={(e) => setAddEmail(e.target.value)}
+                  placeholder="พิมชื่อหรืออีเมล..."
                 />
-              </div>
-              <div>
-                <label className="text-sm text-stone-600 block mb-1">Role</label>
-                <select className="input" value={assignRole} onChange={(e) => setAssignRole(e.target.value)}>
-                  <option value="STAFF">Staff</option>
-                  <option value="MANAGER">Manager</option>
-                  <option value="OWNER">Owner</option>
-                </select>
-              </div>
-            </div>
-
-            {assignPreview && (
-              <div className="text-xs bg-violet-50 rounded-xl px-3 py-2 text-violet-700">
-                พบ: <strong>{assignPreview.name}</strong> ({assignPreview.email})
-                {assignPreview.shopMemberships.length > 0 && (
-                  <span className="ml-2 text-violet-500">
-                    — ปัจจุบันดูแล: {assignPreview.shopMemberships.map((m) => m.shopName).join(", ")}
-                  </span>
+                {suggestions.length > 0 && (
+                  <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-stone-200 rounded-xl shadow-lg overflow-hidden">
+                    {suggestions.map((u) => (
+                      <button
+                        key={u.id}
+                        type="button"
+                        className="w-full text-left px-3 py-2 hover:bg-orange-50 transition-colors"
+                        onClick={() => { setAddEmail(u.email); setSuggestions([]); }}
+                      >
+                        <span className="font-medium text-stone-800 text-sm">{u.name}</span>
+                        <span className="text-xs text-stone-400 ml-2">{u.email}</span>
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
-            )}
-
+            </div>
             <div>
-              <label className="text-sm text-stone-600 block mb-2">เลือกร้านที่จะให้ดูแล</label>
+              <label className="text-sm text-stone-600 block mb-1">Role</label>
+              <select className="input" value={addRole} onChange={(e) => setAddRole(e.target.value)}>
+                <option value="STAFF">Staff</option>
+                <option value="MANAGER">Manager</option>
+                <option value="OWNER">Owner</option>
+              </select>
+            </div>
+            <button
+              onClick={handleAdd}
+              disabled={adding || !addEmail.trim() || (isAdmin && addShopIds.length === 0)}
+              className="btn-primary px-4 py-2 text-sm"
+            >
+              {adding ? "กำลังเพิ่ม..." : "Add"}
+            </button>
+          </div>
+
+          {preview && (
+            <div className="text-xs bg-orange-50 rounded-xl px-3 py-2 text-orange-700">
+              พบ: <strong>{preview.name}</strong> ({preview.email})
+              {preview.shopMemberships.length > 0 && (
+                <span className="ml-2 text-stone-500">— ดูแลอยู่: {preview.shopMemberships.map((m) => m.shopName).join(", ")}</span>
+              )}
+            </div>
+          )}
+
+          {/* Multi-shop selector — admin only */}
+          {isAdmin && shops.length > 1 && (
+            <div>
+              <label className="text-sm text-stone-600 block mb-2">เพิ่มเข้าร้าน</label>
               <div className="flex flex-wrap gap-2">
                 {shops.map((s) => (
-                  <label key={s.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border cursor-pointer text-sm transition-colors ${assignShopIds.includes(s.id) ? "border-violet-300 bg-violet-50 text-violet-700" : "border-stone-200 text-stone-600 hover:bg-stone-50"}`}>
+                  <label key={s.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border cursor-pointer text-sm transition-colors ${addShopIds.includes(s.id) ? "border-orange-300 bg-orange-50 text-orange-700" : "border-stone-200 text-stone-600 hover:bg-stone-50"}`}>
                     <input
                       type="checkbox"
-                      checked={assignShopIds.includes(s.id)}
+                      checked={addShopIds.includes(s.id)}
                       onChange={() => toggleShop(s.id)}
-                      className="accent-violet-500"
+                      className="accent-orange-500"
                     />
+                    {s.logoUrl ? (
+                      <Image src={s.logoUrl} alt={s.name} width={18} height={18} className="rounded-full object-cover shrink-0" />
+                    ) : (
+                      <span className="w-[18px] h-[18px] rounded-full bg-stone-200 text-stone-500 text-[10px] font-bold flex items-center justify-center shrink-0">
+                        {s.name.charAt(0).toUpperCase()}
+                      </span>
+                    )}
                     {s.name}
                   </label>
                 ))}
               </div>
             </div>
+          )}
 
-            {assignError && <p className="text-xs text-red-500">{assignError}</p>}
-
-            <button
-              onClick={handleAssign}
-              disabled={assigning || !assignEmail.trim() || assignShopIds.length === 0}
-              className="bg-violet-500 hover:bg-violet-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              {assigning ? "กำลัง Assign..." : `Assign (${assignShopIds.length} ร้าน)`}
-            </button>
-          </div>
+          {addError && <p className="text-xs text-red-500">{addError}</p>}
         </div>
-      )}
-
-      {/* Add Member */}
-      <div className="bg-white rounded-2xl border border-stone-100 p-5 mb-6">
-        <h2 className="font-semibold text-stone-800 mb-3">Add Member</h2>
-        <div className="flex gap-3 items-end">
-          <div className="flex-1">
-            <label className="text-sm text-stone-600 block mb-1">Email</label>
-            <input className="input w-full" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@email.com" />
-          </div>
-          <div>
-            <label className="text-sm text-stone-600 block mb-1">Role</label>
-            <select className="input" value={role} onChange={(e) => setRole(e.target.value)}>
-              <option value="STAFF">Staff</option>
-              <option value="MANAGER">Manager</option>
-              <option value="OWNER">Owner</option>
-            </select>
-          </div>
-          <button onClick={handleAdd} disabled={adding} className="btn-primary px-4 py-2 text-sm">
-            {adding ? "Adding..." : "Add"}
-          </button>
-        </div>
-        {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
       </div>
 
       {/* Members List */}

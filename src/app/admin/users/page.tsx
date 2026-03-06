@@ -12,6 +12,7 @@ interface User {
   active: boolean;
   createdAt: string;
   _count: { orders: number };
+  shopMemberships: { role: string; shop: { id: string; name: string } }[];
 }
 
 export default function AdminUsersPage() {
@@ -29,6 +30,22 @@ export default function AdminUsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({ name: "", phone: "", role: "USER", password: "" });
   const [editSaving, setEditSaving] = useState(false);
+
+  // Search & filter
+  const [search, setSearch] = useState("");
+  const [filterRole, setFilterRole] = useState<"" | "ADMIN" | "USER">("");
+  const [filterActive, setFilterActive] = useState<"" | "true" | "false">("");
+  const [filterShopStaff, setFilterShopStaff] = useState<"" | "true" | "false">("");
+
+  const filteredUsers = users.filter((u) => {
+    const q = search.toLowerCase();
+    if (q && !u.name.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q) && !(u.phone ?? "").includes(q)) return false;
+    if (filterRole && u.role !== filterRole) return false;
+    if (filterActive && String(u.active) !== filterActive) return false;
+    if (filterShopStaff === "true" && !(u.shopMemberships?.length > 0)) return false;
+    if (filterShopStaff === "false" && u.shopMemberships?.length > 0) return false;
+    return true;
+  });
 
   const pageSize = 50;
   const totalPages = Math.ceil(total / pageSize);
@@ -195,11 +212,46 @@ export default function AdminUsersPage() {
         </div>
       )}
 
+      {/* Search & Filter */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="ค้นหาชื่อ, อีเมล, เบอร์โทร..."
+          className="flex-1 min-w-48 border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+        />
+        <select value={filterRole} onChange={(e) => setFilterRole(e.target.value as "" | "ADMIN" | "USER")}
+          className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white">
+          <option value="">สิทธิ์: ทั้งหมด</option>
+          <option value="ADMIN">Admin</option>
+          <option value="USER">User</option>
+        </select>
+        <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as "" | "true" | "false")}
+          className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white">
+          <option value="">สถานะ: ทั้งหมด</option>
+          <option value="true">Active</option>
+          <option value="false">Inactive</option>
+        </select>
+        <select value={filterShopStaff} onChange={(e) => setFilterShopStaff(e.target.value as "" | "true" | "false")}
+          className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white">
+          <option value="">Shop Staff: ทั้งหมด</option>
+          <option value="true">เป็น Staff ร้าน</option>
+          <option value="false">ไม่ใช่ Staff ร้าน</option>
+        </select>
+        {(search || filterRole || filterActive || filterShopStaff) && (
+          <button onClick={() => { setSearch(""); setFilterRole(""); setFilterActive(""); setFilterShopStaff(""); }}
+            className="text-xs px-3 py-2 rounded-xl border border-stone-200 text-stone-500 hover:bg-stone-50">
+            ล้าง
+          </button>
+        )}
+      </div>
+
       <div className="bg-white rounded-2xl border border-stone-100 overflow-hidden">
         {loading ? (
           <div className="text-center py-16 text-stone-400 text-sm">กำลังโหลด...</div>
-        ) : users.length === 0 ? (
-          <div className="text-center py-16 text-stone-400 text-sm">ไม่มีผู้ใช้งาน</div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="text-center py-16 text-stone-400 text-sm">{users.length === 0 ? "ไม่มีผู้ใช้งาน" : "ไม่พบผู้ใช้ที่ตรงกับเงื่อนไข"}</div>
         ) : (
           <table className="w-full text-sm">
             <thead>
@@ -213,7 +265,7 @@ export default function AdminUsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-50">
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <tr key={user.id} className={`hover:bg-stone-50 transition-colors ${!user.active ? "opacity-50" : ""}`}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -224,6 +276,15 @@ export default function AdminUsersPage() {
                         <p className="font-medium text-stone-800">{user.name}</p>
                         {user.phone && (
                           <p className="text-xs text-stone-400">{user.phone}</p>
+                        )}
+                        {user.shopMemberships?.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {user.shopMemberships.map((m) => (
+                              <span key={m.shop.id} className="text-xs px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 border border-blue-100">
+                                {m.shop.name} · {m.role}
+                              </span>
+                            ))}
+                          </div>
                         )}
                       </div>
                     </div>

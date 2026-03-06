@@ -53,7 +53,7 @@ export default function StoresMap({ stores }: { stores: Store[] }) {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6" style={{ height: "600px" }}>
+    <div className="flex flex-col lg:flex-row gap-6" style={{ height: "100%" }}>
       {/* Store list */}
       <div className="lg:w-80 shrink-0 overflow-y-auto space-y-3 pr-1">
         {stores.map((store) => (

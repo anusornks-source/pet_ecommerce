@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import toast from "react-hot-toast";
 
@@ -32,6 +32,8 @@ function toSlug(title: string) {
 
 export default function ArticleForm({ articleId, initialData }: ArticleFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const shopId = searchParams.get("shopId");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -103,7 +105,8 @@ export default function ArticleForm({ articleId, initialData }: ArticleFormProps
       tags,
     };
 
-    const url = articleId ? `/api/admin/articles/${articleId}` : "/api/admin/articles";
+    const qs = !articleId && shopId ? `?shopId=${shopId}` : "";
+    const url = articleId ? `/api/admin/articles/${articleId}` : `/api/admin/articles${qs}`;
     const method = articleId ? "PUT" : "POST";
 
     const res = await fetch(url, {
@@ -115,7 +118,7 @@ export default function ArticleForm({ articleId, initialData }: ArticleFormProps
 
     if (data.success) {
       toast.success(articleId ? "บันทึกแล้ว" : "เพิ่มบทความแล้ว");
-      router.push("/admin/articles");
+      router.push(`/admin/articles${shopId ? `?shopId=${shopId}` : ""}`);
     } else {
       toast.error(data.error ?? "เกิดข้อผิดพลาด");
     }

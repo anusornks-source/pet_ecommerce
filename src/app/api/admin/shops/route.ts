@@ -11,6 +11,10 @@ export async function GET(request: NextRequest) {
     orderBy: { createdAt: "desc" },
     include: {
       _count: { select: { products: true, orders: true, members: true } },
+      members: {
+        select: { role: true, user: { select: { id: true, name: true, email: true, phone: true, avatar: true } } },
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 

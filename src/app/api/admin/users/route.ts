@@ -22,6 +22,9 @@ export async function GET(request: NextRequest) {
         active: true,
         createdAt: true,
         _count: { select: { orders: true } },
+        shopMemberships: {
+          select: { role: true, shop: { select: { id: true, name: true } } },
+        },
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,

@@ -65,30 +65,46 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
-  const email = new URL(request.url).searchParams.get("email");
-  if (!email) return NextResponse.json({ success: false, error: "email required" }, { status: 400 });
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.get("email") ?? searchParams.get("q") ?? "";
+  if (!query.trim()) return NextResponse.json({ success: false, error: "query required" }, { status: 400 });
 
-  const user = await prisma.user.findUnique({
-    where: { email: email.toLowerCase() },
-    include: {
-      shopMemberships: { include: { shop: { select: { id: true, name: true } } } },
-    },
+  // Exact match by email → return single user with shop memberships (for preview)
+  const exactUser = await prisma.user.findUnique({
+    where: { email: query.trim().toLowerCase() },
+    include: { shopMemberships: { include: { shop: { select: { id: true, name: true } } } } },
   });
 
-  if (!user) return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
+  if (exactUser) {
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: exactUser.id,
+        name: exactUser.name,
+        email: exactUser.email,
+        role: exactUser.role,
+        shopMemberships: exactUser.shopMemberships.map((m) => ({
+          shopId: m.shopId,
+          shopName: m.shop.name,
+          role: m.role,
+        })),
+      },
+      suggestions: [],
+    });
+  }
 
-  return NextResponse.json({
-    success: true,
-    data: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      shopMemberships: user.shopMemberships.map((m) => ({
-        shopId: m.shopId,
-        shopName: m.shop.name,
-        role: m.role,
-      })),
+  // Partial match by name or email → return suggestions list
+  const users = await prisma.user.findMany({
+    where: {
+      OR: [
+        { name: { contains: query.trim(), mode: "insensitive" } },
+        { email: { contains: query.trim(), mode: "insensitive" } },
+      ],
     },
+    select: { id: true, name: true, email: true },
+    take: 8,
+    orderBy: { name: "asc" },
   });
+
+  return NextResponse.json({ success: false, suggestions: users });
 }

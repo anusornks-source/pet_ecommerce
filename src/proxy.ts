@@ -12,7 +12,11 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith(route)
   );
 
-  if (!isProtected && !isAdmin) return NextResponse.next();
+  if (!isProtected && !isAdmin) {
+    const response = NextResponse.next();
+    response.headers.set("x-pathname", pathname);
+    return response;
+  }
 
   const token = request.cookies.get("token")?.value;
   if (!token) {
@@ -34,9 +38,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  response.headers.set("x-pathname", pathname);
+  return response;
 }
 
 export const config = {
-  matcher: ["/checkout/:path*", "/profile/:path*", "/admin/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

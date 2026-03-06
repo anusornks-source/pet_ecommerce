@@ -12,6 +12,7 @@ interface Shop {
   active: boolean;
   usePetType: boolean;
   _count: { products: number; orders: number; members: number };
+  members: { role: string; user: { id: string; name: string; email: string; phone: string | null; avatar: string | null } }[];
 }
 
 export default function ShopsPage() {
@@ -144,15 +145,15 @@ export default function ShopsPage() {
       <div className="grid gap-4">
         {filteredShops.map((shop) => (
           <div key={shop.id} className="bg-white rounded-2xl border border-stone-100 p-5 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center text-2xl shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-stone-100 flex items-center justify-center shrink-0 overflow-hidden">
               {shop.logoUrl ? (
-                <img src={shop.logoUrl} alt="" className="w-full h-full rounded-xl object-cover" />
+                <img src={shop.logoUrl} alt="" className="w-full h-full object-cover" />
               ) : (
-                "🏪"
+                <span className="text-lg font-bold text-stone-400">{shop.name[0]?.toUpperCase()}</span>
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+            <div className="w-56 shrink-0">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-semibold text-stone-800">{shop.name}</h3>
                 {shop.name_th && <span className="text-sm text-stone-400">({shop.name_th})</span>}
                 <span className={`text-xs px-2 py-0.5 rounded-full ${shop.active ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
@@ -162,12 +163,48 @@ export default function ShopsPage() {
                   <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-600">🐾 Pet Type</span>
                 )}
               </div>
-              <p className="text-sm text-stone-500">/{shop.slug}</p>
+              <a href={`/${shop.slug}`} target="_blank" rel="noopener noreferrer" className="text-sm text-stone-400 hover:text-orange-500 hover:underline transition-colors">/{shop.slug}</a>
               <div className="flex gap-4 mt-1 text-xs text-stone-400">
                 <span>{shop._count.products} products</span>
                 <span>{shop._count.orders} orders</span>
-                <span>{shop._count.members} members</span>
               </div>
+            </div>
+            {/* Members — center column */}
+            <div className="flex-1 min-w-0">
+              {shop.members?.length > 0 ? (
+                <div className="flex flex-col gap-2.5">
+                  {shop.members.map((m) => (
+                    <div key={m.user.id} className="flex items-center gap-2">
+                      <div
+                        className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center text-white font-bold overflow-hidden shrink-0 ${
+                          m.role === "OWNER" ? "bg-orange-400" : m.role === "MANAGER" ? "bg-blue-400" : "bg-stone-400"
+                        }`}
+                        style={{ fontSize: 10 }}
+                      >
+                        {m.user.avatar ? (
+                          <img src={m.user.avatar} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          m.user.name[0]?.toUpperCase()
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-stone-700 font-medium truncate">{m.user.name}</span>
+                          <span className={`text-xs font-medium shrink-0 ${m.role === "OWNER" ? "text-orange-500" : m.role === "MANAGER" ? "text-blue-500" : "text-stone-400"}`}>
+                            {m.role}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-stone-400 truncate">{m.user.email}</span>
+                          {m.user.phone && <span className="text-xs text-stone-400 shrink-0">{m.user.phone}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-xs text-stone-300">ยังไม่มีสมาชิก</span>
+              )}
             </div>
             <div className="flex gap-2 shrink-0">
               <Link href={`/admin/shops/${shop.id}`} className="btn-outline px-3 py-1.5 text-xs">

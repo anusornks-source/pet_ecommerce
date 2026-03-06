@@ -1,4 +1,4 @@
-import { use } from "react";
+import { use, Suspense } from "react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import ArticleForm from "../ArticleForm";
@@ -17,6 +17,7 @@ export default async function EditArticlePage({
     <div>
       <h1 className="text-2xl font-bold text-stone-800 mb-6">แก้ไขบทความ</h1>
       <div className="bg-white rounded-2xl border border-stone-100 p-6">
+        <Suspense>
         <ArticleForm
           articleId={article.id}
           initialData={{
@@ -32,6 +33,7 @@ export default async function EditArticlePage({
             tags: article.tags,
           }}
         />
+        </Suspense>
       </div>
     </div>
   );

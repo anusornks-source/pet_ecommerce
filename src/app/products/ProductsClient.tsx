@@ -14,6 +14,7 @@ export default function ProductsClient() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [petTypeList, setPetTypeList] = useState<PetType[]>([]);
+  const [shopUsePetType, setShopUsePetType] = useState(true);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -57,9 +58,23 @@ export default function ProductsClient() {
     fetch(catUrl)
       .then((r) => r.json())
       .then((d) => d.success && setCategories(d.data));
-    fetch("/api/pet-types")
-      .then((r) => r.json())
-      .then((d) => d.success && setPetTypeList(d.data));
+
+    if (shopSlug) {
+      fetch(`/api/shops?slug=${shopSlug}`)
+        .then((r) => r.json())
+        .then((d) => {
+          const usePet = d.success ? (d.data.usePetType ?? true) : true;
+          setShopUsePetType(usePet);
+          if (usePet) {
+            fetch("/api/pet-types").then((r) => r.json()).then((d2) => d2.success && setPetTypeList(d2.data));
+          } else {
+            setPetTypeList([]);
+          }
+        });
+    } else {
+      setShopUsePetType(true);
+      fetch("/api/pet-types").then((r) => r.json()).then((d) => d.success && setPetTypeList(d.data));
+    }
   }, [shopSlug]);
 
   useEffect(() => {
@@ -199,7 +214,7 @@ export default function ProductsClient() {
             </div>
 
             {/* Pet Type */}
-            <div>
+            {shopUsePetType && <div>
               <label className="text-sm font-medium text-stone-600 block mb-2">{lang === "th" ? "ประเภทสัตว์" : "Pet Type"}</label>
               <div className="space-y-1">
                 <button
@@ -222,7 +237,7 @@ export default function ProductsClient() {
                   </button>
                 ))}
               </div>
-            </div>
+            </div>}
           </div>
         </aside>
 

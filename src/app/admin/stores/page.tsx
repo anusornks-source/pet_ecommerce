@@ -42,14 +42,20 @@ export default function AdminStoresPage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (activeShop?.id && !shopFilter) setShopFilter(activeShop.id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeShop?.id]);
+
   const fetchStores = useCallback(() => {
     setLoading(true);
-    const url = shopFilter ? `/api/admin/stores?shopId=${shopFilter}` : "/api/admin/stores";
+    const sid = shopFilter || activeShop?.id;
+    const url = sid ? `/api/admin/stores?shopId=${sid}` : "/api/admin/stores";
     fetch(url)
       .then((r) => r.json())
       .then((d) => { if (d.success) setStores(d.data); })
       .finally(() => setLoading(false));
-  }, [shopFilter]);
+  }, [shopFilter, activeShop?.id]);
 
   useEffect(() => { fetchStores(); }, [fetchStores]);
 
@@ -95,7 +101,7 @@ export default function AdminStoresPage() {
       ...form,
       lat: parseFloat(form.lat),
       lng: parseFloat(form.lng),
-      ...(!editId && activeShop && { shopId: activeShop.id }),
+      ...(!editId && { shopId: shopFilter || activeShop?.id || undefined }),
     };
 
     const url = editId ? `/api/admin/stores/${editId}` : "/api/admin/stores";
@@ -145,7 +151,6 @@ export default function AdminStoresPage() {
                 onChange={(e) => setShopFilter(e.target.value)}
                 className="text-xs border border-stone-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-200 bg-white text-stone-600"
               >
-                <option value="">ร้าน: {activeShop?.name ?? "..."}</option>
                 <option value="all">ทั้งหมด (ทุกร้าน)</option>
                 {shops.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
@@ -318,13 +323,13 @@ export default function AdminStoresPage() {
         )}
       </div>
 
-      {/* Map */}
-      {stores.length > 0 && (
+      {/* Map — only render after loading is done to avoid blocking */}
+      {stores.length > 0 && !loading && (
         <div className="bg-white rounded-2xl border border-stone-100 overflow-hidden mt-6">
           <div className="px-6 py-4 border-b border-stone-100">
             <h2 className="text-base font-semibold text-stone-700">🗺️ แผนที่สาขา</h2>
           </div>
-          <div style={{ height: "420px" }}>
+          <div style={{ height: "680px" }}>
             <StoresMap stores={stores} />
           </div>
         </div>

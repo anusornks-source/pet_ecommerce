@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   if (isNextResponse(auth)) return auth;
 
   const shopId = new URL(request.url).searchParams.get("shopId");
-  const where = shopId && shopId !== "all" ? { shopId } : shopId === "all" ? {} : {};
+  const where = shopId && shopId !== "all" ? { shopId } : {};
 
   const stores = await prisma.store.findMany({
     where,

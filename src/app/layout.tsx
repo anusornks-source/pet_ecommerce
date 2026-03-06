@@ -9,8 +9,23 @@ import { WishlistProvider } from "@/context/WishlistContext";
 import { LocaleProvider } from "@/context/LocaleContext";
 import ChatAssistant from "@/components/ChatAssistant";
 import { getSettings } from "@/lib/settings";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import type { Lang } from "@/lib/translations";
+import { prisma } from "@/lib/prisma";
+
+const KNOWN_ROUTES = new Set([
+  "admin", "api", "products", "cart", "checkout", "orders", "profile",
+  "login", "register", "articles", "stores", "advisor", "search", "wishlist",
+]);
+
+async function resolveNavBrand(pathname: string) {
+  const segment = pathname.split("/").filter(Boolean)[0];
+  if (!segment || KNOWN_ROUTES.has(segment)) return null;
+  return prisma.shop.findUnique({
+    where: { slug: segment, active: true },
+    select: { name: true, name_th: true, logoUrl: true },
+  });
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSettings();
@@ -30,6 +45,12 @@ export default async function RootLayout({
   const langCookie = cookieStore.get("lang")?.value;
   const initialLang: Lang = langCookie === "en" ? "en" : "th";
 
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") ?? "";
+  const shopBrand = await resolveNavBrand(pathname);
+  const navName = shopBrand?.name ?? settings.storeName;
+  const navLogo = shopBrand?.logoUrl ?? settings.logoUrl ?? undefined;
+
   return (
     <html lang={initialLang}>
       <body className="antialiased">
@@ -37,9 +58,9 @@ export default async function RootLayout({
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
-            <Navbar storeName={settings.storeName} logoUrl={settings.logoUrl ?? undefined} />
+            <Navbar storeName={navName} logoUrl={navLogo} />
             <main className="min-h-screen">{children}</main>
-            <Footer storeName={settings.storeName} logoUrl={settings.logoUrl ?? undefined} />
+            <Footer storeName={navName} logoUrl={navLogo} />
             <ChatAssistant />
             <Toaster
               position="top-right"

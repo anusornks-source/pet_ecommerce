@@ -58,13 +58,20 @@ export default function AdminBannersPage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Init shopFilter from activeShop when it first loads
+  useEffect(() => {
+    if (activeShop?.id && !shopFilter) setShopFilter(activeShop.id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeShop?.id]);
+
   const load = useCallback(() => {
-    const url = shopFilter ? `/api/admin/banners?shopId=${shopFilter}` : "/api/admin/banners";
+    const sid = shopFilter || activeShop?.id;
+    const url = sid ? `/api/admin/banners?shopId=${sid}` : "/api/admin/banners";
     fetch(url)
       .then((r) => r.json())
       .then((d) => { if (d.success) setBanners(d.data); })
       .finally(() => setLoading(false));
-  }, [shopFilter]);
+  }, [shopFilter, activeShop?.id]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -88,7 +95,9 @@ export default function AdminBannersPage() {
     if (!form.imageUrl.trim()) { toast.error("กรุณาใส่รูปภาพ"); return; }
     setSaving(true);
     try {
-      const url = editId ? `/api/admin/banners/${editId}` : "/api/admin/banners";
+      const sid = shopFilter || activeShop?.id;
+      const qs = sid ? `?shopId=${sid}` : "";
+      const url = editId ? `/api/admin/banners/${editId}${qs}` : `/api/admin/banners${qs}`;
       const method = editId ? "PUT" : "POST";
       const res = await fetch(url, {
         method,
@@ -137,14 +146,18 @@ export default function AdminBannersPage() {
 
   const handleDelete = async (b: Banner) => {
     if (!confirm(`ลบ banner นี้ใช่ไหม?`)) return;
-    const res = await fetch(`/api/admin/banners/${b.id}`, { method: "DELETE" });
+    const sid = shopFilter || activeShop?.id;
+    const qs = sid ? `?shopId=${sid}` : "";
+    const res = await fetch(`/api/admin/banners/${b.id}${qs}`, { method: "DELETE" });
     const data = await res.json();
     if (data.success) { toast.success("ลบแล้ว"); load(); }
     else toast.error(data.error ?? "ลบไม่สำเร็จ");
   };
 
   const toggleActive = async (b: Banner) => {
-    const res = await fetch(`/api/admin/banners/${b.id}`, {
+    const sid = shopFilter || activeShop?.id;
+    const qs = sid ? `?shopId=${sid}` : "";
+    const res = await fetch(`/api/admin/banners/${b.id}${qs}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ active: !b.active }),
@@ -173,7 +186,6 @@ export default function AdminBannersPage() {
                 onChange={(e) => setShopFilter(e.target.value)}
                 className="text-xs border border-stone-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-200 bg-white text-stone-600"
               >
-                <option value="">ร้าน: {activeShop?.name ?? "..."}</option>
                 {isAdmin && <option value="all">ทั้งหมด (ทุกร้าน)</option>}
                 {shops.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>

@@ -42,6 +42,19 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
   const [form, setForm] = useState({ name: "", name_th: "", slug: "", description: "", description_th: "", logoUrl: "", coverUrl: "", usePetType: true });
   const [saving, setSaving] = useState(false);
   const [savingCats, setSavingCats] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+
+  const handleUpload = async (file: File, field: "logoUrl" | "coverUrl") => {
+    const setter = field === "logoUrl" ? setUploadingLogo : setUploadingCover;
+    setter(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const data = await res.json();
+    if (data.success) setForm((prev) => ({ ...prev, [field]: data.url }));
+    setter(false);
+  };
 
   useEffect(() => {
     fetch(`/api/admin/shops/${id}`)
@@ -125,8 +138,34 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
             <input className="input w-full" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
           </div>
           <div>
-            <label className="text-sm font-medium text-stone-600 block mb-1">Logo URL</label>
-            <input className="input w-full" value={form.logoUrl} onChange={(e) => setForm({ ...form, logoUrl: e.target.value })} />
+            <label className="text-sm font-medium text-stone-600 block mb-1">Logo</label>
+            <div className="flex items-center gap-3">
+              {form.logoUrl && (
+                <img src={form.logoUrl} alt="" className="w-12 h-12 rounded-xl object-cover border border-stone-100 shrink-0" />
+              )}
+              <label className={`flex-1 flex items-center justify-center gap-2 border-2 border-dashed border-stone-200 rounded-xl px-3 py-2.5 cursor-pointer hover:border-orange-300 hover:bg-orange-50 transition-colors text-sm text-stone-500 ${uploadingLogo ? "opacity-50 pointer-events-none" : ""}`}>
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f, "logoUrl"); }} />
+                {uploadingLogo ? "กำลังอัปโหลด..." : "คลิกเพื่ออัปโหลด Logo"}
+              </label>
+              {form.logoUrl && (
+                <button type="button" onClick={() => setForm({ ...form, logoUrl: "" })} className="text-xs text-red-400 hover:text-red-600 shrink-0">ลบ</button>
+              )}
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-stone-600 block mb-1">Cover Image</label>
+            <div className="flex items-center gap-3">
+              {form.coverUrl && (
+                <img src={form.coverUrl} alt="" className="w-20 h-12 rounded-xl object-cover border border-stone-100 shrink-0" />
+              )}
+              <label className={`flex-1 flex items-center justify-center gap-2 border-2 border-dashed border-stone-200 rounded-xl px-3 py-2.5 cursor-pointer hover:border-orange-300 hover:bg-orange-50 transition-colors text-sm text-stone-500 ${uploadingCover ? "opacity-50 pointer-events-none" : ""}`}>
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f, "coverUrl"); }} />
+                {uploadingCover ? "กำลังอัปโหลด..." : "คลิกเพื่ออัปโหลด Cover"}
+              </label>
+              {form.coverUrl && (
+                <button type="button" onClick={() => setForm({ ...form, coverUrl: "" })} className="text-xs text-red-400 hover:text-red-600 shrink-0">ลบ</button>
+              )}
+            </div>
           </div>
           <div>
             <label className="text-sm font-medium text-stone-600 block mb-1">Description (EN)</label>

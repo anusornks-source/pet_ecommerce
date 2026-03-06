@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { useShopAdmin } from "@/context/ShopAdminContext";
 import Link from "next/link";
 import Image from "next/image";
@@ -19,7 +20,8 @@ interface Article {
 
 export default function AdminArticlesPage() {
   const { activeShop, shops, isAdmin } = useShopAdmin();
-  const [shopFilter, setShopFilter] = useState<string>("");
+  const searchParams = useSearchParams();
+  const [shopFilter, setShopFilter] = useState<string>(searchParams.get("shopId") ?? "");
   const [articles, setArticles] = useState<Article[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -28,21 +30,30 @@ export default function AdminArticlesPage() {
   const pageSize = 20;
   const totalPages = Math.ceil(total / pageSize);
 
+  // Init shopFilter from activeShop when not set via URL param
+  useEffect(() => {
+    if (activeShop?.id && !shopFilter && !searchParams.get("shopId")) setShopFilter(activeShop.id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeShop?.id]);
+
   const fetchArticles = useCallback(async (p: number) => {
     setLoading(true);
+    const sid = shopFilter || activeShop?.id;
     const params = new URLSearchParams({ page: String(p) });
-    if (shopFilter) params.set("shopId", shopFilter);
+    if (sid) params.set("shopId", sid);
     const res = await fetch(`/api/admin/articles?${params}`);
     const d = await res.json();
     if (d.success) { setArticles(d.data); setTotal(d.total); }
     setLoading(false);
-  }, [shopFilter]);
+  }, [shopFilter, activeShop?.id]);
 
   useEffect(() => { fetchArticles(1); }, [fetchArticles]);
 
   const handleDelete = async (id: string, title: string) => {
     if (!confirm(`ลบบทความ "${title}" ใช่ไหม?`)) return;
-    const res = await fetch(`/api/admin/articles/${id}`, { method: "DELETE" });
+    const sid = shopFilter || activeShop?.id;
+    const qs = sid ? `?shopId=${sid}` : "";
+    const res = await fetch(`/api/admin/articles/${id}${qs}`, { method: "DELETE" });
     const data = await res.json();
     if (data.success) {
       toast.success("ลบบทความแล้ว");
@@ -53,7 +64,9 @@ export default function AdminArticlesPage() {
   };
 
   const handleTogglePublish = async (id: string, published: boolean) => {
-    const res = await fetch(`/api/admin/articles/${id}`, {
+    const sid = shopFilter || activeShop?.id;
+    const qs = sid ? `?shopId=${sid}` : "";
+    const res = await fetch(`/api/admin/articles/${id}${qs}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ published: !published }),
@@ -93,7 +106,7 @@ export default function AdminArticlesPage() {
           </div>
         </div>
         <Link
-          href="/admin/articles/new"
+          href={`/admin/articles/new${(shopFilter && shopFilter !== "all") ? `?shopId=${shopFilter}` : activeShop ? `?shopId=${activeShop.id}` : ""}`}
           className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
         >
           + เพิ่มบทความ
@@ -107,7 +120,7 @@ export default function AdminArticlesPage() {
           <div className="p-12 text-center text-stone-400">
             <p className="text-4xl mb-3">📝</p>
             <p>ยังไม่มีบทความ</p>
-            <Link href="/admin/articles/new" className="text-orange-500 hover:underline text-sm mt-2 inline-block">
+            <Link href={`/admin/articles/new${(shopFilter && shopFilter !== "all") ? `?shopId=${shopFilter}` : activeShop ? `?shopId=${activeShop.id}` : ""}`} className="text-orange-500 hover:underline text-sm mt-2 inline-block">
               เพิ่มบทความแรก →
             </Link>
           </div>

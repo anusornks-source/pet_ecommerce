@@ -52,7 +52,7 @@ const navEntries: NavEntry[] = [
       { href: "/admin/stores", label: "สาขา", icon: "📍" },
     ],
   },
-  { href: "/admin/staff", label: "Staff", icon: "👤", minRole: "OWNER" },
+  { href: "/admin/staff", label: "Shop Staff", icon: "👤", minRole: "OWNER" },
   { href: "/admin/users", label: "ผู้ใช้งาน", icon: "👥", adminOnly: true },
   {
     label: "ระบบ",

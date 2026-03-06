@@ -136,12 +136,13 @@ export async function DELETE(
 ) {
   const auth = await requireShopAdmin(request);
   if (isShopAuthResponse(auth)) return auth;
-  const { shopId } = auth;
+  const { shopId, payload } = auth;
+  const isAdmin = payload.role === "ADMIN";
 
   const { id } = await params;
 
-  // Verify product belongs to this shop
-  const existingProduct = await prisma.product.findFirst({ where: { id, shopId } });
+  // Platform ADMIN can delete any product; shop members only their own shop's products
+  const existingProduct = await prisma.product.findFirst({ where: isAdmin ? { id } : { id, shopId } });
   if (!existingProduct) {
     return NextResponse.json({ success: false, error: "ไม่พบสินค้า" }, { status: 404 });
   }

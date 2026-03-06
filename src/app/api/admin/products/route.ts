@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const tagId = searchParams.get("tagId") || "";
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = { shopId };
+  const where: any = shopId === "all" ? {} : { shopId };
 
   if (search) {
     where.OR = [

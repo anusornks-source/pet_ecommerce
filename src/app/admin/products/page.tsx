@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useShopAdmin } from "@/context/ShopAdminContext";
 import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -60,6 +61,8 @@ function formatDate(iso: string) {
 }
 
 export default function AdminProductsPage() {
+  const { activeShop, shops, isAdmin } = useShopAdmin();
+  const [shopFilter, setShopFilter] = useState<string>("");  // "" = use cookie, "all" = all shops, shopId = specific
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -134,11 +137,12 @@ export default function AdminProductsPage() {
     if (filterCategory) params.set("categoryId", filterCategory);
     if (filterPetType) params.set("petType", filterPetType);
     if (filterTag) params.set("tagId", filterTag);
+    if (shopFilter) params.set("shopId", shopFilter);
     const res = await fetch(`/api/admin/products?${params.toString()}`);
     const data = await res.json();
     if (data.success) { setProducts(data.data); setTotal(data.total); }
     setLoading(false);
-  }, [search, filterSource, filterActive, filterCategory, filterPetType, filterTag]);
+  }, [search, filterSource, filterActive, filterCategory, filterPetType, filterTag, shopFilter]);
 
   const activeFilterCount = [filterSource, filterActive, filterCategory, filterPetType, filterTag].filter(Boolean).length;
 
@@ -231,9 +235,26 @@ export default function AdminProductsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-stone-800">สินค้า</h1>
-          <p className="text-stone-500 text-sm mt-1">
-            {total.toLocaleString()} รายการ
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-stone-500 text-sm">{total.toLocaleString()} รายการ</p>
+            {isAdmin ? (
+              <select
+                value={shopFilter}
+                onChange={(e) => { setShopFilter(e.target.value); setPage(1); }}
+                className="text-xs border border-stone-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-200 bg-white text-stone-600"
+              >
+                <option value="">ร้าน: {activeShop?.name ?? "..."}</option>
+                <option value="all">ทั้งหมด (ทุกร้าน)</option>
+                {shops.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            ) : activeShop ? (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 font-medium">
+                ร้าน: {activeShop.name}
+              </span>
+            ) : null}
+          </div>
         </div>
         <Link
           href="/admin/products/new"

@@ -38,8 +38,9 @@ export async function requireShopAdmin(
     request.cookies.get("activeShopId")?.value ||
     null;
 
-  // Super admin can access any shop
+  // Super admin can access any shop (or "all" to bypass shop filter)
   if (payload.role === "ADMIN") {
+    if (shopId === "all") return { payload, shopId: "all" };
     if (!shopId && payload.shopRoles) {
       shopId = Object.keys(payload.shopRoles)[0] ?? null;
     }

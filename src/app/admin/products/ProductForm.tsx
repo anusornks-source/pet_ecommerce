@@ -120,6 +120,7 @@ export default function ProductForm({ productId, productShopId, initialData }: P
   const [showSourceDesc, setShowSourceDesc] = useState(false); // always collapsed by default
 
   const [descPreview, setDescPreview] = useState(false);
+  const [descPreviewTh, setDescPreviewTh] = useState(false);
   const [variants, setVariants] = useState<VariantRow[]>(initialData?.variants ?? []);
   const [stockRange, setStockRange] = useState({ min: 50, max: 100 });
   const [allTags, setAllTags] = useState<TagOption[]>([]);
@@ -482,15 +483,26 @@ export default function ProductForm({ productId, productShopId, initialData }: P
               >
                 {generatingFullDesc === "th" ? <><span className="inline-block w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" /> TH...</> : <>✨ AI TH</>}
               </button>
+              <button type="button" onClick={() => setDescPreviewTh((v) => !v)}
+                className="text-xs text-stone-400 hover:text-orange-500 transition-colors">
+                {descPreviewTh ? "✏️ แก้ไข" : "👁 HTML"}
+              </button>
             </div>
           </div>
-          <textarea
-            rows={8}
-            value={form.description_th}
-            onChange={(e) => setForm((f) => ({ ...f, description_th: e.target.value }))}
-            placeholder="คำอธิบายสินค้าภาษาไทย (รองรับ HTML)..."
-            className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none"
-          />
+          {descPreviewTh ? (
+            <div
+              className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm min-h-40 prose prose-sm max-w-none overflow-auto"
+              dangerouslySetInnerHTML={{ __html: form.description_th }}
+            />
+          ) : (
+            <textarea
+              rows={8}
+              value={form.description_th}
+              onChange={(e) => setForm((f) => ({ ...f, description_th: e.target.value }))}
+              placeholder="คำอธิบายสินค้าภาษาไทย (รองรับ HTML)..."
+              className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none"
+            />
+          )}
         </div>
       </div>
 

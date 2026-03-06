@@ -144,10 +144,17 @@ export default function AdminProductsPage() {
   const pageSize = 50;
   const totalPages = Math.ceil(total / pageSize);
 
+  // Fetch categories scoped to the selected shop (or activeShop); fallback to all when "all"
   useEffect(() => {
-    fetch("/api/admin/categories")
+    const resolvedShopId = shopFilter && shopFilter !== "all" ? shopFilter : (shopFilter === "" ? activeShop?.id : null);
+    const url = resolvedShopId ? `/api/admin/shops/${resolvedShopId}/categories` : "/api/admin/categories";
+    setFilterCategory("");
+    fetch(url)
       .then((r) => r.json())
       .then((d) => { if (d.success) setCategories(d.data); });
+  }, [shopFilter, activeShop?.id]);
+
+  useEffect(() => {
     fetch("/api/admin/pet-types")
       .then((r) => r.json())
       .then((d) => { if (d.success) setPetTypes(d.data); });

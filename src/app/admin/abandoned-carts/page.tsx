@@ -29,12 +29,13 @@ interface Stats {
 }
 
 const DAY_FILTERS = [
-  { label: "ทั้งหมด", value: 0 },
+  { label: "ตอนนี้", value: 0, desc: "ทุกตะกร้าที่มีของ" },
   { label: "1+ วัน", value: 1 },
   { label: "7+ วัน", value: 7 },
   { label: "14+ วัน", value: 14 },
   { label: "30+ วัน", value: 30 },
 ];
+
 
 function formatPrice(n: number) {
   return n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -43,7 +44,7 @@ function formatPrice(n: number) {
 export default function AbandonedCartsPage() {
   const { activeShop, shops, isAdmin } = useShopAdmin();
   const [shopFilter, setShopFilter] = useState("");
-  const [days, setDays] = useState(1);
+  const [days, setDays] = useState(0);
   const [page, setPage] = useState(1);
   const [carts, setCarts] = useState<AbandonedCart[]>([]);
   const [stats, setStats] = useState<Stats>({ totalCarts: 0, totalValue: 0, totalItems: 0, avgAgeDays: 0 });
@@ -79,6 +80,7 @@ export default function AbandonedCartsPage() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { setPage(1); }, [days, shopFilter]);
+
 
   const totalPages = Math.ceil(total / pageSize);
 

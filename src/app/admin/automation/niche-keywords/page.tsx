@@ -50,8 +50,9 @@ export default function NicheKeywordsPage() {
   const [enhancingBulk, setEnhancingBulk] = useState(false);
 
   const handleAiEnhance = async (ids: string[]) => {
-    const toEnhance = keywords.filter((k) => ids.includes(k.id));
-    if (toEnhance.length === 0) return;
+    // Fill keywords that have any missing field (TH or EN)
+    const toEnhance = keywords.filter((k) => ids.includes(k.id) && (!k.niche_th?.trim() || !k.niche?.trim()));
+    if (toEnhance.length === 0) { toast("All selected keywords are already complete"); return; }
     const isBulk = ids.length > 1;
     if (isBulk) setEnhancingBulk(true);
     else setEnhancingIds((prev) => new Set([...prev, ids[0]]));
@@ -59,17 +60,20 @@ export default function NicheKeywordsPage() {
       const res = await fetch("/api/admin/automation/niche-keywords/enhance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keywords: toEnhance.map((k) => ({ id: k.id, niche: k.niche })), aiModel }),
+        body: JSON.stringify({ keywords: toEnhance.map((k) => ({ id: k.id, niche: k.niche, niche_th: k.niche_th })), aiModel }),
       });
       const data = await res.json();
       if (data.success) {
-        const map: Record<string, { niche: string; niche_th: string }> = {};
+        const map: Record<string, { niche?: string; niche_th?: string }> = {};
         for (const e of data.data) map[e.id] = e;
-        setKeywords((prev) => prev.map((k) => map[k.id] ? { ...k, niche: map[k.id].niche, niche_th: map[k.id].niche_th } : k));
-        toast.success(`Enhanced ${data.data.length} keywords`);
+        setKeywords((prev) => prev.map((k) => {
+          if (!map[k.id]) return k;
+          return { ...k, ...(map[k.id].niche ? { niche: map[k.id].niche! } : {}), ...(map[k.id].niche_th !== undefined ? { niche_th: map[k.id].niche_th! } : {}) };
+        }));
+        toast.success(`Translated ${data.data.length} keywords`);
         if (isBulk) setSelected(new Set());
-      } else toast.error(data.error || "AI enhance failed");
-    } catch { toast.error("AI enhance failed"); }
+      } else toast.error(data.error || "AI translate failed");
+    } catch { toast.error("AI translate failed"); }
     finally {
       setEnhancingBulk(false);
       setEnhancingIds((prev) => { const next = new Set(prev); ids.forEach((id) => next.delete(id)); return next; });
@@ -316,7 +320,8 @@ export default function NicheKeywordsPage() {
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500">Keyword</th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 hidden md:table-cell">Thai</th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 w-20">Type</th>
-                <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 hidden lg:table-cell w-72">Reason / Remark</th>
+                <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 hidden lg:table-cell w-48">Reason</th>
+                <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 hidden lg:table-cell w-48">Remark</th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500">Tags</th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 hidden md:table-cell w-28">By</th>
                 <th className="w-24 px-3 py-3"></th>
@@ -337,16 +342,15 @@ export default function NicheKeywordsPage() {
                       {TYPE_CONFIG[kw.type]?.label ?? kw.type}
                     </span>
                   </td>
-                  <td className="px-3 py-2.5 text-xs text-stone-400 hidden lg:table-cell w-72">
-                    <div className="space-y-0.5">
-                      {(kw.reason_th || kw.reason) && (
-                        <p className="truncate max-w-xs">{kw.reason_th || kw.reason}</p>
-                      )}
-                      {kw.remark && (
-                        <p className="text-[10px] text-stone-300 truncate max-w-xs" title={kw.remark}>{kw.remark}</p>
-                      )}
-                      {!kw.reason_th && !kw.reason && !kw.remark && "—"}
-                    </div>
+                  <td className="px-3 py-2.5 text-xs text-stone-400 hidden lg:table-cell w-48">
+                    <p className="truncate max-w-45" title={kw.reason_th || kw.reason || ""}>
+                      {kw.reason_th || kw.reason || "—"}
+                    </p>
+                  </td>
+                  <td className="px-3 py-2.5 text-[11px] text-stone-300 hidden lg:table-cell w-48">
+                    <p className="truncate max-w-45" title={kw.remark || ""}>
+                      {kw.remark || "—"}
+                    </p>
                   </td>
                   <td className="px-3 py-2.5">
                     {editingId === kw.id ? (
@@ -377,9 +381,10 @@ export default function NicheKeywordsPage() {
                   </td>
                   <td className="px-3 py-2.5">
                     <div className="flex gap-2 items-center">
-                      <button onClick={() => handleAiEnhance([kw.id])} disabled={enhancingIds.has(kw.id)}
-                        className="text-[11px] text-purple-500 hover:text-purple-700 transition-colors disabled:opacity-40"
-                        title="AI enhance EN + fill Thai">
+                      <button onClick={() => handleAiEnhance([kw.id])}
+                        disabled={enhancingIds.has(kw.id) || (!!kw.niche?.trim() && !!kw.niche_th?.trim())}
+                        className="text-[11px] text-purple-500 hover:text-purple-700 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                        title={kw.niche?.trim() && kw.niche_th?.trim() ? "Both EN and TH already filled" : "AI fill missing EN/TH"}>
                         {enhancingIds.has(kw.id) ? "..." : "✨"}
                       </button>
                       <button onClick={() => startEdit(kw)}

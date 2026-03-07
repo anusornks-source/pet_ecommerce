@@ -13,19 +13,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "No keywords" }, { status: 400 });
   }
 
-  const list = keywords.map((k: { id: string; niche: string }) => `- [${k.id}] ${k.niche}`).join("\n");
+  const items = keywords as { id: string; niche: string; niche_th?: string }[];
+  const list = items.map((k) => {
+    if (!k.niche?.trim() && k.niche_th) return `- [${k.id}] TH:"${k.niche_th}" → need EN`;
+    return `- [${k.id}] EN:"${k.niche}" → need TH`;
+  }).join("\n");
 
-  const prompt = `You are a pet product ecommerce specialist helping with product keyword optimization.
+  const prompt = `You are a Thai pet product ecommerce specialist.
 
-For each keyword below, provide:
-1. A clean, searchable EN product keyword (concise, good for dropshipping search)
-2. Thai translation suitable for Thai pet product ecommerce
+For each keyword below, fill in ONLY the missing field (EN or TH). Do NOT change existing values.
+- If "need TH": translate the EN keyword into natural Thai for Thai pet ecommerce customers
+- If "need EN": translate the Thai keyword into a concise English product keyword
 
 Keywords:
 ${list}
 
-Return ONLY a JSON array:
-[{"id": "...", "niche": "clean EN keyword", "niche_th": "คีย์เวิร์ดภาษาไทย"}]`;
+Return ONLY a JSON array (include only the field that needs to be filled):
+[{"id": "...", "niche_th": "..."} or {"id": "...", "niche": "..."}]`;
 
   try {
     let text = "";
@@ -54,16 +58,17 @@ Return ONLY a JSON array:
     const match = text.match(/\[[\s\S]*\]/);
     if (!match) throw new Error("AI returned invalid JSON");
 
-    const enhanced: { id: string; niche: string; niche_th: string }[] = JSON.parse(match[0]);
+    const enhanced: { id: string; niche?: string; niche_th?: string }[] = JSON.parse(match[0]);
 
-    // Patch all keywords in DB
+    // Only update the field that was missing — never overwrite existing values
     await Promise.all(
-      enhanced.map((e) =>
-        prisma.nicheKeyword.update({
-          where: { id: e.id },
-          data: { niche: e.niche?.trim() || undefined, niche_th: e.niche_th?.trim() || null },
-        }).catch(() => null)
-      )
+      enhanced.map((e) => {
+        const data: { niche?: string; niche_th?: string | null } = {};
+        if (e.niche_th !== undefined) data.niche_th = e.niche_th?.trim() || null;
+        if (e.niche !== undefined) data.niche = e.niche?.trim() || undefined;
+        if (Object.keys(data).length === 0) return null;
+        return prisma.nicheKeyword.update({ where: { id: e.id }, data }).catch(() => null);
+      })
     );
 
     return NextResponse.json({ success: true, data: enhanced });

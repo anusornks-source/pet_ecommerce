@@ -42,6 +42,7 @@ const navEntries: NavEntry[] = [
   },
   { href: "/admin/orders", label: "คำสั่งซื้อ", icon: "🛒" },
   { href: "/admin/coupons", label: "คูปอง", icon: "🎟️", minRole: "MANAGER" },
+  { href: "/admin/shops/__active__", label: "ข้อมูลร้าน", icon: "🏪", minRole: "OWNER" },
   {
     label: "เนื้อหาหน้าเว้บ",
     icon: "🌐",
@@ -60,7 +61,6 @@ const navEntries: NavEntry[] = [
     minRole: "OWNER",
     items: [
       { href: "/admin/settings", label: "ตั้งค่าร้าน", icon: "⚙️" },
-      { href: "/admin/shops/__active__", label: "แก้ไขข้อมูลร้าน", icon: "🏪", minRole: "OWNER" },
       { href: "/admin/system-integration", label: "System Integration", icon: "🔌", adminOnly: true },
       { href: "/admin/api-logs", label: "API & Webhook Logs", icon: "🗂️", adminOnly: true },
       { href: "/admin/cj-logs", label: "CJ Logs", icon: "📋" },
@@ -199,7 +199,7 @@ export default function AdminSidebar() {
           return (
             <Link
               key={entry.href}
-              href={entry.href}
+              href={resolveHref(entry.href)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                 isItemActive(entry.href, entry.exact)
                   ? "bg-orange-50 text-orange-600"

@@ -40,9 +40,10 @@ export default function NicheKeywordsPage() {
 
   // Add / Edit
   const [showAdd, setShowAdd] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);   // top form
+  const [tagEditId, setTagEditId] = useState<string | null>(null);   // inline tag editor
   const [tagInput, setTagInput] = useState("");
-  const [form, setForm] = useState({ niche: "", niche_th: "", type: "manual", reason: "", reason_th: "" });
+  const [form, setForm] = useState({ niche: "", niche_th: "", type: "manual", reason: "", reason_th: "", remark: "" });
 
   // AI enhance
   const [aiModel, setAiModel] = useState<"claude" | "gpt">("claude");
@@ -143,7 +144,7 @@ export default function NicheKeywordsPage() {
       const data = await res.json();
       if (data.success) {
         setKeywords((prev) => prev.map((k) => k.id === id ? { ...k, tags } : k));
-        setEditingId(null);
+        setTagEditId(null);
         toast.success("Tags updated");
       }
     } catch { toast.error("Update failed"); }
@@ -161,7 +162,7 @@ export default function NicheKeywordsPage() {
       if (data.success) {
         toast.success(data.data.saved > 0 ? "Added!" : "Already exists");
         setShowAdd(false);
-        setForm({ niche: "", niche_th: "", type: "manual", reason: "", reason_th: "" });
+        setForm({ niche: "", niche_th: "", type: "manual", reason: "", reason_th: "", remark: "" });
         fetchKeywords();
       } else toast.error(data.error || "Add failed");
     } catch { toast.error("Add failed"); }
@@ -172,7 +173,7 @@ export default function NicheKeywordsPage() {
       const res = await fetch("/api/admin/automation/niche-keywords", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: kw.id, niche: form.niche, niche_th: form.niche_th, type: form.type, reason: form.reason, reason_th: form.reason_th }),
+        body: JSON.stringify({ id: kw.id, niche: form.niche, niche_th: form.niche_th, type: form.type, reason: form.reason, reason_th: form.reason_th, remark: form.remark }),
       });
       const data = await res.json();
       if (data.success) {
@@ -184,8 +185,10 @@ export default function NicheKeywordsPage() {
   };
 
   const startEdit = (kw: NicheKeyword) => {
+    setTagEditId(null);
     setEditingId(kw.id);
-    setForm({ niche: kw.niche, niche_th: kw.niche_th || "", type: kw.type, reason: kw.reason || "", reason_th: kw.reason_th || "" });
+    setForm({ niche: kw.niche, niche_th: kw.niche_th || "", type: kw.type, reason: kw.reason || "", reason_th: kw.reason_th || "", remark: kw.remark || "" });
+    setTimeout(() => document.getElementById("edit-form-top")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
 
   const useInResearch = (niche: string) => {
@@ -201,7 +204,7 @@ export default function NicheKeywordsPage() {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-stone-400">{total} keywords</span>
-          <button onClick={() => { setShowAdd(!showAdd); setEditingId(null); setForm({ niche: "", niche_th: "", type: "manual", reason: "", reason_th: "" }); }}
+          <button onClick={() => { setShowAdd(!showAdd); setEditingId(null); setForm({ niche: "", niche_th: "", type: "manual", reason: "", reason_th: "", remark: "" }); }}
             className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-4 py-2 rounded-xl font-medium transition-colors">
             + Add
           </button>
@@ -210,7 +213,7 @@ export default function NicheKeywordsPage() {
 
       {/* Add / Edit Form */}
       {(showAdd || editingId) && (
-        <div className="bg-white rounded-2xl border border-orange-200 p-4 mb-4">
+        <div id="edit-form-top" className="bg-white rounded-2xl border border-orange-200 p-4 mb-4">
           <h3 className="text-sm font-bold text-stone-700 mb-3">{editingId ? "Edit Keyword" : "Add Keyword"}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <input type="text" value={form.niche} onChange={(e) => setForm((f) => ({ ...f, niche: e.target.value }))}
@@ -229,6 +232,8 @@ export default function NicheKeywordsPage() {
               placeholder="Reason (EN)" className="border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
             <input type="text" value={form.reason_th} onChange={(e) => setForm((f) => ({ ...f, reason_th: e.target.value }))}
               placeholder="Reason (TH)" className="border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
+            <input type="text" value={form.remark} onChange={(e) => setForm((f) => ({ ...f, remark: e.target.value }))}
+              placeholder="Remark (source / note)" className="border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 md:col-span-2" />
           </div>
           <div className="flex gap-2 mt-3">
             {editingId ? (
@@ -353,12 +358,12 @@ export default function NicheKeywordsPage() {
                     </p>
                   </td>
                   <td className="px-3 py-2.5">
-                    {editingId === kw.id ? (
+                    {tagEditId === kw.id ? (
                       <div className="flex gap-1">
                         <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") handleSaveTags(kw.id, tagInput.split(",").map((t) => t.trim()).filter(Boolean));
-                            if (e.key === "Escape") setEditingId(null);
+                            if (e.key === "Escape") setTagEditId(null);
                           }}
                           placeholder="tag1, tag2"
                           className="w-32 border border-stone-200 rounded px-2 py-0.5 text-xs" autoFocus />
@@ -366,7 +371,7 @@ export default function NicheKeywordsPage() {
                           className="text-[10px] text-green-600 hover:text-green-800">Save</button>
                       </div>
                     ) : (
-                      <button onClick={() => { setEditingId(kw.id); setTagInput(kw.tags.join(", ")); }}
+                      <button onClick={() => { setTagEditId(kw.id); setTagInput(kw.tags.join(", ")); }}
                         className="flex flex-wrap gap-1 group">
                         {kw.tags.length > 0 ? kw.tags.map((t, i) => (
                           <span key={i} className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded">{t}</span>

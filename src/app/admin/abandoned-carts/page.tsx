@@ -7,8 +7,16 @@ import Image from "next/image";
 interface CartItem {
   id: string;
   quantity: number;
-  product: { id: string; name: string; name_th: string | null; price: number; images: string[]; shopId: string };
-  variant: { id: string; size: string | null; color: string | null; price: number } | null;
+  product: {
+    id: string; name: string; name_th: string | null; price: number; normalPrice: number | null;
+    images: string[]; shopId: string; source: string | null; fulfillmentMethod: string;
+    cjProductId: string | null;
+  };
+  variant: {
+    id: string; size: string | null; color: string | null; price: number;
+    sku: string | null; variantImage: string | null; fulfillmentMethod: string | null;
+    cjVid: string | null;
+  } | null;
 }
 
 interface AbandonedCart {
@@ -203,35 +211,51 @@ export default function AbandonedCartsPage() {
                     {expanded === c.id && (
                       <tr key={`${c.id}-detail`} className="bg-stone-50/50">
                         <td colSpan={4} className="px-4 py-3">
-                          <div className="space-y-2">
+                          <div className="space-y-2.5">
                             {c.items.map((item) => {
                               const price = item.variant?.price ?? item.product.price;
-                              const img = item.product.images?.[0];
+                              const img = item.variant?.variantImage || item.product.images?.[0];
+                              const fm = item.variant?.fulfillmentMethod ?? item.product.fulfillmentMethod;
+                              const variantParts = [item.variant?.size, item.variant?.color].filter(Boolean);
                               return (
                                 <div key={item.id} className="flex items-center gap-3 text-xs">
-                                  <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-stone-100 shrink-0">
+                                  <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-stone-100 shrink-0">
                                     {img ? (
-                                      <Image src={img} alt="" fill className="object-cover" sizes="40px" />
+                                      <Image src={img} alt="" fill className="object-cover" sizes="48px" />
                                     ) : (
                                       <div className="flex items-center justify-center h-full text-stone-300">📦</div>
                                     )}
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-stone-700 truncate">{item.product.name_th || item.product.name}</p>
-                                    {item.variant && (
-                                      <p className="text-stone-400">
-                                        {[item.variant.size, item.variant.color].filter(Boolean).join(" / ")}
+                                    <div className="flex items-center gap-1.5">
+                                      {fm === "CJ" && <span className="shrink-0 text-[9px] font-bold bg-blue-100 text-blue-600 px-1 rounded">CJ</span>}
+                                      {fm === "SELF" && <span className="shrink-0 text-[9px] font-bold bg-orange-100 text-orange-600 px-1 rounded">SELF</span>}
+                                      {fm === "SUPPLIER" && <span className="shrink-0 text-[9px] font-bold bg-purple-100 text-purple-600 px-1 rounded">SUP</span>}
+                                      <p className="text-stone-700 truncate font-medium">{item.product.name_th || item.product.name}</p>
+                                    </div>
+                                    {variantParts.length > 0 && (
+                                      <p className="text-stone-400 mt-0.5">
+                                        {variantParts.join(" / ")}
+                                        {item.variant?.sku && <span className="ml-2 text-stone-300">SKU: {item.variant.sku}</span>}
                                       </p>
                                     )}
+                                    {item.product.normalPrice && item.product.normalPrice > price && (
+                                      <p className="text-stone-300 line-through mt-0.5">฿{formatPrice(item.product.normalPrice)}</p>
+                                    )}
                                   </div>
-                                  <p className="text-stone-500 shrink-0">x{item.quantity}</p>
-                                  <p className="text-stone-700 font-medium shrink-0">฿{formatPrice(price * item.quantity)}</p>
+                                  <div className="text-right shrink-0">
+                                    <p className="text-stone-500">x{item.quantity}</p>
+                                    <p className="text-stone-700 font-semibold">฿{formatPrice(price * item.quantity)}</p>
+                                    {item.quantity > 1 && (
+                                      <p className="text-stone-300 text-[10px]">@฿{formatPrice(price)}</p>
+                                    )}
+                                  </div>
                                 </div>
                               );
                             })}
                           </div>
                           {c.user.phone && (
-                            <p className="text-xs text-stone-400 mt-2">โทร: {c.user.phone}</p>
+                            <p className="text-xs text-stone-400 mt-3 pt-2 border-t border-stone-100">โทร: {c.user.phone}</p>
                           )}
                         </td>
                       </tr>

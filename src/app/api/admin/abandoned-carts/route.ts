@@ -35,8 +35,8 @@ export async function GET(request: NextRequest) {
         user: { select: { id: true, name: true, email: true, phone: true, avatar: true } },
         items: {
           include: {
-            product: { select: { id: true, name: true, name_th: true, price: true, images: true, shopId: true } },
-            variant: { select: { id: true, size: true, color: true, price: true } },
+            product: { select: { id: true, name: true, name_th: true, price: true, normalPrice: true, images: true, shopId: true, source: true, fulfillmentMethod: true, cjProductId: true } },
+            variant: { select: { id: true, size: true, color: true, price: true, sku: true, variantImage: true, fulfillmentMethod: true, cjVid: true } },
           },
         },
       },

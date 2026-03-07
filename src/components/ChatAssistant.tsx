@@ -32,10 +32,8 @@ interface ChatAssistantProps {
   shopName?: string;
 }
 
-const QUICK_SUGGESTIONS = [
+const DEFAULT_SUGGESTIONS = [
   { label: "สินค้าแนะนำ", message: "แนะนำสินค้าขายดีในร้าน" },
-  { label: "อาหารสัตว์เลี้ยง", message: "มีอาหารสัตว์เลี้ยงอะไรบ้าง" },
-  { label: "ของเล่นสุนัข", message: "มีของเล่นสำหรับสุนัขอะไรบ้าง" },
   { label: "สินค้าราคาไม่เกิน 500", message: "แนะนำสินค้าราคาไม่เกิน 500 บาท" },
 ];
 
@@ -93,6 +91,23 @@ export default function ChatAssistant({ productContext, initialMessage, shopId, 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [quickSuggestions, setQuickSuggestions] = useState(DEFAULT_SUGGESTIONS);
+
+  useEffect(() => {
+    if (!shopId) return;
+    fetch(`/api/categories?shopId=${shopId}&limit=2`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && data.data?.length > 0) {
+          const catSuggestions = data.data.slice(0, 2).map((c: { name: string; icon: string }) => ({
+            label: `${c.icon} ${c.name}`,
+            message: `มีสินค้าหมวด${c.name}อะไรบ้าง`,
+          }));
+          setQuickSuggestions([...DEFAULT_SUGGESTIONS, ...catSuggestions]);
+        }
+      })
+      .catch(() => {});
+  }, [shopId]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const initialSentRef = useRef(false);
@@ -156,7 +171,7 @@ export default function ChatAssistant({ productContext, initialMessage, shopId, 
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history, productContext, shopId }),
+        body: JSON.stringify({ messages: history, productContext, shopId, shopName }),
       });
       const data = await res.json();
 
@@ -253,7 +268,7 @@ export default function ChatAssistant({ productContext, initialMessage, shopId, 
                 {/* Quick suggestions */}
                 <div className="w-full space-y-2">
                   <p className="text-xs text-stone-400 font-medium mb-2">ลองถามว่า...</p>
-                  {QUICK_SUGGESTIONS.map((s) => (
+                  {quickSuggestions.map((s) => (
                     <button
                       key={s.label}
                       onClick={() => sendMessage(s.message)}

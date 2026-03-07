@@ -2,13 +2,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+
 import { pickLang, type Lang } from "@/lib/translations";
 
 export const dynamic = "force-dynamic";
 
-async function getArticles() {
+async function getArticles(shopId?: string) {
   return prisma.article.findMany({
-    where: { published: true },
+    where: { published: true, ...(shopId ? { shopId } : {}) },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -24,8 +25,18 @@ async function getArticles() {
   });
 }
 
-export default async function ArticlesPage() {
-  const articles = await getArticles();
+export default async function ArticlesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ shopSlug?: string }>;
+}) {
+  const { shopSlug } = await searchParams;
+  let shopId: string | undefined;
+  if (shopSlug) {
+    const shop = await prisma.shop.findUnique({ where: { slug: shopSlug, active: true }, select: { id: true } });
+    shopId = shop?.id;
+  }
+  const articles = await getArticles(shopId);
   const cookieStore = await cookies();
   const lang: Lang = cookieStore.get("lang")?.value === "en" ? "en" : "th";
   const p = (th: string | null | undefined, en: string | null | undefined) => pickLang(th, en, lang);

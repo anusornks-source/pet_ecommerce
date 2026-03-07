@@ -2,10 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
-  const shopSlug = new URL(request.url).searchParams.get("shopSlug");
+  const sp = new URL(request.url).searchParams;
+  const shopSlug = sp.get("shopSlug");
+  const shopId = sp.get("shopId");
+  const limit = sp.get("limit") ? parseInt(sp.get("limit")!) : undefined;
 
-  const where = shopSlug
-    ? { products: { some: { shop: { slug: shopSlug }, active: true } } }
+  const shopFilter = shopSlug
+    ? { shop: { slug: shopSlug } }
+    : shopId
+    ? { shopId }
+    : null;
+
+  const where = shopFilter
+    ? { products: { some: { ...shopFilter, active: true } } }
     : undefined;
 
   const categories = await prisma.category.findMany({
@@ -13,13 +22,14 @@ export async function GET(request: NextRequest) {
     include: {
       _count: {
         select: {
-          products: shopSlug
-            ? { where: { shop: { slug: shopSlug }, active: true } }
+          products: shopFilter
+            ? { where: { ...shopFilter, active: true } }
             : true,
         },
       },
     },
     orderBy: { name: "asc" },
+    ...(limit ? { take: limit } : {}),
   });
   return NextResponse.json({ success: true, data: categories });
 }

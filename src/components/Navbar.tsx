@@ -13,9 +13,10 @@ interface NavbarProps {
   storeName?: string;
   logoUrl?: string;
   shopId?: string;
+  shopSlug?: string;
 }
 
-export default function Navbar({ storeName = "PetShop", logoUrl, shopId }: NavbarProps) {
+export default function Navbar({ storeName = "PetShop", logoUrl, shopId, shopSlug }: NavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
@@ -31,18 +32,18 @@ export default function Navbar({ storeName = "PetShop", logoUrl, shopId }: Navba
   };
 
   const navLinks = [
-    { href: "/", label: t("home", "nav") },
-    { href: "/products", label: t("products", "nav") },
+    { href: shopSlug ? `/${shopSlug}` : "/", label: t("home", "nav") },
+    { href: shopSlug ? `/products?shopSlug=${shopSlug}` : "/products", label: t("products", "nav") },
     { href: shopId ? `/advisor?shopId=${shopId}&shopName=${encodeURIComponent(storeName)}` : "/advisor", label: t("advisor", "nav") },
-    { href: "/stores", label: t("stores", "nav") },
-    { href: "/articles", label: t("articles", "nav") },
+    { href: shopSlug ? `/stores?shopSlug=${shopSlug}` : "/stores", label: t("stores", "nav") },
+    { href: shopSlug ? `/articles?shopSlug=${shopSlug}` : "/articles", label: t("articles", "nav") },
   ];
 
   return (
     <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-stone-100 shadow-sm">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl text-orange-500">
+        <Link href={shopSlug ? `/${shopSlug}` : "/"} className="flex items-center gap-2 font-bold text-xl text-orange-500">
           {logoUrl ? (
             <div className="relative w-8 h-8 shrink-0">
               <Image src={logoUrl} alt={storeName} fill className="object-contain" sizes="32px" />

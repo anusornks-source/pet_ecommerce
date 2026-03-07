@@ -109,7 +109,11 @@ export default function CheckoutPage() {
       const res = await fetch("/api/coupons/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: couponInput.trim(), subtotal }),
+        body: JSON.stringify({
+            code: couponInput.trim(),
+            subtotal,
+            shopId: (cart?.items?.[0]?.product as { shopId?: string } | undefined)?.shopId,
+          }),
       });
       const data = await res.json();
       if (!data.success) { toast.error(data.error); return; }

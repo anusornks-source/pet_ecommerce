@@ -23,7 +23,7 @@ async function resolveNavBrand(pathname: string) {
   if (!segment || KNOWN_ROUTES.has(segment)) return null;
   return prisma.shop.findUnique({
     where: { slug: segment, active: true },
-    select: { id: true, name: true, name_th: true, logoUrl: true },
+    select: { id: true, name: true, name_th: true, logoUrl: true, slug: true },
   });
 }
 
@@ -51,6 +51,7 @@ export default async function RootLayout({
   const navName = shopBrand?.name ?? settings.storeName;
   const navLogo = shopBrand?.logoUrl ?? settings.logoUrl ?? undefined;
   const shopId = shopBrand?.id ?? undefined;
+  const shopSlug = shopBrand?.slug ?? undefined;
   const shopName = shopBrand?.name ?? undefined;
 
   return (
@@ -60,7 +61,7 @@ export default async function RootLayout({
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
-            <Navbar storeName={navName} logoUrl={navLogo} shopId={shopId} />
+            <Navbar storeName={navName} logoUrl={navLogo} shopId={shopId} shopSlug={shopSlug} />
             <main className="min-h-screen">{children}</main>
             <Footer storeName={navName} logoUrl={navLogo} />
             <ChatAssistant shopId={shopId} shopName={shopName} />

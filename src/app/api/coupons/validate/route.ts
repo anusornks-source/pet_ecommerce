@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
-  const { code, subtotal } = await request.json();
+  const { code, subtotal, shopId } = await request.json();
 
   if (!code) {
     return NextResponse.json({ success: false, error: "กรุณากรอกโค้ด" }, { status: 400 });
   }
 
   const coupon = await prisma.coupon.findUnique({ where: { code: code.toUpperCase() } });
+
+  if (coupon && shopId && coupon.shopId !== shopId) {
+    return NextResponse.json({ success: false, error: "โค้ดนี้ไม่ใช่ของร้านนี้" }, { status: 400 });
+  }
 
   if (!coupon || !coupon.active) {
     return NextResponse.json({ success: false, error: "โค้ดไม่ถูกต้องหรือหมดอายุ" }, { status: 400 });

@@ -3,12 +3,25 @@ import StoresMapClient from "./StoresMapClient";
 
 export const dynamic = "force-dynamic";
 
-async function getStores() {
-  return prisma.store.findMany({ orderBy: { createdAt: "asc" } });
+async function getStores(shopId?: string) {
+  return prisma.store.findMany({
+    where: shopId ? { shopId } : undefined,
+    orderBy: { createdAt: "asc" },
+  });
 }
 
-export default async function StoresPage() {
-  const stores = await getStores();
+export default async function StoresPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ shopSlug?: string }>;
+}) {
+  const { shopSlug } = await searchParams;
+  let shopId: string | undefined;
+  if (shopSlug) {
+    const shop = await prisma.shop.findUnique({ where: { slug: shopSlug, active: true }, select: { id: true } });
+    shopId = shop?.id;
+  }
+  const stores = await getStores(shopId);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">

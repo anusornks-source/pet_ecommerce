@@ -9,6 +9,19 @@ const SYSTEM_PROMPT = `คุณคือ "PetShop Assistant" ผู้ช่ว
 ตอบเป็นภาษาไทยเสมอ ตอบสั้นกระชับแต่เป็นประโยชน์
 เมื่อลูกค้าถามเกี่ยวกับสินค้า ให้ใช้เครื่องมือ search_products เพื่อค้นหาสินค้าจริงในระบบ`;
 
+function buildSystemPrompt(shopName?: string, shopDescription?: string, categoryNames?: string[]): string {
+  if (!shopName) return SYSTEM_PROMPT;
+  const descLine = shopDescription ? `\nข้อมูลร้าน: ${shopDescription}` : "";
+  const catLine = categoryNames?.length
+    ? `\nหมวดหมู่สินค้าที่ร้านนี้ขาย: ${categoryNames.join(", ")}`
+    : "";
+  return `คุณคือ "${shopName} Assistant" ผู้ช่วยช้อปปิ้งที่เป็นมิตรของร้าน ${shopName}${descLine}${catLine}
+คุณช่วยลูกค้าค้นหาสินค้า แนะนำผลิตภัณฑ์ และตอบคำถามเกี่ยวกับสินค้าในร้าน ${shopName}
+ตอบเป็นภาษาไทยเสมอ ตอบสั้นกระชับแต่เป็นประโยชน์
+เมื่อลูกค้าถามเกี่ยวกับสินค้า ให้ใช้เครื่องมือ search_products เพื่อค้นหาสินค้าจริงในระบบ
+สำคัญ: แนะนำเฉพาะสินค้าที่มีในร้าน ${shopName} เท่านั้น ห้ามแนะนำสินค้าหรือหมวดหมู่ที่ไม่เกี่ยวข้องกับร้านนี้`;
+}
+
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -79,15 +92,45 @@ async function searchProducts(params: {
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages, productContext, shopId } = await request.json() as {
+    const { messages, productContext, shopId, shopName } = await request.json() as {
       messages: ChatMessage[];
       productContext?: { id: string; name: string; category: string };
       shopId?: string;
+      shopName?: string;
     };
 
+    // Fetch shop context for system prompt
+    let shopDescription: string | undefined;
+    let categoryNames: string[] | undefined;
+    if (shopId) {
+      const [shopData, shopCats] = await Promise.all([
+        prisma.shop.findUnique({
+          where: { id: shopId },
+          select: { description_th: true, description: true },
+        }),
+        prisma.shopCategory.findMany({
+          where: { shopId },
+          include: { category: { select: { name: true, name_th: true } } },
+        }),
+      ]);
+      shopDescription = shopData?.description_th ?? shopData?.description ?? undefined;
+      if (shopCats.length > 0) {
+        categoryNames = shopCats.map((sc) => sc.category.name_th ?? sc.category.name);
+      } else {
+        // Fallback: derive from active products
+        const cats = await prisma.category.findMany({
+          where: { products: { some: { shopId, active: true } } },
+          select: { name: true, name_th: true },
+        });
+        categoryNames = cats.map((c) => c.name_th ?? c.name);
+      }
+    }
+
+    const basePrompt = buildSystemPrompt(shopName, shopDescription, categoryNames);
+
     const systemPrompt = productContext
-      ? `${SYSTEM_PROMPT}\n\nลูกค้ากำลังดูสินค้า: "${productContext.name}" หมวดหมู่: ${productContext.category}`
-      : SYSTEM_PROMPT;
+      ? `${basePrompt}\n\nลูกค้ากำลังดูสินค้า: "${productContext.name}" หมวดหมู่: ${productContext.category}`
+      : basePrompt;
 
     // Agentic loop: allow up to 5 tool call rounds
     let currentMessages: Anthropic.Messages.MessageParam[] = messages.map((m) => ({
@@ -107,7 +150,7 @@ export async function POST(request: NextRequest) {
           {
             name: "search_products",
             description:
-              "ค้นหาสินค้าในร้าน PetShop ตามคำค้นหา หมวดหมู่ ประเภทสัตว์ หรือช่วงราคา",
+              `ค้นหาสินค้าในร้าน${shopName ? ` ${shopName}` : ""} ตามคำค้นหา หมวดหมู่ ประเภทสัตว์ หรือช่วงราคา`,
             input_schema: {
               type: "object" as const,
               properties: {

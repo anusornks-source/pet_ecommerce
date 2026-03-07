@@ -11,6 +11,32 @@ const PROMPTS: Record<string, (ctx: Record<string, string>) => string> = {
     `Translate this Thai product category name to concise English: "${name_th}". Reply with ONLY the English text, nothing else.`,
   slug: ({ name, name_th }) =>
     `Generate a URL-friendly slug for this category: "${name || name_th}". Rules: lowercase, hyphens only, no spaces, no special chars. Reply with ONLY the slug, nothing else.`,
+  // Banner EN fields
+  badge_en: ({ badge_th }) =>
+    `Translate this short Thai banner badge text to natural English: "${badge_th}". Keep emojis. Reply with ONLY the English text, nothing else.`,
+  title_en: ({ title_th }) =>
+    `Translate this Thai banner headline to concise English: "${title_th}". Reply with ONLY the English text, nothing else.`,
+  titleHighlight_en: ({ titleHighlight_th }) =>
+    `Translate this Thai banner highlight text to punchy English: "${titleHighlight_th}". Reply with ONLY the English text, nothing else.`,
+  subtitle_en: ({ subtitle_th }) =>
+    `Translate this Thai banner subtitle to natural English: "${subtitle_th}". Reply with ONLY the English text, nothing else.`,
+  ctaLabel_en: ({ ctaLabel_th }) =>
+    `Translate this Thai call-to-action button label to short English: "${ctaLabel_th}". Keep emojis. Reply with ONLY the English text, nothing else.`,
+  secondaryCtaLabel_en: ({ secondaryCtaLabel_th }) =>
+    `Translate this Thai secondary button label to short English: "${secondaryCtaLabel_th}". Keep emojis. Reply with ONLY the English text, nothing else.`,
+  // Banner TH fields
+  badge_th: ({ badge }) =>
+    `Translate this short banner badge text to natural Thai: "${badge}". Keep emojis. Reply with ONLY the Thai text, nothing else.`,
+  title_th: ({ title }) =>
+    `Translate this banner headline to natural Thai (short): "${title}". Reply with ONLY the Thai text, nothing else.`,
+  titleHighlight_th: ({ titleHighlight }) =>
+    `Translate this banner highlight text to natural Thai (short, punchy): "${titleHighlight}". Reply with ONLY the Thai text, nothing else.`,
+  subtitle_th: ({ subtitle }) =>
+    `Translate this banner subtitle to natural Thai: "${subtitle}". Reply with ONLY the Thai text, nothing else.`,
+  ctaLabel_th: ({ ctaLabel }) =>
+    `Translate this call-to-action button label to natural Thai (short): "${ctaLabel}". Keep emojis. Reply with ONLY the Thai text, nothing else.`,
+  secondaryCtaLabel_th: ({ secondaryCtaLabel }) =>
+    `Translate this secondary button label to natural Thai (short): "${secondaryCtaLabel}". Keep emojis. Reply with ONLY the Thai text, nothing else.`,
 };
 
 export async function POST(request: NextRequest) {

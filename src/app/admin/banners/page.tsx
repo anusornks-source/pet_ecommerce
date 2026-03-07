@@ -36,9 +36,9 @@ const emptyForm = {
   titleHighlight_th: "",
   subtitle: "",
   subtitle_th: "",
-  ctaLabel: "",
-  ctaLabel_th: "",
-  ctaUrl: "",
+  ctaLabel: "Shop Now 🛒",
+  ctaLabel_th: "ช้อปเลย 🛒",
+  ctaUrl: "/products",
   secondaryCtaLabel: "",
   secondaryCtaLabel_th: "",
   secondaryCtaUrl: "",
@@ -130,9 +130,9 @@ export default function AdminBannersPage() {
       titleHighlight_th: b.titleHighlight_th ?? "",
       subtitle: b.subtitle ?? "",
       subtitle_th: b.subtitle_th ?? "",
-      ctaLabel: b.ctaLabel ?? "",
-      ctaLabel_th: b.ctaLabel_th ?? "",
-      ctaUrl: b.ctaUrl ?? "",
+      ctaLabel: b.ctaLabel ?? emptyForm.ctaLabel,
+      ctaLabel_th: b.ctaLabel_th ?? emptyForm.ctaLabel_th,
+      ctaUrl: b.ctaUrl ?? emptyForm.ctaUrl,
       secondaryCtaLabel: b.secondaryCtaLabel ?? "",
       secondaryCtaLabel_th: b.secondaryCtaLabel_th ?? "",
       secondaryCtaUrl: b.secondaryCtaUrl ?? "",
@@ -170,9 +170,95 @@ export default function AdminBannersPage() {
 
   const inputCls = "w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200";
 
+  const [aiBusy, setAiBusy] = useState<string | null>(null);
+  const suggestTh = async (field: string, ctx: Record<string, string>, setter: (v: string) => void) => {
+    setAiBusy(field);
+    const res = await fetch("/api/admin/ai/suggest-field", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ field, ...ctx }),
+    });
+    const data = await res.json();
+    if (data.success) setter(data.value);
+    setAiBusy(null);
+  };
+  const AIBtn = ({ field, disabled, onSuggest }: { field: string; disabled?: boolean; onSuggest: () => void }) => (
+    <button type="button" disabled={!!disabled || aiBusy === field} onClick={onSuggest}
+      className="shrink-0 px-2 py-2 rounded-xl border border-violet-200 bg-violet-50 text-violet-600 text-xs font-medium hover:bg-violet-100 disabled:opacity-40 transition-colors"
+      title="AI แปลภาษาไทย">
+      {aiBusy === field ? "…" : "✨"}
+    </button>
+  );
+
   const isValidUrl = (url: string) => {
     try { new URL(url); return true; } catch { return false; }
   };
+
+  // ── Live Preview ───────────────────────────────────────────
+  const [previewLang, setPreviewLang] = useState<"th" | "en">("en");
+  const pick = (th: string, en: string) => previewLang === "th" ? (th || en) : (en || th);
+  const Preview = () => (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">Preview</p>
+        <div className="flex rounded-lg border border-stone-200 overflow-hidden text-xs font-medium">
+          <button
+            type="button"
+            onClick={() => setPreviewLang("en")}
+            className={`px-3 py-1 transition-colors ${previewLang === "en" ? "bg-orange-500 text-white" : "text-stone-500 hover:bg-stone-50"}`}
+          >
+            🇬🇧 EN
+          </button>
+          <button
+            type="button"
+            onClick={() => setPreviewLang("th")}
+            className={`px-3 py-1 transition-colors ${previewLang === "th" ? "bg-orange-500 text-white" : "text-stone-500 hover:bg-stone-50"}`}
+          >
+            🇹🇭 TH
+          </button>
+        </div>
+      </div>
+      <div className="relative w-full aspect-[5/2] rounded-xl overflow-hidden bg-stone-800">
+        {form.imageUrl && isValidUrl(form.imageUrl) && (
+          <Image src={form.imageUrl} alt="preview" fill className="object-cover" sizes="600px" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
+        <div className="absolute inset-0 flex flex-col justify-center px-6 py-4 max-w-[70%]">
+          {(form.badge || form.badge_th) && (
+            <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur text-white text-[10px] font-semibold px-2 py-0.5 rounded-full mb-2 w-fit">
+              {pick(form.badge_th, form.badge)}
+            </span>
+          )}
+          {(form.title || form.title_th || form.titleHighlight || form.titleHighlight_th) && (
+            <h2 className="text-white font-bold text-base leading-tight mb-1">
+              {pick(form.title_th, form.title)}{" "}
+              {(form.titleHighlight || form.titleHighlight_th) && (
+                <span className="text-orange-400">{pick(form.titleHighlight_th, form.titleHighlight)}</span>
+              )}
+            </h2>
+          )}
+          {(form.subtitle || form.subtitle_th) && (
+            <p className="text-white/80 text-[10px] leading-relaxed mb-2 line-clamp-2">
+              {pick(form.subtitle_th, form.subtitle)}
+            </p>
+          )}
+          <div className="flex gap-2">
+            {(form.ctaLabel || form.ctaLabel_th) && (
+              <span className="bg-orange-500 text-white text-[9px] font-semibold px-2.5 py-1 rounded-lg">
+                {pick(form.ctaLabel_th, form.ctaLabel)}
+              </span>
+            )}
+            {(form.secondaryCtaLabel || form.secondaryCtaLabel_th) && (
+              <span className="bg-white/20 backdrop-blur text-white text-[9px] font-semibold px-2.5 py-1 rounded-lg border border-white/30">
+                {pick(form.secondaryCtaLabel_th, form.secondaryCtaLabel)}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+      <p className="text-[10px] text-stone-400 mt-1.5 text-center">Preview อัปเดตตามที่คุณพิมพ์</p>
+    </div>
+  );
 
   return (
     <div>
@@ -255,48 +341,81 @@ export default function AdminBannersPage() {
             />
           </div>
 
+          {/* Live Preview */}
+          <Preview />
+
           {/* Text content — EN / TH side by side */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
             <p className="sm:col-span-2 text-xs font-semibold text-stone-500 uppercase tracking-wide">ข้อความ EN (Default) / TH</p>
             <div>
               <label className="block text-xs text-stone-500 mb-1">Badge EN</label>
-              <input value={form.badge} onChange={(e) => setForm((f) => ({ ...f, badge: e.target.value }))} placeholder="🎉 Welcome to PetShop" className={inputCls} />
+              <div className="flex gap-1.5">
+                <input value={form.badge} onChange={(e) => setForm((f) => ({ ...f, badge: e.target.value }))} placeholder="🎉 Welcome to PetShop" className={inputCls} />
+                <AIBtn field="badge_en" disabled={!form.badge_th} onSuggest={() => suggestTh("badge_en", { badge_th: form.badge_th }, (v) => setForm((f) => ({ ...f, badge: v })))} />
+              </div>
             </div>
             <div>
               <label className="block text-xs text-stone-500 mb-1">Badge TH</label>
-              <input value={form.badge_th} onChange={(e) => setForm((f) => ({ ...f, badge_th: e.target.value }))} placeholder="🎉 ยินดีต้อนรับสู่ PetShop" className={inputCls} />
+              <div className="flex gap-1.5">
+                <input value={form.badge_th} onChange={(e) => setForm((f) => ({ ...f, badge_th: e.target.value }))} placeholder="🎉 ยินดีต้อนรับสู่ PetShop" className={inputCls} />
+                <AIBtn field="badge_th" disabled={!form.badge} onSuggest={() => suggestTh("badge_th", { badge: form.badge }, (v) => setForm((f) => ({ ...f, badge_th: v })))} />
+              </div>
             </div>
             <div>
               <label className="block text-xs text-stone-500 mb-1">Title EN (หัวเรื่องหลัก)</label>
-              <input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Everything your" className={inputCls} />
+              <div className="flex gap-1.5">
+                <input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Everything your" className={inputCls} />
+                <AIBtn field="title_en" disabled={!form.title_th} onSuggest={() => suggestTh("title_en", { title_th: form.title_th }, (v) => setForm((f) => ({ ...f, title: v })))} />
+              </div>
             </div>
             <div>
               <label className="block text-xs text-stone-500 mb-1">Title TH</label>
-              <input value={form.title_th} onChange={(e) => setForm((f) => ({ ...f, title_th: e.target.value }))} placeholder="ทุกสิ่งที่" className={inputCls} />
+              <div className="flex gap-1.5">
+                <input value={form.title_th} onChange={(e) => setForm((f) => ({ ...f, title_th: e.target.value }))} placeholder="ทุกสิ่งที่" className={inputCls} />
+                <AIBtn field="title_th" disabled={!form.title} onSuggest={() => suggestTh("title_th", { title: form.title }, (v) => setForm((f) => ({ ...f, title_th: v })))} />
+              </div>
             </div>
             <div>
               <label className="block text-xs text-stone-500 mb-1">Title Highlight EN (สีส้ม)</label>
-              <input value={form.titleHighlight} onChange={(e) => setForm((f) => ({ ...f, titleHighlight: e.target.value }))} placeholder="Pet needs, right here!" className={inputCls} />
+              <div className="flex gap-1.5">
+                <input value={form.titleHighlight} onChange={(e) => setForm((f) => ({ ...f, titleHighlight: e.target.value }))} placeholder="Pet needs, right here!" className={inputCls} />
+                <AIBtn field="titleHighlight_en" disabled={!form.titleHighlight_th} onSuggest={() => suggestTh("titleHighlight_en", { titleHighlight_th: form.titleHighlight_th }, (v) => setForm((f) => ({ ...f, titleHighlight: v })))} />
+              </div>
             </div>
             <div>
               <label className="block text-xs text-stone-500 mb-1">Title Highlight TH (สีส้ม)</label>
-              <input value={form.titleHighlight_th} onChange={(e) => setForm((f) => ({ ...f, titleHighlight_th: e.target.value }))} placeholder="น้องรัก ต้องการ ที่นี่ครบ!" className={inputCls} />
+              <div className="flex gap-1.5">
+                <input value={form.titleHighlight_th} onChange={(e) => setForm((f) => ({ ...f, titleHighlight_th: e.target.value }))} placeholder="น้องรัก ต้องการ ที่นี่ครบ!" className={inputCls} />
+                <AIBtn field="titleHighlight_th" disabled={!form.titleHighlight} onSuggest={() => suggestTh("titleHighlight_th", { titleHighlight: form.titleHighlight }, (v) => setForm((f) => ({ ...f, titleHighlight_th: v })))} />
+              </div>
             </div>
             <div>
               <label className="block text-xs text-stone-500 mb-1">Subtitle EN (คำอธิบาย)</label>
-              <textarea value={form.subtitle} onChange={(e) => setForm((f) => ({ ...f, subtitle: e.target.value }))} rows={2} placeholder="Quality pet products delivered nationwide." className={inputCls} />
+              <div className="flex gap-1.5 items-start">
+                <textarea value={form.subtitle} onChange={(e) => setForm((f) => ({ ...f, subtitle: e.target.value }))} rows={2} placeholder="Quality pet products delivered nationwide." className={inputCls} />
+                <AIBtn field="subtitle_en" disabled={!form.subtitle_th} onSuggest={() => suggestTh("subtitle_en", { subtitle_th: form.subtitle_th }, (v) => setForm((f) => ({ ...f, subtitle: v })))} />
+              </div>
             </div>
             <div>
               <label className="block text-xs text-stone-500 mb-1">Subtitle TH</label>
-              <textarea value={form.subtitle_th} onChange={(e) => setForm((f) => ({ ...f, subtitle_th: e.target.value }))} rows={2} placeholder="คัดสรรสัตว์เลี้ยงคุณภาพ จัดส่งถึงบ้านทั่วประเทศ" className={inputCls} />
+              <div className="flex gap-1.5 items-start">
+                <textarea value={form.subtitle_th} onChange={(e) => setForm((f) => ({ ...f, subtitle_th: e.target.value }))} rows={2} placeholder="คัดสรรสัตว์เลี้ยงคุณภาพ จัดส่งถึงบ้านทั่วประเทศ" className={inputCls} />
+                <AIBtn field="subtitle_th" disabled={!form.subtitle} onSuggest={() => suggestTh("subtitle_th", { subtitle: form.subtitle }, (v) => setForm((f) => ({ ...f, subtitle_th: v })))} />
+              </div>
             </div>
             <div>
               <label className="block text-xs text-stone-500 mb-1">ปุ่มหลัก EN (CTA Label)</label>
-              <input value={form.ctaLabel} onChange={(e) => setForm((f) => ({ ...f, ctaLabel: e.target.value }))} placeholder="Shop Now 🛒" className={inputCls} />
+              <div className="flex gap-1.5">
+                <input value={form.ctaLabel} onChange={(e) => setForm((f) => ({ ...f, ctaLabel: e.target.value }))} placeholder="Shop Now 🛒" className={inputCls} />
+                <AIBtn field="ctaLabel_en" disabled={!form.ctaLabel_th} onSuggest={() => suggestTh("ctaLabel_en", { ctaLabel_th: form.ctaLabel_th }, (v) => setForm((f) => ({ ...f, ctaLabel: v })))} />
+              </div>
             </div>
             <div>
               <label className="block text-xs text-stone-500 mb-1">ปุ่มหลัก TH</label>
-              <input value={form.ctaLabel_th} onChange={(e) => setForm((f) => ({ ...f, ctaLabel_th: e.target.value }))} placeholder="ช้อปเลย 🛒" className={inputCls} />
+              <div className="flex gap-1.5">
+                <input value={form.ctaLabel_th} onChange={(e) => setForm((f) => ({ ...f, ctaLabel_th: e.target.value }))} placeholder="ช้อปเลย 🛒" className={inputCls} />
+                <AIBtn field="ctaLabel_th" disabled={!form.ctaLabel} onSuggest={() => suggestTh("ctaLabel_th", { ctaLabel: form.ctaLabel }, (v) => setForm((f) => ({ ...f, ctaLabel_th: v })))} />
+              </div>
             </div>
             <div>
               <label className="block text-xs text-stone-500 mb-1">ปุ่มหลัก URL</label>
@@ -308,11 +427,17 @@ export default function AdminBannersPage() {
             </div>
             <div>
               <label className="block text-xs text-stone-500 mb-1">ปุ่มรอง EN (Secondary Label)</label>
-              <input value={form.secondaryCtaLabel} onChange={(e) => setForm((f) => ({ ...f, secondaryCtaLabel: e.target.value }))} placeholder="View Pets" className={inputCls} />
+              <div className="flex gap-1.5">
+                <input value={form.secondaryCtaLabel} onChange={(e) => setForm((f) => ({ ...f, secondaryCtaLabel: e.target.value }))} placeholder="View Pets" className={inputCls} />
+                <AIBtn field="secondaryCtaLabel_en" disabled={!form.secondaryCtaLabel_th} onSuggest={() => suggestTh("secondaryCtaLabel_en", { secondaryCtaLabel_th: form.secondaryCtaLabel_th }, (v) => setForm((f) => ({ ...f, secondaryCtaLabel: v })))} />
+              </div>
             </div>
             <div>
               <label className="block text-xs text-stone-500 mb-1">ปุ่มรอง TH</label>
-              <input value={form.secondaryCtaLabel_th} onChange={(e) => setForm((f) => ({ ...f, secondaryCtaLabel_th: e.target.value }))} placeholder="ดูสัตว์เลี้ยง" className={inputCls} />
+              <div className="flex gap-1.5">
+                <input value={form.secondaryCtaLabel_th} onChange={(e) => setForm((f) => ({ ...f, secondaryCtaLabel_th: e.target.value }))} placeholder="ดูสัตว์เลี้ยง" className={inputCls} />
+                <AIBtn field="secondaryCtaLabel_th" disabled={!form.secondaryCtaLabel} onSuggest={() => suggestTh("secondaryCtaLabel_th", { secondaryCtaLabel: form.secondaryCtaLabel }, (v) => setForm((f) => ({ ...f, secondaryCtaLabel_th: v })))} />
+              </div>
             </div>
             <div className="sm:col-span-2">
               <label className="block text-xs text-stone-500 mb-1">ปุ่มรอง URL</label>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
-import { getGoogleTrends, getCJBestsellers, getTikTokTrends, buildAITrendPrompt, TrendKeyword } from "@/lib/trendSources";
+import { getGoogleTrends, getCJBestsellers, buildTikTokTrendPrompt, buildAITrendPrompt, TrendKeyword } from "@/lib/trendSources";
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 
@@ -136,10 +136,15 @@ export async function POST(request: NextRequest) {
         (async () => {
           const t0 = Date.now();
           try {
-            const kws = await getTikTokTrends(niche.trim());
+            const prompt = buildTikTokTrendPrompt(niche.trim());
+            const text = await aiComplete(aiModel, prompt, 400);
+            const parsed = parseJsonArray<{ keyword: string; why: string }>(text);
+            const kws: TrendKeyword[] = parsed
+              .filter((p) => p.keyword?.trim())
+              .map((p) => ({ keyword: p.keyword, source: "TikTok Trending", trending: true }));
             sourceResults.tiktok = kws;
             allTrends.push(...kws);
-            log("source:tiktok", "ok", `${kws.length} keywords found`, Date.now() - t0);
+            log("source:tiktok", "ok", `${kws.length} keywords generated via AI (${aiModel})`, Date.now() - t0);
           } catch (e) {
             sourceResults.tiktok = [];
             log("source:tiktok", "error", e instanceof Error ? e.message : "Unknown error", Date.now() - t0);

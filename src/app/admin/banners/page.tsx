@@ -4,6 +4,21 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useShopAdmin } from "@/context/ShopAdminContext";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface Banner {
   id: string;
@@ -42,9 +57,88 @@ const emptyForm = {
   secondaryCtaLabel: "",
   secondaryCtaLabel_th: "",
   secondaryCtaUrl: "",
-  order: "0",
   active: true,
 };
+
+function SortableBannerCard({
+  banner: b,
+  index,
+  isValidUrl,
+  onEdit,
+  onDelete,
+  onToggleActive,
+}: {
+  banner: Banner;
+  index: number;
+  isValidUrl: (url: string) => boolean;
+  onEdit: (b: Banner) => void;
+  onDelete: (b: Banner) => void;
+  onToggleActive: (b: Banner) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: b.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  return (
+    <div ref={setNodeRef} style={style} className={`bg-white rounded-2xl border ${b.active ? "border-stone-100" : "border-stone-100 opacity-60"} overflow-hidden`}>
+      <div className="flex gap-4 p-4">
+        {/* Drag handle */}
+        <button
+          {...attributes}
+          {...listeners}
+          className="shrink-0 flex flex-col items-center justify-center w-8 cursor-grab active:cursor-grabbing text-stone-300 hover:text-stone-500 transition-colors"
+          title="ลากเพื่อจัดลำดับ"
+        >
+          <span className="text-lg">⠿</span>
+        </button>
+
+        {/* Thumbnail */}
+        <div className="relative w-40 h-24 rounded-xl overflow-hidden bg-stone-100 shrink-0">
+          {b.imageUrl && isValidUrl(b.imageUrl) ? (
+            <Image src={b.imageUrl} alt="Banner" fill className="object-cover" sizes="160px" />
+          ) : (
+            <div className="flex items-center justify-center h-full text-stone-300 text-2xl">🖼️</div>
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              {b.badge && <p className="text-xs text-orange-500 font-medium mb-0.5">{b.badge}</p>}
+              <p className="font-semibold text-stone-800 text-sm">
+                {b.title}{b.titleHighlight && <span className="text-orange-500"> {b.titleHighlight}</span>}
+                {!b.title && !b.titleHighlight && <span className="text-stone-400 italic">ไม่มีหัวเรื่อง</span>}
+              </p>
+              {b.subtitle && <p className="text-xs text-stone-400 mt-0.5 line-clamp-2">{b.subtitle}</p>}
+              <div className="flex gap-2 mt-1.5">
+                {b.ctaLabel && (
+                  <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">{b.ctaLabel}</span>
+                )}
+                {b.secondaryCtaLabel && (
+                  <span className="text-xs bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">{b.secondaryCtaLabel}</span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-xs text-stone-400 bg-stone-50 px-2 py-0.5 rounded-full">#{index}</span>
+              <button
+                onClick={() => onToggleActive(b)}
+                className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors ${b.active ? "bg-green-100 text-green-600 hover:bg-green-200" : "bg-stone-100 text-stone-400 hover:bg-stone-200"}`}
+              >
+                {b.active ? "แสดง" : "ซ่อน"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-stone-50 px-4 py-2 flex gap-3">
+        <button onClick={() => onEdit(b)} className="text-xs text-stone-400 hover:text-stone-700 transition-colors">แก้ไข</button>
+        <button onClick={() => onDelete(b)} className="text-xs text-red-400 hover:text-red-600 transition-colors">ลบ</button>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminBannersPage() {
   const { activeShop, shops, isAdmin } = useShopAdmin();
@@ -102,7 +196,7 @@ export default function AdminBannersPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, ...(!editId && { order: String(banners.length) }) }),
       });
       const data = await res.json();
       if (data.success) {
@@ -136,7 +230,6 @@ export default function AdminBannersPage() {
       secondaryCtaLabel: b.secondaryCtaLabel ?? "",
       secondaryCtaLabel_th: b.secondaryCtaLabel_th ?? "",
       secondaryCtaUrl: b.secondaryCtaUrl ?? "",
-      order: String(b.order),
       active: b.active,
     });
     setEditId(b.id);
@@ -167,6 +260,27 @@ export default function AdminBannersPage() {
   };
 
   const cancel = () => { setForm(emptyForm); setEditId(null); setShowForm(false); };
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = banners.findIndex((b) => b.id === active.id);
+    const newIndex = banners.findIndex((b) => b.id === over.id);
+    const reordered = arrayMove(banners, oldIndex, newIndex);
+    setBanners(reordered);
+    const sid = shopFilter || activeShop?.id;
+    const qs = sid ? `?shopId=${sid}` : "";
+    const res = await fetch(`/api/admin/banners/reorder${qs}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: reordered.map((b) => b.id) }),
+    });
+    const data = await res.json();
+    if (data.success) toast.success("จัดลำดับแล้ว");
+    else { toast.error("จัดลำดับไม่สำเร็จ"); load(); }
+  };
 
   const inputCls = "w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200";
 
@@ -422,10 +536,6 @@ export default function AdminBannersPage() {
               <input value={form.ctaUrl} onChange={(e) => setForm((f) => ({ ...f, ctaUrl: e.target.value }))} placeholder="/products" className={inputCls} />
             </div>
             <div>
-              <label className="block text-xs text-stone-500 mb-1">Order (ลำดับ)</label>
-              <input type="number" value={form.order} onChange={(e) => setForm((f) => ({ ...f, order: e.target.value }))} className={inputCls} />
-            </div>
-            <div>
               <label className="block text-xs text-stone-500 mb-1">ปุ่มรอง EN (Secondary Label)</label>
               <div className="flex gap-1.5">
                 <input value={form.secondaryCtaLabel} onChange={(e) => setForm((f) => ({ ...f, secondaryCtaLabel: e.target.value }))} placeholder="View Pets" className={inputCls} />
@@ -477,58 +587,23 @@ export default function AdminBannersPage() {
       ) : banners.length === 0 ? (
         <div className="text-center py-16 text-stone-400 text-sm">ยังไม่มี banner — กด "+ เพิ่ม Banner" เพื่อเริ่ม</div>
       ) : (
-        <div className="space-y-3">
-          {banners.map((b) => (
-            <div key={b.id} className={`bg-white rounded-2xl border ${b.active ? "border-stone-100" : "border-stone-100 opacity-60"} overflow-hidden`}>
-              <div className="flex gap-4 p-4">
-                {/* Thumbnail */}
-                <div className="relative w-40 h-24 rounded-xl overflow-hidden bg-stone-100 shrink-0">
-                  {b.imageUrl && isValidUrl(b.imageUrl) ? (
-                    <Image src={b.imageUrl} alt="Banner" fill className="object-cover" sizes="160px" />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-stone-300 text-2xl">🖼️</div>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      {b.badge && <p className="text-xs text-orange-500 font-medium mb-0.5">{b.badge}</p>}
-                      <p className="font-semibold text-stone-800 text-sm">
-                        {b.title}{b.titleHighlight && <span className="text-orange-500"> {b.titleHighlight}</span>}
-                        {!b.title && !b.titleHighlight && <span className="text-stone-400 italic">ไม่มีหัวเรื่อง</span>}
-                      </p>
-                      {b.subtitle && <p className="text-xs text-stone-400 mt-0.5 line-clamp-2">{b.subtitle}</p>}
-                      <div className="flex gap-2 mt-1.5">
-                        {b.ctaLabel && (
-                          <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">{b.ctaLabel}</span>
-                        )}
-                        {b.secondaryCtaLabel && (
-                          <span className="text-xs bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">{b.secondaryCtaLabel}</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <span className="text-xs text-stone-400 bg-stone-50 px-2 py-0.5 rounded-full">#{b.order}</span>
-                      <button
-                        onClick={() => toggleActive(b)}
-                        className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors ${b.active ? "bg-green-100 text-green-600 hover:bg-green-200" : "bg-stone-100 text-stone-400 hover:bg-stone-200"}`}
-                      >
-                        {b.active ? "แสดง" : "ซ่อน"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-stone-50 px-4 py-2 flex gap-3">
-                <button onClick={() => startEdit(b)} className="text-xs text-stone-400 hover:text-stone-700 transition-colors">แก้ไข</button>
-                <button onClick={() => handleDelete(b)} className="text-xs text-red-400 hover:text-red-600 transition-colors">ลบ</button>
-              </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={banners.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {banners.map((b, idx) => (
+                <SortableBannerCard
+                  key={b.id}
+                  banner={b}
+                  index={idx}
+                  isValidUrl={isValidUrl}
+                  onEdit={startEdit}
+                  onDelete={handleDelete}
+                  onToggleActive={toggleActive}
+                />
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
     </div>
   );

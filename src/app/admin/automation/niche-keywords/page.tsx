@@ -12,6 +12,7 @@ interface NicheKeyword {
   type: string;
   reason: string | null;
   reason_th: string | null;
+  remark: string | null;
   tags: string[];
   createdAt: string;
   createdBy?: { id: string; name: string; avatar: string | null } | null;
@@ -42,6 +43,38 @@ export default function NicheKeywordsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState("");
   const [form, setForm] = useState({ niche: "", niche_th: "", type: "manual", reason: "", reason_th: "" });
+
+  // AI enhance
+  const [aiModel, setAiModel] = useState<"claude" | "gpt">("claude");
+  const [enhancingIds, setEnhancingIds] = useState<Set<string>>(new Set());
+  const [enhancingBulk, setEnhancingBulk] = useState(false);
+
+  const handleAiEnhance = async (ids: string[]) => {
+    const toEnhance = keywords.filter((k) => ids.includes(k.id));
+    if (toEnhance.length === 0) return;
+    const isBulk = ids.length > 1;
+    if (isBulk) setEnhancingBulk(true);
+    else setEnhancingIds((prev) => new Set([...prev, ids[0]]));
+    try {
+      const res = await fetch("/api/admin/automation/niche-keywords/enhance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keywords: toEnhance.map((k) => ({ id: k.id, niche: k.niche })), aiModel }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const map: Record<string, { niche: string; niche_th: string }> = {};
+        for (const e of data.data) map[e.id] = e;
+        setKeywords((prev) => prev.map((k) => map[k.id] ? { ...k, niche: map[k.id].niche, niche_th: map[k.id].niche_th } : k));
+        toast.success(`Enhanced ${data.data.length} keywords`);
+        if (isBulk) setSelected(new Set());
+      } else toast.error(data.error || "AI enhance failed");
+    } catch { toast.error("AI enhance failed"); }
+    finally {
+      setEnhancingBulk(false);
+      setEnhancingIds((prev) => { const next = new Set(prev); ids.forEach((id) => next.delete(id)); return next; });
+    }
+  };
 
   const fetchKeywords = async () => {
     setLoading(true);
@@ -236,12 +269,26 @@ export default function NicheKeywordsPage() {
             ))}
           </div>
 
+          {/* AI Model */}
+          <div className="flex bg-stone-100 rounded-lg p-0.5 ml-auto">
+            <button onClick={() => setAiModel("claude")}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${aiModel === "claude" ? "bg-white text-purple-600 shadow-sm" : "text-stone-500"}`}>Claude</button>
+            <button onClick={() => setAiModel("gpt")}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${aiModel === "gpt" ? "bg-white text-green-600 shadow-sm" : "text-stone-500"}`}>GPT</button>
+          </div>
+
           {/* Bulk actions */}
           {selected.size > 0 && (
-            <button onClick={handleDelete}
-              className="text-xs text-red-500 hover:text-red-700 border border-red-200 px-3 py-1.5 rounded-lg transition-colors">
-              Delete ({selected.size})
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => handleAiEnhance(Array.from(selected))} disabled={enhancingBulk}
+                className="text-xs text-purple-600 hover:text-purple-800 border border-purple-200 bg-purple-50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1">
+                {enhancingBulk ? "AI..." : `✨ AI Fill (${selected.size})`}
+              </button>
+              <button onClick={handleDelete}
+                className="text-xs text-red-500 hover:text-red-700 border border-red-200 px-3 py-1.5 rounded-lg transition-colors">
+                Delete ({selected.size})
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -269,7 +316,7 @@ export default function NicheKeywordsPage() {
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500">Keyword</th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 hidden md:table-cell">Thai</th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 w-20">Type</th>
-                <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 hidden lg:table-cell">Reason</th>
+                <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 hidden lg:table-cell w-72">Reason / Remark</th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500">Tags</th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 hidden md:table-cell w-28">By</th>
                 <th className="w-24 px-3 py-3"></th>
@@ -290,8 +337,16 @@ export default function NicheKeywordsPage() {
                       {TYPE_CONFIG[kw.type]?.label ?? kw.type}
                     </span>
                   </td>
-                  <td className="px-3 py-2.5 text-xs text-stone-400 hidden lg:table-cell max-w-48 truncate">
-                    {kw.reason_th || kw.reason || "—"}
+                  <td className="px-3 py-2.5 text-xs text-stone-400 hidden lg:table-cell w-72">
+                    <div className="space-y-0.5">
+                      {(kw.reason_th || kw.reason) && (
+                        <p className="truncate max-w-xs">{kw.reason_th || kw.reason}</p>
+                      )}
+                      {kw.remark && (
+                        <p className="text-[10px] text-stone-300 truncate max-w-xs" title={kw.remark}>{kw.remark}</p>
+                      )}
+                      {!kw.reason_th && !kw.reason && !kw.remark && "—"}
+                    </div>
                   </td>
                   <td className="px-3 py-2.5">
                     {editingId === kw.id ? (
@@ -321,7 +376,12 @@ export default function NicheKeywordsPage() {
                     <span className="text-[11px] text-stone-400">{kw.createdBy?.name ?? "—"}</span>
                   </td>
                   <td className="px-3 py-2.5">
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
+                      <button onClick={() => handleAiEnhance([kw.id])} disabled={enhancingIds.has(kw.id)}
+                        className="text-[11px] text-purple-500 hover:text-purple-700 transition-colors disabled:opacity-40"
+                        title="AI enhance EN + fill Thai">
+                        {enhancingIds.has(kw.id) ? "..." : "✨"}
+                      </button>
                       <button onClick={() => startEdit(kw)}
                         className="text-[11px] text-stone-400 hover:text-stone-600 transition-colors">Edit</button>
                       <button onClick={() => useInResearch(kw.niche)}

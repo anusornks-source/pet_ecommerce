@@ -42,6 +42,7 @@ const navEntries: NavEntry[] = [
     ],
   },
   { href: "/admin/orders", label: "คำสั่งซื้อ", icon: "🛒" },
+  { href: "/admin/abandoned-carts", label: "Abandoned Carts", icon: "🛒", minRole: "MANAGER" },
   { href: "/admin/coupons", label: "คูปอง", icon: "🎟️", minRole: "MANAGER" },
   { href: "/admin/shops/__active__", label: "ข้อมูลร้าน", icon: "🏪", minRole: "OWNER" },
   {

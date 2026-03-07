@@ -205,6 +205,10 @@ model Product {
   tags       Tag[]            @relation("ProductTags")
 
   @@index([shopId])
+  @@index([shopId, active])
+  @@index([shopId, categoryId])
+  @@index([active, createdAt])
+  @@index([active, featured])
   @@map("products")
 }
 
@@ -249,6 +253,7 @@ model Address {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("addresses")
 }
 
@@ -262,6 +267,7 @@ model Wishlist {
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
+  @@index([userId])
   @@map("wishlists")
 }
 
@@ -277,6 +283,7 @@ model Review {
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([productId, userId])
+  @@index([productId])
   @@map("reviews")
 }
 
@@ -341,6 +348,9 @@ model Order {
   cjApiLogs CjApiLog[]
 
   @@index([shopId])
+  @@index([shopId, status])
+  @@index([shopId, createdAt])
+  @@index([userId])
   @@map("orders")
 }
 
@@ -529,6 +539,7 @@ model CjApiLog {
   shop  Shop?  @relation(fields: [shopId], references: [id])
 
   @@index([shopId])
+  @@index([shopId, createdAt])
   @@map("cj_api_logs")
 }
 
@@ -574,6 +585,7 @@ model Shelf {
   shop Shop @relation(fields: [shopId], references: [id])
 
   @@index([shopId])
+  @@index([shopId, active])
   @@map("shelves")
 }
 

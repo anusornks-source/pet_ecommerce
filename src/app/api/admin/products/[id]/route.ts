@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
-import { FulfillmentMethod } from "@prisma/client";
+import { FulfillmentMethod } from "@/generated/prisma/client";
 
 export async function GET(
   request: NextRequest,

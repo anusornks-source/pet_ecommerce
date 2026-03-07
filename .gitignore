@@ -39,6 +39,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# prisma generated client
+src/generated/
+
 # temp directories
 .tmp.drivedownload/
 .tmp.driveupload/

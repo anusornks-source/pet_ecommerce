@@ -2,9 +2,12 @@
  * Migration script: Create default shop and backfill shopId on all existing data.
  * Run with: npx tsx prisma/migrate-to-multishop.ts
  */
-import { PrismaClient } from "@prisma/client";
+import "dotenv/config";
+import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-const prisma = new PrismaClient();
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log("=== Multi-Shop Migration ===\n");

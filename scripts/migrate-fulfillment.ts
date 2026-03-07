@@ -1,5 +1,5 @@
 import { prisma } from "../src/lib/prisma";
-import { FulfillmentMethod } from "@prisma/client";
+import { FulfillmentMethod } from "../src/generated/prisma/client";
 
 async function main() {
   const products = await prisma.product.updateMany({

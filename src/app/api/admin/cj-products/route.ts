@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma, FulfillmentMethod } from "@prisma/client";
+import { Prisma, FulfillmentMethod } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";

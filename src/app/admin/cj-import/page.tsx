@@ -537,9 +537,10 @@ export default function CJImportPage() {
                       <div className="flex gap-1.5">
                         <Link
                           href={`/admin/cj-import/${item.pid}`}
+                          target="_blank" rel="noopener noreferrer"
                           className="flex-1 text-center text-xs px-2 py-1.5 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 hover:text-stone-700 transition-colors"
                         >
-                          🔍 รายละเอียด
+                          🔍 รายละเอียด ↗
                         </Link>
                         <button
                           onClick={() => toggleImportPanel(item.pid)}

@@ -41,6 +41,16 @@ const navEntries: NavEntry[] = [
       { href: "/admin/cj-import", label: "CJ Dropshipping", icon: "🚚" },
     ],
   },
+  {
+    label: "Automation",
+    icon: "🤖",
+    minRole: "MANAGER",
+    items: [
+      { href: "/admin/automation/research", label: "Product Research", icon: "🔬" },
+      { href: "/admin/automation/niche-keywords", label: "Niche Keyword Bank", icon: "🗃️" },
+      { href: "/admin/automation/creative", label: "Creative Studio", icon: "✨" },
+    ],
+  },
   { href: "/admin/orders", label: "คำสั่งซื้อ", icon: "🛒" },
   { href: "/admin/abandoned-carts", label: "Abandoned Carts", icon: "🛒", minRole: "MANAGER" },
   { href: "/admin/coupons", label: "คูปอง", icon: "🎟️", minRole: "MANAGER" },

@@ -55,12 +55,13 @@ export async function POST(request: NextRequest) {
 
   const toCreate = keywords
     .filter((k: { niche: string }) => !existingSet.has(k.niche))
-    .map((k: { niche: string; niche_th?: string; type?: string; reason?: string; reason_th?: string }) => ({
+    .map((k: { niche: string; niche_th?: string; type?: string; reason?: string; reason_th?: string; remark?: string }) => ({
       niche: k.niche,
       niche_th: k.niche_th || null,
       type: k.type || "manual",
       reason: k.reason || null,
       reason_th: k.reason_th || null,
+      remark: k.remark || null,
       createdById: auth.userId,
     }));
 
@@ -93,7 +94,7 @@ export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
-  const { id, tags, niche, niche_th, type, reason, reason_th } = await request.json();
+  const { id, tags, niche, niche_th, type, reason, reason_th, remark } = await request.json();
   if (!id) {
     return NextResponse.json({ success: false, error: "No id provided" }, { status: 400 });
   }
@@ -105,6 +106,7 @@ export async function PATCH(request: NextRequest) {
   if (type !== undefined) data.type = type;
   if (reason !== undefined) data.reason = reason || null;
   if (reason_th !== undefined) data.reason_th = reason_th || null;
+  if (remark !== undefined) data.remark = remark || null;
 
   const updated = await prisma.nicheKeyword.update({ where: { id }, data });
 

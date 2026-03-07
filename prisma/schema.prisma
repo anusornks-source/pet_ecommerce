@@ -648,6 +648,7 @@ model NicheKeyword {
   type        String   @default("manual")
   reason      String?
   reason_th   String?
+  remark      String?
   tags        String[]
   createdById String?
   createdBy   User?    @relation(fields: [createdById], references: [id])

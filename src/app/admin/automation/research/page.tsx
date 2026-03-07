@@ -85,6 +85,50 @@ export default function ProductResearchPage() {
   const [suggestLoading, setSuggestLoading] = useState(false);
   const [suggestError, setSuggestError] = useState("");
 
+  // Saved keywords tracking
+  const [savedKeywords, setSavedKeywords] = useState<Set<string>>(new Set());
+  const [savingAll, setSavingAll] = useState(false);
+
+  const buildRemark = (kw: TrendKeyword) =>
+    [kw.source, kw.volume != null && kw.volume > 0 ? `score: ${kw.volume.toLocaleString()}` : null, niche ? `from: "${niche}"` : null]
+      .filter(Boolean).join(" · ");
+
+  const handleSaveKeywords = async (kws: TrendKeyword[]) => {
+    const toSave = kws.filter((k) => !savedKeywords.has(k.keyword));
+    if (toSave.length === 0) { toast("All keywords already saved"); return; }
+    setSavingAll(true);
+    try {
+      const res = await fetch("/api/admin/automation/niche-keywords", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keywords: toSave.map((k) => ({ niche: k.keyword, type: "trending", remark: buildRemark(k) })) }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSavedKeywords((prev) => { const next = new Set(prev); toSave.forEach((k) => next.add(k.keyword)); return next; });
+        toast.success(`Saved ${data.data.saved} keywords${data.data.skipped > 0 ? ` (${data.data.skipped} already exist)` : ""}`);
+      } else toast.error(data.error || "Save failed");
+    } catch { toast.error("Save failed"); }
+    finally { setSavingAll(false); }
+  };
+
+  const handleSaveOne = async (kw: TrendKeyword) => {
+    if (savedKeywords.has(kw.keyword)) return;
+    try {
+      const res = await fetch("/api/admin/automation/niche-keywords", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keywords: [{ niche: kw.keyword, type: "trending", remark: buildRemark(kw) }] }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSavedKeywords((prev) => new Set([...prev, kw.keyword]));
+        if (data.data.skipped > 0) toast("Already in keyword bank");
+        else toast.success(`Saved`);
+      } else toast.error(data.error || "Save failed");
+    } catch { toast.error("Save failed"); }
+  };
+
   // CJ Search (box 3)
   const [cjQuery, setCjQuery] = useState("");
   const [cjProducts, setCjProducts] = useState<CJProduct[]>([]);
@@ -482,22 +526,27 @@ export default function ProductResearchPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {Object.entries(sourceResults).map(([key, kws]) => {
               const srcOpt = SOURCE_OPTIONS.find((o) => o.id === key);
+              const errLog = kws.length === 0 ? logs.find((l) => l.step === `source:${key}` && l.status === "error") : null;
               return (
-                <div key={key} className="bg-stone-50 rounded-xl p-3">
+                <div key={key} className={`rounded-xl p-3 ${errLog ? "bg-red-50 border border-red-100" : "bg-stone-50"}`}>
                   <div className="flex items-center gap-1.5 mb-1">
                     <span className="text-sm">{srcOpt?.icon ?? "📌"}</span>
-                    <span className="text-xs font-medium text-stone-700">{srcOpt?.label ?? key}</span>
-                    <span className="text-[10px] text-stone-400 ml-auto">{kws.length} keywords</span>
+                    <span className={`text-xs font-medium ${errLog ? "text-red-700" : "text-stone-700"}`}>{srcOpt?.label ?? key}</span>
+                    <span className={`text-[10px] ml-auto ${errLog ? "text-red-400" : "text-stone-400"}`}>{kws.length} keywords</span>
                   </div>
-                  <div className="flex flex-wrap gap-1">
-                    {kws.slice(0, 3).map((k, i) => (
-                      <span key={i} className="text-[10px] bg-white text-stone-500 px-1.5 py-0.5 rounded truncate max-w-36">
-                        {k.keyword}
-                        {k.volume != null && k.volume > 0 && <span className="text-stone-400 ml-0.5">({k.volume.toLocaleString()})</span>}
-                      </span>
-                    ))}
-                    {kws.length > 3 && <span className="text-[10px] text-stone-400">+{kws.length - 3}</span>}
-                  </div>
+                  {errLog ? (
+                    <p className="text-[10px] text-red-500 leading-relaxed">{errLog.detail}</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1">
+                      {kws.slice(0, 3).map((k, i) => (
+                        <span key={i} className="text-[10px] bg-white text-stone-500 px-1.5 py-0.5 rounded truncate max-w-36">
+                          {k.keyword}
+                          {k.volume != null && k.volume > 0 && <span className="text-stone-400 ml-0.5">({k.volume.toLocaleString()})</span>}
+                        </span>
+                      ))}
+                      {kws.length > 3 && <span className="text-[10px] text-stone-400">+{kws.length - 3}</span>}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -508,16 +557,31 @@ export default function ProductResearchPage() {
       {/* Keywords (clickable → sends to CJ search) */}
       {keywords.length > 0 && !loading && (
         <div className="mb-4">
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5 items-center mb-1">
             <span className="text-xs text-stone-400 self-center mr-1">Keywords ({keywords.length}) — click to search CJ:</span>
-            {keywords.map((tk, i) => (
-              <button key={i} onClick={() => handleKeywordClick(tk.keyword)}
-                className={`text-[11px] px-2.5 py-1 rounded-full font-medium inline-flex items-center gap-1 cursor-pointer hover:ring-2 hover:ring-orange-300 transition-all ${getSourceColor(tk.source)} ${cjQuery.split(",").map((s) => s.trim()).includes(tk.keyword) ? "ring-2 ring-orange-400" : ""}`}>
-                {tk.keyword}
-                {tk.volume != null && tk.volume > 0 && <span className="opacity-60 text-[9px]">({tk.volume.toLocaleString()})</span>}
-                {tk.trending && <span className="text-[9px]">&#9650;</span>}
-              </button>
-            ))}
+            <button onClick={() => handleSaveKeywords(keywords)} disabled={savingAll}
+              className="ml-auto text-[11px] px-3 py-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-stone-500 hover:text-stone-700 disabled:opacity-50 transition-colors font-medium flex items-center gap-1.5">
+              {savingAll ? "Saving..." : `Save All to Bank`}
+              {savedKeywords.size > 0 && <span className="text-[10px] text-green-500">({savedKeywords.size} saved)</span>}
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {keywords.map((tk, i) => {
+              const isSaved = savedKeywords.has(tk.keyword);
+              return (
+                <span key={i} className={`text-[11px] px-2 py-1 rounded-full font-medium inline-flex items-center gap-1 ${getSourceColor(tk.source)} ${cjQuery.split(",").map((s) => s.trim()).includes(tk.keyword) ? "ring-2 ring-orange-400" : ""} ${isSaved ? "opacity-50" : ""}`}>
+                  <button onClick={() => handleKeywordClick(tk.keyword)} className="hover:underline">
+                    {tk.keyword}
+                    {tk.volume != null && tk.volume > 0 && <span className="opacity-60 text-[9px] ml-0.5">({tk.volume.toLocaleString()})</span>}
+                    {tk.trending && <span className="text-[9px] ml-0.5">&#9650;</span>}
+                  </button>
+                  <button onClick={() => handleSaveOne(tk)} title={isSaved ? "Saved" : "Save to keyword bank"}
+                    className={`ml-0.5 text-[10px] transition-colors ${isSaved ? "text-green-500 cursor-default" : "text-stone-300 hover:text-stone-500"}`}>
+                    {isSaved ? "✓" : "＋"}
+                  </button>
+                </span>
+              );
+            })}
           </div>
           {/* Legend */}
           <div className="flex flex-wrap items-center gap-3 mt-2">

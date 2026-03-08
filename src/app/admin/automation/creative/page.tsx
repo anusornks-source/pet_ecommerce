@@ -45,6 +45,7 @@ export default function CreativeStudioPage() {
   const [result, setResult] = useState<CreativeResult | null>(null);
   const [captionTab, setCaptionTab] = useState<"facebook" | "instagram" | "line">("facebook");
   const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
+  const [saving, setSaving] = useState(false);
 
   const searchProducts = useCallback(async (q: string) => {
     if (!q.trim()) { setProducts([]); return; }
@@ -190,7 +191,7 @@ export default function CreativeStudioPage() {
             disabled={!selectedProduct || loading}
             className="bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white px-6 py-3 rounded-xl font-medium text-sm transition-colors whitespace-nowrap"
           >
-            {loading ? "Generating..." : "Generate"}
+            {loading ? "Generating..." : "Generate Marketing Pack"}
           </button>
 
           {/* Language Toggle */}
@@ -387,6 +388,45 @@ export default function CreativeStudioPage() {
               className="bg-orange-500 hover:bg-orange-600 text-white text-sm px-5 py-2 rounded-xl font-medium transition-colors"
             >
               Copy All
+            </button>
+            <button
+              disabled={saving}
+              onClick={async () => {
+                if (!selectedProduct) return;
+                setSaving(true);
+                try {
+                  const res = await fetch("/api/admin/automation/marketing-packs", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      productId: selectedProduct.id,
+                      lang,
+                      productName: result.productName,
+                      hooks: result.hooks,
+                      captionFacebook: result.captions.facebook,
+                      captionInstagram: result.captions.instagram,
+                      captionLine: result.captions.line,
+                      adAngles: result.adAngles,
+                      ugcScript: result.ugcScript,
+                      thumbnailTexts: result.thumbnailTexts,
+                      _raw: result._raw,
+                    }),
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                    toast.success("บันทึก Marketing Pack แล้ว");
+                  } else {
+                    toast.error(data.error ?? "บันทึกไม่สำเร็จ");
+                  }
+                } catch {
+                  toast.error("บันทึกไม่สำเร็จ");
+                } finally {
+                  setSaving(false);
+                }
+              }}
+              className="bg-teal-500 hover:bg-teal-600 disabled:bg-stone-300 text-white text-sm px-5 py-2 rounded-xl font-medium transition-colors"
+            >
+              {saving ? "Saving..." : "Add to Marketing Pack"}
             </button>
             <button onClick={handleGenerate}
               className="text-sm text-stone-400 hover:text-orange-500 transition-colors">

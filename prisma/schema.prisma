@@ -206,8 +206,9 @@ model Product {
   reviews    Review[]
   wishlists  Wishlist[]
   variants   ProductVariant[]
-  shelfItems ShelfItem[]
-  tags       Tag[]            @relation("ProductTags")
+  shelfItems     ShelfItem[]
+  tags           Tag[]                  @relation("ProductTags")
+  marketingPacks ProductMarketingPack[]
 
   @@index([shopId])
   @@index([shopId, active])
@@ -238,6 +239,30 @@ model ProductVariant {
   orderItems OrderItem[]
 
   @@map("product_variants")
+}
+
+model ProductMarketingPack {
+  id             String   @id @default(cuid())
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  lang           String   @default("th")
+  productName    String
+  hooks              Json
+  captionFacebook    String?  @db.Text
+  captionInstagram   String?  @db.Text
+  captionLine        String?  @db.Text
+  adAngles           Json
+  ugcScript      String   @db.Text
+  thumbnailTexts Json
+  rawHooks       String?  @db.Text
+  rawCaptions    String?  @db.Text
+  rawAngles      String?  @db.Text
+  rawUgc         String?  @db.Text
+  rawThumbnails  String?  @db.Text
+  createdAt      DateTime @default(now())
+
+  @@index([productId])
+  @@map("product_marketing_packs")
 }
 
 // ─── Customer ─────────────────────────────────────────────────

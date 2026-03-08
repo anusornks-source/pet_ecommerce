@@ -49,6 +49,7 @@ const navEntries: NavEntry[] = [
       { href: "/admin/automation/research", label: "Product Research", icon: "🔬" },
       { href: "/admin/automation/niche-keywords", label: "Niche Keyword Bank", icon: "🗃️" },
       { href: "/admin/automation/creative", label: "Creative Studio", icon: "✨" },
+      { href: "/admin/automation/marketing-packs", label: "Marketing Packs", icon: "📦" },
     ],
   },
   { href: "/admin/orders", label: "คำสั่งซื้อ", icon: "🛒" },

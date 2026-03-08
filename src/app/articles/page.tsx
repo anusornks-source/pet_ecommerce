@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-
+import { shopColorCSS } from "@/lib/shopColorCSS";
 import { pickLang, type Lang } from "@/lib/translations";
 
 export const dynamic = "force-dynamic";
@@ -37,11 +37,23 @@ export default async function ArticlesPage({
     shopId = shop?.id;
   }
   const articles = await getArticles(shopId);
+
+  let colorStyle: string | null = null;
+  if (shopSlug) {
+    const settings = await prisma.shopSettings.findFirst({
+      where: { shop: { slug: shopSlug } },
+      select: { primaryColor: true },
+    });
+    if (settings) colorStyle = shopColorCSS(settings.primaryColor);
+  }
+
   const cookieStore = await cookies();
   const lang: Lang = cookieStore.get("lang")?.value === "en" ? "en" : "th";
   const p = (th: string | null | undefined, en: string | null | undefined) => pickLang(th, en, lang);
 
   return (
+    <>
+      {colorStyle && <style>{colorStyle}</style>}
     <div className="max-w-6xl mx-auto px-4 py-10">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-stone-800">{p("บทความ", "Articles")}</h1>
@@ -113,5 +125,6 @@ export default async function ArticlesPage({
         </div>
       )}
     </div>
+    </>
   );
 }

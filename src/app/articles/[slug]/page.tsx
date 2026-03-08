@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { shopColorCSS } from "@/lib/shopColorCSS";
 import ShareButtons from "@/components/ShareButtons";
 import { pickLang, type Lang } from "@/lib/translations";
 import type { Metadata } from "next";
@@ -39,13 +40,25 @@ export async function generateMetadata({
 
 export default async function ArticleDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ shopSlug?: string }>;
 }) {
-  const { slug } = await params;
+  const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const article = await getArticle(slug);
 
   if (!article) notFound();
+
+  const shopSlug = sp.shopSlug;
+  let colorStyle: string | null = null;
+  if (shopSlug) {
+    const settings = await prisma.shopSettings.findFirst({
+      where: { shop: { slug: shopSlug } },
+      select: { primaryColor: true },
+    });
+    if (settings) colorStyle = shopColorCSS(settings.primaryColor);
+  }
 
   const cookieStore = await cookies();
   const lang: Lang = cookieStore.get("lang")?.value === "en" ? "en" : "th";
@@ -59,11 +72,16 @@ export default async function ArticleDetailPage({
     try { new URL(article.coverImage ?? ""); return true; } catch { return false; }
   })();
 
+  const backHref = shopSlug ? `/articles?shopSlug=${shopSlug}` : "/articles";
+  const shopHref = shopSlug ? `/products?shopSlug=${shopSlug}` : "/products";
+
   return (
+    <>
+      {colorStyle && <style>{colorStyle}</style>}
     <div className="max-w-3xl mx-auto px-4 py-10">
       {/* Back */}
       <Link
-        href="/articles"
+        href={backHref}
         className="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-orange-500 transition-colors mb-6"
       >
         ← {p("กลับหน้าบทความ", "Back to Articles")}
@@ -132,18 +150,19 @@ export default async function ArticleDetailPage({
       {/* Footer */}
       <div className="mt-12 pt-6 border-t border-stone-100 flex items-center justify-between">
         <Link
-          href="/articles"
+          href={backHref}
           className="text-sm text-orange-500 hover:text-orange-600 font-medium"
         >
           ← {p("ดูบทความทั้งหมด", "View All Articles")}
         </Link>
         <Link
-          href="/products"
+          href={shopHref}
           className="text-sm bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl transition-colors"
         >
           {p("ช้อปสินค้า 🛒", "Shop Now 🛒")}
         </Link>
       </div>
     </div>
+    </>
   );
 }

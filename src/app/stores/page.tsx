@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { shopColorCSS } from "@/lib/shopColorCSS";
 import StoresMapClient from "./StoresMapClient";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,18 @@ export default async function StoresPage({
   }
   const stores = await getStores(shopId);
 
+  let colorStyle: string | null = null;
+  if (shopSlug) {
+    const settings = await prisma.shopSettings.findFirst({
+      where: { shop: { slug: shopSlug } },
+      select: { primaryColor: true },
+    });
+    if (settings) colorStyle = shopColorCSS(settings.primaryColor);
+  }
+
   return (
+    <>
+      {colorStyle && <style>{colorStyle}</style>}
     <div className="max-w-6xl mx-auto px-4 py-10">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-stone-800">สาขาของเรา</h1>
@@ -44,5 +56,6 @@ export default async function StoresPage({
         <StoresMapClient stores={stores} />
       )}
     </div>
+    </>
   );
 }

@@ -19,13 +19,23 @@ export async function GET(request: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = shopId === "all" ? {} : { shopId };
 
+  const nameOnly = searchParams.get("nameOnly") === "true";
   if (search) {
-    where.OR = [
-      { name: { contains: search, mode: "insensitive" } },
-      { name_th: { contains: search, mode: "insensitive" } },
-      { description: { contains: search, mode: "insensitive" } },
-      { description_th: { contains: search, mode: "insensitive" } },
-    ];
+    where.OR = nameOnly
+      ? [
+          { name: { contains: search, mode: "insensitive" } },
+          { name_th: { contains: search, mode: "insensitive" } },
+          { id: { contains: search, mode: "insensitive" } },
+          { variants: { some: { sku: { contains: search, mode: "insensitive" } } } },
+          { variants: { some: { cjVid: { contains: search, mode: "insensitive" } } } },
+          { variants: { some: { id: { contains: search, mode: "insensitive" } } } },
+        ]
+      : [
+          { name: { contains: search, mode: "insensitive" } },
+          { name_th: { contains: search, mode: "insensitive" } },
+          { description: { contains: search, mode: "insensitive" } },
+          { description_th: { contains: search, mode: "insensitive" } },
+        ];
   }
   if (source === "CJ") where.source = "CJ";
   if (source === "own") where.source = null;
@@ -42,7 +52,7 @@ export async function GET(request: NextRequest) {
   const [products, total] = await Promise.all([
     prisma.product.findMany({
       where,
-      include: { category: true, petType: true, tags: true, shop: includeShop },
+      include: { category: true, petType: true, tags: true, shop: includeShop, variants: { select: { id: true, sku: true, cjVid: true, size: true, color: true } } },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,

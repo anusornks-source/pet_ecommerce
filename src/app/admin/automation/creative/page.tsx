@@ -4,14 +4,25 @@ import { useState, useCallback } from "react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 
+interface ProductVariant {
+  id: string;
+  sku: string | null;
+  cjVid: string | null;
+  size: string | null;
+  color: string | null;
+}
+
 interface Product {
   id: string;
   name: string;
   name_th?: string | null;
   price: number;
   images: string[];
+  shortDescription?: string | null;
+  shortDescription_th?: string | null;
   category?: { name: string } | null;
   petType?: { name: string } | null;
+  variants?: ProductVariant[];
 }
 
 interface CreativeResult {
@@ -21,6 +32,7 @@ interface CreativeResult {
   ugcScript: string;
   thumbnailTexts: string[];
   productName: string;
+  _raw?: { hooks: string; captions: string; angles: string; ugc: string; thumbnails: string };
 }
 
 export default function CreativeStudioPage() {
@@ -32,12 +44,13 @@ export default function CreativeStudioPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CreativeResult | null>(null);
   const [captionTab, setCaptionTab] = useState<"facebook" | "instagram" | "line">("facebook");
+  const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
 
   const searchProducts = useCallback(async (q: string) => {
     if (!q.trim()) { setProducts([]); return; }
     setSearching(true);
     try {
-      const res = await fetch(`/api/admin/products?search=${encodeURIComponent(q)}&limit=20`);
+      const res = await fetch(`/api/admin/products?search=${encodeURIComponent(q)}&nameOnly=true&limit=20`);
       const data = await res.json();
       if (data.success) setProducts(data.data ?? data.products ?? []);
     } catch { /* ignore */ }
@@ -94,6 +107,25 @@ export default function CreativeStudioPage() {
     </button>
   );
 
+  const RawToggle = ({ section, raw }: { section: string; raw?: string }) => {
+    if (!raw) return null;
+    const open = showRaw[section];
+    return (
+      <div>
+        <button
+          onClick={() => setShowRaw((prev) => ({ ...prev, [section]: !prev[section] }))}
+          className="text-[10px] text-stone-400 hover:text-blue-500 transition-colors px-2 py-0.5 rounded-lg hover:bg-blue-50">
+          {open ? "Hide raw" : "Raw"}
+        </button>
+        {open && (
+          <pre className="mt-2 text-[11px] text-stone-500 whitespace-pre-wrap font-mono bg-stone-50 border border-stone-100 rounded-xl p-3 leading-relaxed">
+            {raw}
+          </pre>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="max-w-5xl mx-auto">
       <div className="mb-6">
@@ -122,20 +154,27 @@ export default function CreativeStudioPage() {
             {/* Search Dropdown */}
             {products.length > 0 && !selectedProduct && (
               <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-stone-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
-                {products.map((p) => (
-                  <button key={p.id} onClick={() => selectProduct(p)}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 text-left transition-colors">
-                    {p.images?.[0] && (
-                      <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-stone-100">
-                        <Image src={p.images[0]} alt="" fill className="object-cover" unoptimized />
+                {products.map((p) => {
+                  const shortDesc = p.shortDescription_th || p.shortDescription;
+                  return (
+                    <button key={p.id} onClick={() => selectProduct(p)}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 text-left transition-colors">
+                      {p.images?.[0] && (
+                        <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-stone-100">
+                          <Image src={p.images[0]} alt="" fill className="object-cover" unoptimized />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-stone-800 truncate">{p.name_th || p.name}</p>
+                        <p className="text-[10px] text-stone-400">{p.category?.name} · ฿{p.price?.toLocaleString()}</p>
+                        {shortDesc && (
+                          <p className="text-[10px] text-stone-400 truncate mt-0.5">{shortDesc}</p>
+                        )}
+                        <span className="text-[9px] text-stone-300">ID: {p.id.slice(0, 8)}</span>
                       </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="text-sm text-stone-800 truncate">{p.name_th || p.name}</p>
-                      <p className="text-[10px] text-stone-400">{p.category?.name} · ฿{p.price?.toLocaleString()}</p>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
@@ -145,6 +184,14 @@ export default function CreativeStudioPage() {
               </div>
             )}
           </div>
+
+          <button
+            onClick={handleGenerate}
+            disabled={!selectedProduct || loading}
+            className="bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white px-6 py-3 rounded-xl font-medium text-sm transition-colors whitespace-nowrap"
+          >
+            {loading ? "Generating..." : "Generate"}
+          </button>
 
           {/* Language Toggle */}
           <div className="flex bg-stone-100 rounded-xl p-1">
@@ -157,14 +204,6 @@ export default function CreativeStudioPage() {
               EN
             </button>
           </div>
-
-          <button
-            onClick={handleGenerate}
-            disabled={!selectedProduct || loading}
-            className="bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white px-6 py-3 rounded-xl font-medium text-sm transition-colors whitespace-nowrap"
-          >
-            {loading ? "Generating..." : "Generate"}
-          </button>
         </div>
 
         {/* Selected Product Preview */}
@@ -178,6 +217,10 @@ export default function CreativeStudioPage() {
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-stone-800 truncate">{selectedProduct.name_th || selectedProduct.name}</p>
               <p className="text-xs text-stone-500">{selectedProduct.category?.name} · ฿{selectedProduct.price?.toLocaleString()}</p>
+              {(selectedProduct.shortDescription_th || selectedProduct.shortDescription) && (
+                <p className="text-[10px] text-stone-400 truncate">{selectedProduct.shortDescription_th || selectedProduct.shortDescription}</p>
+              )}
+              <span className="text-[10px] text-stone-300">Product ID: {selectedProduct.id.slice(0, 8)}</span>
             </div>
             <button onClick={() => { setSelectedProduct(null); setResult(null); }}
               className="text-stone-400 hover:text-stone-600 text-lg">×</button>
@@ -202,7 +245,10 @@ export default function CreativeStudioPage() {
           <div className="bg-white rounded-2xl border border-stone-200 p-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-bold text-stone-800 text-sm">Marketing Hooks</h2>
-              <CopyBtn text={result.hooks.join("\n\n")} />
+              <div className="flex items-center gap-1">
+                <RawToggle section="hooks" raw={result._raw?.hooks} />
+                <CopyBtn text={result.hooks.join("\n\n")} />
+              </div>
             </div>
             <div className="space-y-2">
               {result.hooks.map((hook, i) => (
@@ -220,7 +266,10 @@ export default function CreativeStudioPage() {
 
           {/* 2. Social Media Captions */}
           <div className="bg-white rounded-2xl border border-stone-200 p-5">
-            <h2 className="font-bold text-stone-800 text-sm mb-3">Social Media Captions</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-bold text-stone-800 text-sm">Social Media Captions</h2>
+              <RawToggle section="captions" raw={result._raw?.captions} />
+            </div>
             <div className="flex gap-1 bg-stone-100 rounded-xl p-1 mb-3 w-fit">
               {(["facebook", "instagram", "line"] as const).map((platform) => (
                 <button key={platform} onClick={() => setCaptionTab(platform)}
@@ -243,7 +292,10 @@ export default function CreativeStudioPage() {
           <div className="bg-white rounded-2xl border border-stone-200 p-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-bold text-stone-800 text-sm">Ad Angles</h2>
-              <CopyBtn text={result.adAngles.map((a) => `[${a.angle}]\n${a.headline}\n${a.body}`).join("\n\n")} />
+              <div className="flex items-center gap-1">
+                <RawToggle section="angles" raw={result._raw?.angles} />
+                <CopyBtn text={result.adAngles.map((a) => `[${a.angle}]\n${a.headline}\n${a.body}`).join("\n\n")} />
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {result.adAngles.map((angle, i) => (
@@ -274,7 +326,10 @@ export default function CreativeStudioPage() {
           <div className="bg-white rounded-2xl border border-stone-200 p-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-bold text-stone-800 text-sm">Thumbnail Text</h2>
-              <CopyBtn text={result.thumbnailTexts.join("\n")} />
+              <div className="flex items-center gap-1">
+                <RawToggle section="thumbnails" raw={result._raw?.thumbnails} />
+                <CopyBtn text={result.thumbnailTexts.join("\n")} />
+              </div>
             </div>
             <div className="flex flex-wrap gap-2">
               {result.thumbnailTexts.map((text, i) => (
@@ -286,8 +341,53 @@ export default function CreativeStudioPage() {
             </div>
           </div>
 
-          {/* Regenerate */}
-          <div className="text-center pb-4">
+          {/* Copy All + Regenerate */}
+          <div className="flex items-center justify-center gap-4 pb-4">
+            <button
+              onClick={() => {
+                const p = selectedProduct;
+                const productInfo = [
+                  `# ${result.productName}`,
+                  p?.name_th && p.name_th !== result.productName ? `(${p.name_th})` : "",
+                  ``,
+                  `**ราคา:** ฿${p?.price?.toLocaleString() ?? "-"}`,
+                  p?.category ? `**หมวดหมู่:** ${p.category.name}` : "",
+                  p?.petType ? `**ประเภทสัตว์:** ${p.petType.name}` : "",
+                  p?.shortDescription ? `**Short Desc (EN):** ${p.shortDescription}` : "",
+                  p?.shortDescription_th ? `**Short Desc (TH):** ${p.shortDescription_th}` : "",
+                  p ? `**Product ID:** ${p.id}` : "",
+                ].filter(Boolean).join("\n");
+
+                const all = [
+                  productInfo,
+                  ``,
+                  `---`,
+                  ``,
+                  `## Marketing Hooks`,
+                  result.hooks.map((h, i) => `${i + 1}. ${h}`).join("\n"),
+                  ``,
+                  `## Social Media Captions`,
+                  `### Facebook\n${result.captions.facebook}`,
+                  ``,
+                  `### Instagram\n${result.captions.instagram}`,
+                  ``,
+                  `### LINE\n${result.captions.line}`,
+                  ``,
+                  `## Ad Angles`,
+                  result.adAngles.map((a) => `### ${a.angle}\n**${a.headline}**\n${a.body}`).join("\n\n"),
+                  ``,
+                  `## UGC Video Script`,
+                  result.ugcScript,
+                  ``,
+                  `## Thumbnail Text`,
+                  result.thumbnailTexts.map((t, i) => `${i + 1}. ${t}`).join("\n"),
+                ].join("\n");
+                copy(all);
+              }}
+              className="bg-orange-500 hover:bg-orange-600 text-white text-sm px-5 py-2 rounded-xl font-medium transition-colors"
+            >
+              Copy All
+            </button>
             <button onClick={handleGenerate}
               className="text-sm text-stone-400 hover:text-orange-500 transition-colors">
               Regenerate all

@@ -563,30 +563,29 @@ export default function ProductResearchPage() {
 
       {/* Source Results Summary */}
       {!loading && Object.keys(sourceResults).length > 0 && (
-        <div className="bg-white rounded-2xl border border-stone-200 p-4 mb-4">
-          <p className="text-xs text-stone-500 font-medium mb-2">Source Results</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-white rounded-2xl border border-stone-200 p-5 mb-4">
+          <p className="text-sm font-semibold text-stone-600 mb-4">Source Results</p>
+          <div className="space-y-4">
             {Object.entries(sourceResults).map(([key, kws]) => {
               const srcOpt = SOURCE_OPTIONS.find((o) => o.id === key);
               const errLog = kws.length === 0 ? logs.find((l) => l.step === `source:${key}` && l.status === "error") : null;
               return (
-                <div key={key} className={`rounded-xl p-3 ${errLog ? "bg-red-50 border border-red-100" : "bg-stone-50"}`}>
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <span className="text-sm">{srcOpt?.icon ?? "📌"}</span>
-                    <span className={`text-xs font-medium ${errLog ? "text-red-700" : "text-stone-700"}`}>{srcOpt?.label ?? key}</span>
-                    <span className={`text-[10px] ml-auto ${errLog ? "text-red-400" : "text-stone-400"}`}>{kws.length} keywords</span>
+                <div key={key} className={`rounded-2xl p-5 ${errLog ? "bg-red-50 border border-red-100" : "bg-stone-50 border border-stone-100"}`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-lg">{srcOpt?.icon ?? "📌"}</span>
+                    <span className={`text-sm font-bold ${errLog ? "text-red-700" : "text-stone-700"}`}>{srcOpt?.label ?? key}</span>
+                    <span className={`text-xs ml-auto font-medium ${errLog ? "text-red-400" : "text-stone-400"}`}>{kws.length} keywords</span>
                   </div>
                   {errLog ? (
-                    <p className="text-[10px] text-red-500 leading-relaxed">{errLog.detail}</p>
+                    <p className="text-sm text-red-500 leading-relaxed">{errLog.detail}</p>
                   ) : (
-                    <div className="flex flex-wrap gap-1">
-                      {kws.slice(0, 3).map((k, i) => (
-                        <span key={i} className="text-[10px] bg-white text-stone-500 px-1.5 py-0.5 rounded truncate max-w-36">
+                    <div className="flex flex-wrap gap-2">
+                      {kws.map((k, i) => (
+                        <span key={i} className="text-sm bg-white text-stone-600 px-3 py-1.5 rounded-xl border border-stone-200 font-medium">
                           {k.keyword}
-                          {k.volume != null && k.volume > 0 && <span className="text-stone-400 ml-0.5">({k.volume.toLocaleString()})</span>}
+                          {k.volume != null && k.volume > 0 && <span className="text-stone-400 ml-1.5 text-xs">({k.volume.toLocaleString()})</span>}
                         </span>
                       ))}
-                      {kws.length > 3 && <span className="text-[10px] text-stone-400">+{kws.length - 3}</span>}
                     </div>
                   )}
                   {/* Interest over time — shown on Google Trends card */}

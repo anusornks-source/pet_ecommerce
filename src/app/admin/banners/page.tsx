@@ -368,11 +368,31 @@ export default function AdminBannersPage() {
           </button>
         </div>
       </div>
-      <div className="relative w-full aspect-[5/2] rounded-xl overflow-hidden bg-stone-800">
+      <div
+        className="relative w-full aspect-[5/2] rounded-xl overflow-hidden bg-stone-800 cursor-pointer group"
+        onClick={() => fileInputRef.current?.click()}
+        title="คลิกเพื่ออัปโหลดรูป"
+      >
         {form.imageUrl && isValidUrl(form.imageUrl) && (
           <Image src={form.imageUrl} alt="preview" fill className="object-cover" sizes="600px" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
+        {!form.imageUrl && !uploading && (
+          <div className="absolute inset-0 flex flex-col items-end justify-start p-3 pointer-events-none">
+            <span className="bg-black/40 text-white text-[10px] px-2 py-1 rounded-lg">🖼️ คลิกเพื่ออัปโหลดรูป</span>
+          </div>
+        )}
+        {uploading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-10">
+            <div className="flex items-center gap-2 text-white text-sm">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              กำลังอัปโหลด...
+            </div>
+          </div>
+        )}
+        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-start justify-end p-3 z-10">
+          <span className="bg-black/60 text-white text-[10px] px-2 py-1 rounded-lg">📷 เปลี่ยนรูป</span>
+        </div>
+        <div className="absolute inset-0 bg-linear-to-r from-black/60 via-black/30 to-transparent" />
         <div className="absolute inset-0 flex flex-col justify-center px-6 py-4 max-w-[70%]">
           {(form.badge || form.badge_th) && (
             <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur text-white text-[10px] font-semibold px-2 py-0.5 rounded-full mb-2 w-fit">
@@ -404,6 +424,13 @@ export default function AdminBannersPage() {
               </span>
             )}
           </div>
+          {(form.feat1Enabled || form.feat2Enabled || form.feat3Enabled) && (
+            <div className="flex items-center gap-3 mt-2 text-white/80 text-[9px]">
+              {form.feat1Enabled && <span>{form.feat1Icon} {pick(form.feat1Label_th, form.feat1Label)}</span>}
+              {form.feat2Enabled && <span>{form.feat2Icon} {pick(form.feat2Label_th, form.feat2Label)}</span>}
+              {form.feat3Enabled && <span>{form.feat3Icon} {pick(form.feat3Label_th, form.feat3Label)}</span>}
+            </div>
+          )}
         </div>
       </div>
       <p className="text-[10px] text-stone-400 mt-1.5 text-center">Preview อัปเดตตามที่คุณพิมพ์</p>
@@ -449,50 +476,21 @@ export default function AdminBannersPage() {
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-stone-100 p-5 mb-5 space-y-5">
           <p className="text-sm font-semibold text-stone-700">{editId ? "แก้ไข Banner" : "สร้าง Banner ใหม่"}</p>
 
-          {/* Image upload */}
-          <div>
-            <label className="block text-xs text-stone-500 mb-1.5">รูปภาพ Banner *</label>
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="relative border-2 border-dashed border-stone-200 rounded-xl overflow-hidden cursor-pointer hover:border-orange-300 hover:bg-stone-50 transition-colors aspect-5/2"
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
-              />
-              {form.imageUrl && isValidUrl(form.imageUrl) ? (
-                <>
-                  <Image src={form.imageUrl} alt="Banner" fill className="object-cover" sizes="800px" />
-                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <span className="text-white text-sm font-medium">📷 เปลี่ยนรูป</span>
-                  </div>
-                </>
-              ) : uploading ? (
-                <div className="h-full flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-sm text-orange-500">กำลังอัปโหลด...</span>
-                </div>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center gap-1 text-stone-400">
-                  <span className="text-3xl">🖼️</span>
-                  <p className="text-sm">คลิกเพื่ออัปโหลดรูป Banner</p>
-                  <p className="text-xs">แนะนำ: 1400×560px ขึ้นไป (ratio 5:2)</p>
-                </div>
-              )}
-            </div>
-            <input
-              value={form.imageUrl}
-              onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
-              placeholder="หรือวาง URL รูปโดยตรง"
-              className={`${inputCls} mt-2`}
-            />
-          </div>
-
-          {/* Live Preview */}
+          {/* Live Preview (คลิกเพื่ออัปโหลดรูป) */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
+          />
           <Preview />
+          <input
+            value={form.imageUrl}
+            onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
+            placeholder="หรือวาง URL รูปโดยตรง"
+            className={inputCls}
+          />
 
           {/* Text content — EN / TH side by side */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">

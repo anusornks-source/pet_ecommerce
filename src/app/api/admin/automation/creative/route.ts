@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       // 1. Marketing Hooks
       client.messages.create({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 400,
+        max_tokens: 1500,
         messages: [{
           role: "user",
           content: `You are a direct-response marketing expert for pet products.
@@ -67,7 +67,7 @@ Return ONLY a JSON array of strings: ["hook1", "hook2", ...]`,
       // 2. Social Media Captions
       client.messages.create({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 800,
+        max_tokens: 2000,
         messages: [{
           role: "user",
           content: `You are a social media manager for a pet shop.
@@ -88,7 +88,7 @@ Return ONLY a JSON object:
       // 3. Ad Angles
       client.messages.create({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 800,
+        max_tokens: 1200,
         messages: [{
           role: "user",
           content: `You are a performance marketing strategist for pet products.
@@ -105,7 +105,7 @@ Return ONLY a JSON array:
       // 4. UGC Script
       client.messages.create({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 600,
+        max_tokens: 1200,
         messages: [{
           role: "user",
           content: `You are a UGC (user-generated content) creator for pet products.
@@ -127,7 +127,7 @@ Return the script as plain text with section labels.`,
       // 5. Thumbnail Texts
       client.messages.create({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 300,
+        max_tokens: 600,
         messages: [{
           role: "user",
           content: `You are a thumbnail designer for pet product content.
@@ -144,9 +144,13 @@ Return ONLY a JSON array of strings: ["text1", "text2", ...]`,
     const extractText = (msg: Anthropic.Message) =>
       msg.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
 
+    const stripCodeBlock = (text: string) =>
+      text.replace(/^```[\w]*\s*/m, "").replace(/```\s*$/m, "").trim();
+
     const parseJsonArray = (text: string, fallback: string[] = []): string[] => {
+      const clean = stripCodeBlock(text);
       try {
-        const match = text.match(/\[[\s\S]*\]/);
+        const match = clean.match(/\[[\s\S]*\]/);
         return match ? JSON.parse(match[0]) : fallback;
       } catch {
         return fallback;
@@ -154,8 +158,9 @@ Return ONLY a JSON array of strings: ["text1", "text2", ...]`,
     };
 
     const parseJsonObject = <T>(text: string, fallback: T): T => {
+      const clean = stripCodeBlock(text);
       try {
-        const match = text.match(/\{[\s\S]*\}/);
+        const match = clean.match(/\{[\s\S]*\}/);
         return match ? JSON.parse(match[0]) : fallback;
       } catch {
         return fallback;
@@ -168,6 +173,11 @@ Return ONLY a JSON array of strings: ["text1", "text2", ...]`,
     const ugcScript = extractText(ugcRes);
     const thumbnailTexts = parseJsonArray(extractText(thumbRes));
 
+    const rawHooks = extractText(hooksRes);
+    const rawCaptions = extractText(captionsRes);
+    const rawAngles = extractText(anglesRes);
+    const rawThumb = extractText(thumbRes);
+
     return NextResponse.json({
       success: true,
       data: {
@@ -177,6 +187,7 @@ Return ONLY a JSON array of strings: ["text1", "text2", ...]`,
         ugcScript,
         thumbnailTexts,
         productName: product.name,
+        _raw: { hooks: rawHooks, captions: rawCaptions, angles: rawAngles, ugc: ugcScript, thumbnails: rawThumb },
       },
     });
   } catch (err) {

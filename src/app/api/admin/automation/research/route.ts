@@ -125,7 +125,16 @@ export async function POST(request: NextRequest) {
         (async () => {
           const t0 = Date.now();
           try {
-            const kws = await getCJBestsellers(niche.trim());
+            // CJ API is English-only — translate Thai keyword first
+            let cjNiche = niche.trim();
+            if (googleLang === "th") {
+              const translated = await aiComplete(aiModel, `Translate this Thai product keyword to concise English (2-4 words max, product search term): "${cjNiche}"\nReturn ONLY the English keyword, nothing else.`, 50).catch(() => null);
+              if (translated?.trim()) {
+                cjNiche = translated.trim();
+                log("source:cj", "info", `Thai→EN: "${niche.trim()}" → "${cjNiche}"`, Date.now() - t0);
+              }
+            }
+            const kws = await getCJBestsellers(cjNiche);
             sourceResults.cj = kws;
             allTrends.push(...kws);
             log("source:cj", "ok", `${kws.length} keywords found`, Date.now() - t0);
@@ -143,7 +152,7 @@ export async function POST(request: NextRequest) {
           const t0 = Date.now();
           try {
             const prompt = buildTikTokTrendPrompt(niche.trim(), googleLang);
-            const text = await aiComplete(aiModel, prompt, 400);
+            const text = await aiComplete(aiModel, prompt, 700);
             const parsed = parseJsonArray<{ keyword: string; why: string; trend_score?: number; momentum?: string }>(text);
             const kws: TrendKeyword[] = parsed
               .filter((p) => p.keyword?.trim())
@@ -165,7 +174,7 @@ export async function POST(request: NextRequest) {
           const t0 = Date.now();
           try {
             const prompt = buildAITrendPrompt(niche.trim(), googleLang);
-            const text = await aiComplete(aiModel, prompt, 600);
+            const text = await aiComplete(aiModel, prompt, 900);
             const parsed = parseJsonArray<{ keyword: string; reason: string; trend_score?: number; momentum?: string }>(text);
             const kws: TrendKeyword[] = parsed.map((p) => ({
               keyword: p.keyword,

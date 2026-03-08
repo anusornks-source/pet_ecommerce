@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import toast from "react-hot-toast";
 import { useShopAdmin } from "@/context/ShopAdminContext";
 
@@ -627,8 +628,8 @@ export default function NicheKeywordsPage() {
                         className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-teal-50 hover:bg-teal-100 text-teal-600 border border-teal-200 transition-colors disabled:opacity-40">
                         {recommendingIds.has(kw.id) ? <><span className="inline-block w-2.5 h-2.5 border-2 border-teal-400 border-t-transparent rounded-full animate-spin" /></> : <>✨ Advise</>}
                       </button>
-                      <button onClick={() => startEdit(kw)}
-                        className="text-[11px] text-stone-400 hover:text-stone-600 transition-colors">Edit</button>
+                      <Link href={`/admin/automation/niche-keywords/${kw.id}`}
+                        className="text-[11px] text-stone-500 hover:text-stone-800 border border-stone-200 px-2 py-0.5 rounded-md transition-colors font-medium">Detail</Link>
                       <button onClick={() => useInResearch(kw.niche)}
                         className="text-[11px] text-orange-500 hover:text-orange-700 font-medium transition-colors">Research</button>
                     </div>

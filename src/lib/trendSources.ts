@@ -18,14 +18,24 @@ export interface TrendInterest {
 }
 
 // ─── 1. Google Trends ───────────────────────────────────────────
+function classifyGoogleError(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (msg.includes("DOCTYPE") || msg.includes("<HEAD>") || msg.includes("not valid JSON")) {
+    return "Google blocked the request (rate limited / CAPTCHA). Try again later.";
+  }
+  return msg;
+}
+
 export async function getGoogleTrends(niche: string, lang: "en" | "th" = "en"): Promise<TrendKeyword[]> {
   const googleTrends = await import("google-trends-api");
   const results: TrendKeyword[] = [];
+  const errors: string[] = [];
 
+  // Use only 2 queries to reduce rate-limit risk; add delay between them
   const queries =
     lang === "th"
-      ? [niche, `${niche} สัตว์เลี้ยง`, `${niche} สุนัข`, `${niche} แมว`]
-      : [niche, `${niche} pet`, `${niche} dog`, `${niche} cat`];
+      ? [niche, `${niche} สัตว์เลี้ยง`]
+      : [niche, `${niche} pet`];
 
   const geoOptions = lang === "th" ? { hl: "th", geo: "TH" } : {};
 
@@ -36,19 +46,25 @@ export async function getGoogleTrends(niche: string, lang: "en" | "th" = "en"): 
       const parsed = JSON.parse(relatedData);
 
       const topQueries = parsed?.default?.rankedList?.[0]?.rankedKeyword ?? [];
-      for (const item of topQueries.slice(0, 3)) {
+      for (const item of topQueries.slice(0, 4)) {
         if (!item.query || results.some((r) => r.keyword.toLowerCase() === item.query.toLowerCase())) continue;
         results.push({ keyword: item.query, source: "Google Trends (Top)", volume: item.value ?? null });
       }
 
       const risingQueries = parsed?.default?.rankedList?.[1]?.rankedKeyword ?? [];
-      for (const item of risingQueries.slice(0, 3)) {
+      for (const item of risingQueries.slice(0, 4)) {
         if (!item.query || results.some((r) => r.keyword.toLowerCase() === item.query.toLowerCase())) continue;
         results.push({ keyword: item.query, source: "Google Trends (Rising)", volume: item.value ?? null, trending: true });
       }
-    } catch {
-      // This query variant failed, try next
+      // Small delay before next query to avoid rate limiting
+      await new Promise((r) => setTimeout(r, 800));
+    } catch (e) {
+      errors.push(classifyGoogleError(e));
     }
+  }
+
+  if (results.length === 0 && errors.length > 0) {
+    throw new Error(errors[0]);
   }
 
   return results;
@@ -61,7 +77,7 @@ export async function getGoogleTrendsInterest(niche: string, lang: "en" | "th" =
   try {
     const raw = await googleTrends.interestOverTime({
       keyword: niche,
-      startTime: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 90 days
+      startTime: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
       ...geoOptions,
     });
     const parsed = JSON.parse(raw);

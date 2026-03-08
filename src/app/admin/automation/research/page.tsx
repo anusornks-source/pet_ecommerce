@@ -541,6 +541,20 @@ export default function ProductResearchPage() {
                   <span className="text-xs text-stone-400">Time</span>
                   <span className="text-xs font-bold text-stone-700">{(researchTime / 1000).toFixed(1)}s</span>
                 </div>
+                {logs.length > 0 && (
+                  <button onClick={() => setShowLogs((v) => !v)}
+                    className={`flex items-center gap-1.5 rounded-xl px-3 py-2 border text-xs font-medium transition-colors ${
+                      logs.some((l) => l.status === "error")
+                        ? "bg-red-50 border-red-200 text-red-600 hover:bg-red-100"
+                        : "bg-white border-stone-200 text-stone-500 hover:text-stone-700"
+                    }`}>
+                    <span>{showLogs ? "▾" : "▸"}</span>
+                    <span>Logs ({logs.length})</span>
+                    {logs.some((l) => l.status === "error") && (
+                      <span className="bg-red-100 text-red-600 text-[10px] px-1 py-0 rounded-full">{logs.filter((l) => l.status === "error").length} err</span>
+                    )}
+                  </button>
+                )}
               </>
             );
           })()}
@@ -826,45 +840,28 @@ export default function ProductResearchPage() {
       )}
 
       {/* Log Viewer */}
-      {logs.length > 0 && (
-        <div className="mt-6">
-          <button onClick={() => setShowLogs(!showLogs)}
-            className={`flex items-center gap-2 text-xs font-medium transition-colors ${
-              logs.some((l) => l.status === "error") ? "text-red-500 hover:text-red-600" : "text-stone-400 hover:text-stone-600"
-            }`}>
-            <span>{showLogs ? "▾" : "▸"}</span>
-            <span>Logs ({logs.length})</span>
-            {logs.some((l) => l.status === "error") && (
-              <span className="bg-red-100 text-red-600 text-[10px] px-1.5 py-0.5 rounded-full">
-                {logs.filter((l) => l.status === "error").length} errors
-              </span>
-            )}
-          </button>
-
-          {showLogs && (
-            <div className="mt-2 bg-stone-900 rounded-xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-2 border-b border-stone-700">
-                <span className="text-[10px] text-stone-400 font-mono">Research Pipeline Log</span>
-                <button onClick={() => {
-                  navigator.clipboard.writeText(logs.map((l) => `[${l.time}] [${l.status.toUpperCase()}] ${l.step}: ${l.detail}${l.durationMs ? ` (${l.durationMs}ms)` : ""}`).join("\n"));
-                  toast.success("Logs copied!");
-                }} className="text-[10px] text-stone-500 hover:text-stone-300 transition-colors">Copy</button>
+      {logs.length > 0 && showLogs && (
+        <div className="mt-6 bg-stone-900 rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-stone-700">
+            <span className="text-[10px] text-stone-400 font-mono">Research Pipeline Log</span>
+            <button onClick={() => {
+              navigator.clipboard.writeText(logs.map((l) => `[${l.time}] [${l.status.toUpperCase()}] ${l.step}: ${l.detail}${l.durationMs ? ` (${l.durationMs}ms)` : ""}`).join("\n"));
+              toast.success("Logs copied!");
+            }} className="text-[10px] text-stone-500 hover:text-stone-300 transition-colors">Copy</button>
+          </div>
+          <div className="max-h-72 overflow-y-auto p-3 space-y-0.5 font-mono text-[11px]">
+            {logs.map((entry, i) => (
+              <div key={i} className="flex gap-2 leading-relaxed">
+                <span className="text-stone-600 shrink-0">{entry.time}</span>
+                <span className={`shrink-0 w-3 text-center ${entry.status === "ok" ? "text-green-400" : entry.status === "error" ? "text-red-400" : "text-blue-400"}`}>
+                  {entry.status === "ok" ? "✓" : entry.status === "error" ? "✗" : "·"}
+                </span>
+                <span className="text-amber-400 shrink-0 min-w-22.5">{entry.step}</span>
+                <span className={entry.status === "error" ? "text-red-300" : "text-stone-400"}>{entry.detail}</span>
+                {entry.durationMs != null && <span className="text-stone-600 shrink-0 ml-auto">{entry.durationMs}ms</span>}
               </div>
-              <div className="max-h-72 overflow-y-auto p-3 space-y-0.5 font-mono text-[11px]">
-                {logs.map((entry, i) => (
-                  <div key={i} className="flex gap-2 leading-relaxed">
-                    <span className="text-stone-600 shrink-0">{entry.time}</span>
-                    <span className={`shrink-0 w-3 text-center ${entry.status === "ok" ? "text-green-400" : entry.status === "error" ? "text-red-400" : "text-blue-400"}`}>
-                      {entry.status === "ok" ? "✓" : entry.status === "error" ? "✗" : "·"}
-                    </span>
-                    <span className="text-amber-400 shrink-0 min-w-22.5">{entry.step}</span>
-                    <span className={entry.status === "error" ? "text-red-300" : "text-stone-400"}>{entry.detail}</span>
-                    {entry.durationMs != null && <span className="text-stone-600 shrink-0 ml-auto">{entry.durationMs}ms</span>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
       )}
     </div>

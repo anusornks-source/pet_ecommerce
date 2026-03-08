@@ -122,6 +122,14 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
           &larr;
         </button>
         <h1 className="text-2xl font-bold text-stone-800">Edit Shop: {shop.name}</h1>
+        <a
+          href={`/${shop.slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-auto flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-800 border border-stone-200 rounded-xl px-3 py-1.5 transition-colors"
+        >
+          View Shop ↗
+        </a>
       </div>
 
       {/* Shop Details */}

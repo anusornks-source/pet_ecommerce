@@ -29,8 +29,12 @@ export default async function ShopPage({
 
   const shop = await prisma.shop.findUnique({
     where: { slug: shopSlug, active: true },
+    include: { settings: { select: { primaryColor: true, secondaryColor: true } } },
   });
   if (!shop) notFound();
+
+  const primary = shop.settings?.primaryColor ?? "#f97316";
+  const secondary = shop.settings?.secondaryColor ?? "#f59e0b";
 
   const cookieStore = await cookies();
   const lang: Lang = cookieStore.get("lang")?.value === "en" ? "en" : "th";
@@ -79,6 +83,16 @@ export default async function ShopPage({
 
   return (
     <div>
+      <style>{`
+        .shop-primary { color: ${primary}; }
+        .shop-cat-card:hover { background-color: ${primary}18; border-color: ${primary}55; }
+        .shop-cat-card:hover .shop-cat-label { color: ${primary}; }
+        .shop-view-all { color: ${primary}cc; }
+        .shop-view-all:hover { color: ${primary}; }
+        .shop-primary-gradient { background: linear-gradient(to right, ${primary}, ${secondary}); }
+        .shop-register-btn { color: ${primary}; }
+        .shop-register-btn:hover { background-color: ${primary}18; }
+      `}</style>
       <HeroSlider banners={banners} />
 
       {/* Pet Types */}
@@ -119,10 +133,10 @@ export default async function ShopPage({
                 <Link
                   key={cat.id}
                   href={`/products?${shopFilter}&category=${cat.slug}`}
-                  className="bg-white rounded-2xl p-4 text-center hover:bg-orange-50 hover:border-orange-200 border-2 border-transparent transition-all group"
+                  className="shop-cat-card bg-white rounded-2xl p-4 text-center border-2 border-transparent transition-all group"
                 >
                   <div className="text-3xl mb-2">{cat.icon}</div>
-                  <p className="text-sm font-medium text-stone-700 group-hover:text-orange-500">
+                  <p className="shop-cat-label text-sm font-medium text-stone-700">
                     {p((cat as { name_th?: string | null }).name_th, cat.name)}
                   </p>
                   <p className="text-xs text-stone-400 mt-0.5">
@@ -177,7 +191,7 @@ export default async function ShopPage({
           </h2>
           <Link
             href={`/products?${shopFilter}&featured=true`}
-            className="text-orange-500 hover:text-orange-600 text-sm font-medium"
+            className="shop-view-all text-sm font-medium transition-colors"
           >
             {p("ดูทั้งหมด", "View All")} →
           </Link>
@@ -197,12 +211,12 @@ export default async function ShopPage({
 
       {/* Promo Banner */}
       <section className="max-w-6xl mx-auto px-4 pb-12">
-        <div className="bg-linear-to-r from-orange-500 to-amber-500 rounded-3xl p-8 md:p-12 text-white flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="shop-primary-gradient rounded-3xl p-8 md:p-12 text-white flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
             <h3 className="text-2xl md:text-3xl font-bold mb-2">
               {p("สมัครสมาชิกวันนี้", "Register Today")}
             </h3>
-            <p className="text-orange-100">
+            <p className="text-white/80">
               {p(
                 "รับส่วนลดพิเศษสำหรับสมาชิกใหม่ และข่าวสารโปรโมชั่น",
                 "Get special discounts for new members and promotions"
@@ -211,7 +225,7 @@ export default async function ShopPage({
           </div>
           <Link
             href="/register"
-            className="bg-white text-orange-500 font-bold px-8 py-3 rounded-xl hover:bg-orange-50 transition-colors whitespace-nowrap"
+            className="shop-register-btn bg-white font-bold px-8 py-3 rounded-xl transition-colors whitespace-nowrap"
           >
             {p("สมัครฟรี →", "Register Free →")}
           </Link>

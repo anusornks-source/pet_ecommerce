@@ -32,6 +32,7 @@ interface ShopDetail {
   coverUrl: string | null;
   usePetType: boolean;
   active: boolean;
+  settings?: { primaryColor?: string | null; secondaryColor?: string | null } | null;
 }
 
 export default function EditShopPage({ params }: { params: Promise<{ id: string }> }) {
@@ -39,7 +40,7 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
   const router = useRouter();
   const [shop, setShop] = useState<ShopDetail | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [form, setForm] = useState({ name: "", name_th: "", slug: "", description: "", description_th: "", logoUrl: "", coverUrl: "", usePetType: true });
+  const [form, setForm] = useState({ name: "", name_th: "", slug: "", description: "", description_th: "", logoUrl: "", coverUrl: "", usePetType: true, primaryColor: "#f97316", secondaryColor: "#f59e0b" });
   const [saving, setSaving] = useState(false);
   const [savingCats, setSavingCats] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -72,6 +73,8 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
             logoUrl: s.logoUrl ?? "",
             coverUrl: s.coverUrl ?? "",
             usePetType: s.usePetType,
+            primaryColor: s.settings?.primaryColor ?? "#f97316",
+            secondaryColor: s.settings?.secondaryColor ?? "#f59e0b",
           });
         }
       });
@@ -178,6 +181,41 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
           <div className="flex items-center gap-2 col-span-2">
             <input type="checkbox" checked={form.usePetType} onChange={(e) => setForm({ ...form, usePetType: e.target.checked })} id="usePetType" />
             <label htmlFor="usePetType" className="text-sm text-stone-600">Use Pet Type categories</label>
+          </div>
+          <div className="col-span-2 border-t border-stone-100 pt-4">
+            <label className="text-sm font-semibold text-stone-600 block mb-3">Shop Colors</label>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={form.primaryColor}
+                  onChange={(e) => setForm({ ...form, primaryColor: e.target.value })}
+                  className="w-10 h-10 rounded-lg border border-stone-200 cursor-pointer p-0.5"
+                />
+                <div>
+                  <p className="text-xs font-medium text-stone-700">Primary</p>
+                  <p className="text-xs text-stone-400 font-mono">{form.primaryColor}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={form.secondaryColor}
+                  onChange={(e) => setForm({ ...form, secondaryColor: e.target.value })}
+                  className="w-10 h-10 rounded-lg border border-stone-200 cursor-pointer p-0.5"
+                />
+                <div>
+                  <p className="text-xs font-medium text-stone-700">Secondary</p>
+                  <p className="text-xs text-stone-400 font-mono">{form.secondaryColor}</p>
+                </div>
+              </div>
+              <div
+                className="ml-auto rounded-xl px-5 py-2 text-white text-sm font-medium"
+                style={{ background: `linear-gradient(to right, ${form.primaryColor}, ${form.secondaryColor})` }}
+              >
+                Preview
+              </div>
+            </div>
           </div>
         </div>
         <button onClick={handleSave} disabled={saving} className="btn-primary px-4 py-2 text-sm mt-4">

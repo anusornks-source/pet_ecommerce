@@ -105,6 +105,8 @@ model ShopSettings {
   usdToThb              Float     @default(36)
   displayStockMin       Int       @default(50)
   displayStockMax       Int       @default(100)
+  primaryColor          String    @default("#f97316")
+  secondaryColor        String    @default("#f59e0b")
   updatedAt             DateTime  @updatedAt
 
   shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)

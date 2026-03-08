@@ -36,7 +36,7 @@ export async function PUT(
   const auth = await requireShopOwner(request, id, "OWNER");
   if (isNextResponse(auth)) return auth;
   const body = await request.json();
-  const { name, name_th, slug, description, description_th, logoUrl, coverUrl, usePetType, active } = body;
+  const { name, name_th, slug, description, description_th, logoUrl, coverUrl, usePetType, active, primaryColor, secondaryColor } = body;
 
   const shop = await prisma.shop.update({
     where: { id },
@@ -52,6 +52,21 @@ export async function PUT(
       ...(active !== undefined && { active: !!active }),
     },
   });
+
+  if (primaryColor !== undefined || secondaryColor !== undefined) {
+    await prisma.shopSettings.upsert({
+      where: { shopId: id },
+      create: {
+        shopId: id,
+        ...(primaryColor && { primaryColor }),
+        ...(secondaryColor && { secondaryColor }),
+      },
+      update: {
+        ...(primaryColor && { primaryColor }),
+        ...(secondaryColor && { secondaryColor }),
+      },
+    });
+  }
 
   return NextResponse.json({ success: true, data: shop });
 }

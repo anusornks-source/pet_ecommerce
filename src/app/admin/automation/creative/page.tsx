@@ -4,31 +4,165 @@ import { useState, useCallback } from "react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 
-function ImagePromptCard({ item }: { item: { angle: string; prompt: string } }) {
+const AR_OPTIONS = [
+  { label: "1:1 Feed", ar: "1:1" },
+  { label: "4:5 Portrait", ar: "4:5" },
+  { label: "9:16 Story/TikTok", ar: "9:16" },
+] as const;
+
+function VideoConceptCard({ item, onConceptChange }: { item: { angle: string; concept: string }; onConceptChange?: (concept: string) => void }) {
+  const [edited, setEdited] = useState(item.concept);
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(edited).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+  return (
+    <div className="bg-stone-50 rounded-xl p-4">
+      <div className="text-[10px] text-pink-500 font-bold uppercase tracking-wide mb-2">{item.angle}</div>
+      <textarea
+        value={edited}
+        onChange={(e) => { setEdited(e.target.value); onConceptChange?.(e.target.value); }}
+        className="w-full text-xs text-stone-700 leading-relaxed font-sans bg-white border border-stone-200 rounded-lg px-3 py-2 mb-2 focus:outline-none focus:ring-1 focus:ring-pink-300 resize-none min-h-[3rem]"
+        style={{ fieldSizing: "content" } as unknown as React.CSSProperties}
+      />
+      <div className="flex justify-end">
+        <button onClick={copy}
+          className={`text-[10px] px-2.5 py-1 rounded-lg transition-colors ${copied ? "bg-green-100 text-green-600" : "text-stone-400 hover:text-pink-500 hover:bg-pink-50"}`}>
+          {copied ? "Copied!" : "Copy"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ImagePromptCard({ item, productImages, onPromptChange }: { item: { angle: string; prompt: string }; productImages?: string[]; onPromptChange?: (prompt: string) => void }) {
   const [copied, setCopied] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
+  const [selectedAr, setSelectedAr] = useState<string>("1:1");
+  const [error, setError] = useState<string | null>(null);
+  const [selectedRefImages, setSelectedRefImages] = useState<string[]>([]);
+  const toggleRefImage = (img: string) =>
+    setSelectedRefImages((prev) => prev.includes(img) ? prev.filter((x) => x !== img) : [...prev, img]);
+  const [editedPrompt, setEditedPrompt] = useState(item.prompt);
+
   const copyWithAr = (text: string, key: string) => {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(key);
       setTimeout(() => setCopied(null), 1500);
     });
   };
+
+  const generateImage = async () => {
+    setGenerating(true);
+    setGeneratedUrl(null);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/automation/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: editedPrompt, aspectRatio: selectedAr, imageUrls: selectedRefImages }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGeneratedUrl(data.url);
+      } else {
+        setError(data.error ?? "Generation failed");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
     <div className="bg-stone-50 rounded-xl p-4">
       <div className="text-[10px] text-purple-500 font-bold uppercase tracking-wide mb-2">{item.angle}</div>
-      <p className="text-xs text-stone-700 leading-relaxed font-mono mb-3">{item.prompt}</p>
+      <textarea
+        value={editedPrompt}
+        onChange={(e) => { setEditedPrompt(e.target.value); onPromptChange?.(e.target.value); }}
+        className="w-full text-xs text-stone-700 leading-relaxed font-mono bg-white border border-stone-200 rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring-1 focus:ring-purple-300 resize-none min-h-12"
+        style={{ fieldSizing: "content" } as unknown as React.CSSProperties}
+      />
+
+      {/* Reference image picker for img2img */}
+      {productImages && productImages.length > 0 && (
+        <div className="mb-3">
+          <p className="text-[10px] text-stone-400 mb-1.5">
+            Reference images:{" "}
+            {selectedRefImages.length > 0
+              ? <span className="text-teal-500 font-medium">{selectedRefImages.length} รูป selected ✓</span>
+              : <span className="text-stone-300">none — click to use Kontext</span>}
+          </p>
+          <div className="flex gap-1.5 flex-wrap">
+            {productImages.slice(0, 8).map((img, i) => (
+              <button key={i} type="button"
+                onClick={() => toggleRefImage(img)}
+                className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors shrink-0 ${selectedRefImages.includes(img) ? "border-teal-400 ring-1 ring-teal-300" : "border-stone-200 hover:border-stone-400"}`}>
+                <img src={img} alt="" className="w-full h-full object-cover" />
+                {selectedRefImages.includes(img) && (
+                  <div className="absolute inset-0 bg-teal-500/30 flex items-center justify-center">
+                    <span className="text-white text-[10px] font-bold">✓</span>
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Action row */}
       <div className="flex items-center gap-1.5 flex-wrap">
-        <span className="text-[10px] text-stone-400 mr-1">Copy with --ar:</span>
-        {([{ label: "1:1 Feed", ar: "1:1" }, { label: "4:5 Portrait", ar: "4:5" }, { label: "9:16 Story/TikTok", ar: "9:16" }] as const).map(({ label, ar }) => (
-          <button key={ar} type="button" onClick={() => copyWithAr(`${item.prompt} --ar ${ar}`, ar)}
+        <span className="text-[10px] text-stone-400 mr-1">Copy --ar:</span>
+        {AR_OPTIONS.map(({ label, ar }) => (
+          <button key={ar} type="button" onClick={() => copyWithAr(`${editedPrompt} --ar ${ar}`, ar)}
             className={`text-[10px] px-2.5 py-1 rounded-lg transition-colors font-medium ${copied === ar ? "bg-green-100 text-green-600" : "bg-purple-50 text-purple-600 hover:bg-purple-100"}`}>
             {copied === ar ? "Copied!" : label}
           </button>
         ))}
-        <button type="button" onClick={() => copyWithAr(item.prompt, "base")}
-          className={`text-[10px] px-2.5 py-1 rounded-lg transition-colors ml-auto ${copied === "base" ? "bg-green-100 text-green-600" : "bg-stone-200 text-stone-500 hover:bg-stone-300"}`}>
-          {copied === "base" ? "Copied!" : "Base prompt"}
+        <button type="button" onClick={() => copyWithAr(editedPrompt, "base")}
+          className={`text-[10px] px-2.5 py-1 rounded-lg transition-colors ${copied === "base" ? "bg-green-100 text-green-600" : "bg-stone-200 text-stone-500 hover:bg-stone-300"}`}>
+          {copied === "base" ? "Copied!" : "Base"}
         </button>
+
+        {/* Generate button */}
+        <div className="ml-auto flex items-center gap-1.5">
+          <select value={selectedAr} onChange={(e) => setSelectedAr(e.target.value)}
+            className="text-[10px] border border-stone-200 rounded-lg px-1.5 py-1 bg-white text-stone-600 focus:outline-none focus:ring-1 focus:ring-purple-300">
+            {AR_OPTIONS.map(({ label, ar }) => (
+              <option key={ar} value={ar}>{label}</option>
+            ))}
+          </select>
+          <button type="button" onClick={generateImage} disabled={generating}
+            className="text-[10px] px-3 py-1 rounded-lg bg-purple-500 hover:bg-purple-600 disabled:bg-stone-300 text-white font-medium transition-colors flex items-center gap-1">
+            {generating ? (
+              <><span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generating...</>
+            ) : "Generate Image"}
+          </button>
+        </div>
       </div>
+
+      {/* Error */}
+      {error && <p className="text-[11px] text-red-500 mt-2">{error}</p>}
+
+      {/* Generated image */}
+      {generatedUrl && (
+        <div className="mt-3 relative">
+          <img src={generatedUrl} alt={item.angle} className="w-full rounded-xl object-cover" />
+          <a href={generatedUrl} download target="_blank" rel="noopener noreferrer"
+            className="absolute top-2 right-2 text-[10px] bg-black/60 hover:bg-black/80 text-white px-2.5 py-1 rounded-lg transition-colors">
+            Download
+          </a>
+          <button type="button" onClick={generateImage}
+            className="absolute top-2 left-2 text-[10px] bg-black/60 hover:bg-black/80 text-white px-2.5 py-1 rounded-lg transition-colors">
+            Regenerate
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -88,6 +222,14 @@ export default function CreativeStudioPage() {
 const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [activeImg, setActiveImg] = useState<string | null>(null);
+  const [captionTab, setCaptionTab] = useState<"facebook" | "instagram" | "line">("facebook");
+  const [editedHooks, setEditedHooks] = useState<string[]>([]);
+  const [editedCaptions, setEditedCaptions] = useState<{ facebook: string; instagram: string; line: string }>({ facebook: "", instagram: "", line: "" });
+  const [editedAdAngles, setEditedAdAngles] = useState<{ angle: string; headline: string; body: string }[]>([]);
+  const [editedUgcScript, setEditedUgcScript] = useState("");
+  const [editedThumbnailTexts, setEditedThumbnailTexts] = useState<string[]>([]);
+  const [editedImagePrompts, setEditedImagePrompts] = useState<{ angle: string; prompt: string }[]>([]);
+  const [editedVideoPrompts, setEditedVideoPrompts] = useState<{ angle: string; concept: string }[]>([]);
 
   const searchProducts = useCallback(async (q: string) => {
     if (!q.trim()) { setProducts([]); return; }
@@ -129,6 +271,13 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
       const data = await res.json();
       if (data.success) {
         setResult(data.data);
+        setEditedHooks(data.data.hooks ?? []);
+        setEditedCaptions(data.data.captions ?? { facebook: "", instagram: "", line: "" });
+        setEditedAdAngles(data.data.adAngles ?? []);
+        setEditedUgcScript(data.data.ugcScript ?? "");
+        setEditedThumbnailTexts(data.data.thumbnailTexts ?? []);
+        setEditedImagePrompts(data.data.imageAdPrompts ?? []);
+        setEditedVideoPrompts(data.data.videoAdPrompts ?? []);
       } else {
         toast.error(data.error || "Generation failed");
       }
@@ -409,18 +558,20 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
               <h2 className="font-bold text-stone-800 text-sm">Marketing Hooks</h2>
               <div className="flex items-center gap-1">
                 <RawToggle section="hooks" raw={result._raw?.hooks} />
-                <CopyBtn text={result.hooks.join("\n\n")} />
+                <CopyBtn text={editedHooks.join("\n\n")} />
               </div>
             </div>
             <div className="space-y-2">
-              {result.hooks.map((hook, i) => (
-                <div key={i} className="flex items-start gap-2 group">
-                  <span className="text-xs text-stone-400 mt-0.5 shrink-0">{i + 1}.</span>
-                  <p className="text-sm text-stone-700 flex-1">{hook}</p>
-                  <button onClick={() => copy(hook)}
-                    className="opacity-0 group-hover:opacity-100 text-[10px] text-stone-400 hover:text-orange-500 transition-all shrink-0">
-                    Copy
-                  </button>
+              {editedHooks.map((hook, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span className="text-xs text-stone-400 mt-2.5 shrink-0">{i + 1}.</span>
+                  <textarea
+                    value={hook}
+                    onChange={(e) => setEditedHooks((prev) => prev.map((h, idx) => idx === i ? e.target.value : h))}
+                    className="flex-1 text-sm text-stone-700 bg-white border border-stone-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-stone-300 resize-none min-h-10"
+                    style={{ fieldSizing: "content" } as unknown as React.CSSProperties}
+                  />
+                  <button onClick={() => copy(hook)} className="text-[10px] text-stone-400 hover:text-orange-500 shrink-0 mt-2.5">Copy</button>
                 </div>
               ))}
             </div>
@@ -428,32 +579,27 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
 
           {/* 2. Social Media Captions */}
           <div className="bg-white rounded-2xl border border-stone-200 p-5">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
               <h2 className="font-bold text-stone-800 text-sm">Social Media Captions</h2>
               <div className="flex items-center gap-1">
                 <RawToggle section="captions" raw={result._raw?.captions} />
-                <CopyBtn text={[`Facebook:\n${result.captions.facebook}`, `Instagram:\n${result.captions.instagram}`, `LINE:\n${result.captions.line}`].join("\n\n")} />
+                <CopyBtn text={editedCaptions[captionTab]} />
               </div>
             </div>
-            <div className="space-y-3">
-              {([
-                { key: "facebook", label: "Facebook", color: "bg-blue-50 text-blue-600" },
-                { key: "instagram", label: "Instagram", color: "bg-pink-50 text-pink-600" },
-                { key: "line", label: "LINE", color: "bg-green-50 text-green-600" },
-              ] as const).map(({ key, label, color }) => (
-                <div key={key} className="relative">
-                  <div className={`inline-flex items-center text-[11px] font-bold px-2.5 py-1 rounded-lg mb-1.5 ${color}`}>{label}</div>
-                  <div className="relative">
-                    <pre className="text-sm text-stone-700 whitespace-pre-wrap font-sans bg-stone-50 rounded-xl p-4 pr-12">
-                      {result.captions[key]}
-                    </pre>
-                    <div className="absolute top-2 right-2">
-                      <CopyBtn text={result.captions[key]} />
-                    </div>
-                  </div>
-                </div>
+            <div className="flex gap-1 bg-stone-100 rounded-xl p-1 mb-3 w-fit">
+              {(["facebook", "instagram", "line"] as const).map((platform) => (
+                <button key={platform} onClick={() => setCaptionTab(platform)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${captionTab === platform ? "bg-white text-orange-600 shadow-sm" : "text-stone-500"}`}>
+                  {platform === "line" ? "LINE" : platform.charAt(0).toUpperCase() + platform.slice(1)}
+                </button>
               ))}
             </div>
+            <textarea
+              value={editedCaptions[captionTab]}
+              onChange={(e) => setEditedCaptions((prev) => ({ ...prev, [captionTab]: e.target.value }))}
+              className="w-full text-sm text-stone-700 font-sans bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-stone-300 resize-none min-h-28 leading-relaxed"
+              style={{ fieldSizing: "content" } as unknown as React.CSSProperties}
+            />
           </div>
 
           {/* 3. Ad Angles */}
@@ -462,16 +608,25 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
               <h2 className="font-bold text-stone-800 text-sm">Ad Angles</h2>
               <div className="flex items-center gap-1">
                 <RawToggle section="angles" raw={result._raw?.angles} />
-                <CopyBtn text={result.adAngles.map((a) => `[${a.angle}]\n${a.headline}\n${a.body}`).join("\n\n")} />
+                <CopyBtn text={editedAdAngles.map((a) => `[${a.angle}]\n${a.headline}\n${a.body}`).join("\n\n")} />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {result.adAngles.map((angle, i) => (
-                <div key={i} className="bg-stone-50 rounded-xl p-4 group relative">
-                  <div className="text-[10px] text-orange-500 font-bold uppercase tracking-wide mb-1">{angle.angle}</div>
-                  <h3 className="text-sm font-bold text-stone-800 mb-1">{angle.headline}</h3>
-                  <p className="text-xs text-stone-600">{angle.body}</p>
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              {editedAdAngles.map((angle, i) => (
+                <div key={i} className="bg-stone-50 rounded-xl p-4 space-y-1.5">
+                  <div className="text-[10px] text-orange-500 font-bold uppercase tracking-wide">{angle.angle}</div>
+                  <input
+                    value={angle.headline}
+                    onChange={(e) => setEditedAdAngles((prev) => prev.map((a, idx) => idx === i ? { ...a, headline: e.target.value } : a))}
+                    className="w-full text-sm font-bold text-stone-800 bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-orange-300"
+                  />
+                  <textarea
+                    value={angle.body}
+                    onChange={(e) => setEditedAdAngles((prev) => prev.map((a, idx) => idx === i ? { ...a, body: e.target.value } : a))}
+                    className="w-full text-xs text-stone-600 bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-orange-300 resize-none min-h-10"
+                    style={{ fieldSizing: "content" } as unknown as React.CSSProperties}
+                  />
+                  <div className="flex justify-end">
                     <CopyBtn text={`${angle.headline}\n${angle.body}`} />
                   </div>
                 </div>
@@ -483,11 +638,14 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
           <div className="bg-white rounded-2xl border border-stone-200 p-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-bold text-stone-800 text-sm">UGC Video Script</h2>
-              <CopyBtn text={result.ugcScript} />
+              <CopyBtn text={editedUgcScript} />
             </div>
-            <pre className="text-sm text-stone-700 whitespace-pre-wrap font-sans bg-stone-50 rounded-xl p-4 leading-relaxed">
-              {result.ugcScript}
-            </pre>
+            <textarea
+              value={editedUgcScript}
+              onChange={(e) => setEditedUgcScript(e.target.value)}
+              className="w-full text-sm text-stone-700 font-sans bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-stone-300 resize-none min-h-28 leading-relaxed"
+              style={{ fieldSizing: "content" } as unknown as React.CSSProperties}
+            />
           </div>
 
           {/* 5. Thumbnail Texts */}
@@ -496,15 +654,19 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
               <h2 className="font-bold text-stone-800 text-sm">Thumbnail Text</h2>
               <div className="flex items-center gap-1">
                 <RawToggle section="thumbnails" raw={result._raw?.thumbnails} />
-                <CopyBtn text={result.thumbnailTexts.join("\n")} />
+                <CopyBtn text={editedThumbnailTexts.join("\n")} />
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              {result.thumbnailTexts.map((text, i) => (
-                <button key={i} onClick={() => copy(text)}
-                  className="bg-stone-100 hover:bg-orange-50 hover:text-orange-600 text-stone-700 text-sm px-4 py-2 rounded-xl font-medium transition-colors">
-                  {text}
-                </button>
+              {editedThumbnailTexts.map((text, i) => (
+                <div key={i} className="flex items-center gap-1">
+                  <input
+                    value={text}
+                    onChange={(e) => setEditedThumbnailTexts((prev) => prev.map((t, idx) => idx === i ? e.target.value : t))}
+                    className="text-sm text-stone-700 bg-stone-100 border border-transparent focus:border-stone-300 focus:bg-white px-4 py-2 rounded-xl font-medium focus:outline-none transition-colors"
+                  />
+                  <button onClick={() => copy(text)} className="text-[10px] text-stone-400 hover:text-orange-500 px-1.5">Copy</button>
+                </div>
               ))}
             </div>
           </div>
@@ -519,12 +681,13 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
                 </div>
                 <div className="flex items-center gap-1">
                   <RawToggle section="imagePrompts" raw={result._raw?.imagePrompts} />
-                  <CopyBtn text={result.imageAdPrompts.map((p) => `[${p.angle}]\n${p.prompt}`).join("\n\n")} />
+                  <CopyBtn text={editedImagePrompts.map((p) => `[${p.angle}]\n${p.prompt}`).join("\n\n")} />
                 </div>
               </div>
               <div className="space-y-3">
                 {result.imageAdPrompts.map((item, i) => (
-                  <ImagePromptCard key={i} item={item} />
+                  <ImagePromptCard key={i} item={item} productImages={selectedProduct?.images ?? []}
+                    onPromptChange={(prompt) => setEditedImagePrompts((prev) => prev.map((p, idx) => idx === i ? { ...p, prompt } : p))} />
                 ))}
               </div>
               <p className="text-[11px] text-stone-400 mt-3 bg-stone-50 rounded-xl px-4 py-2.5">
@@ -543,18 +706,13 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
                 </div>
                 <div className="flex items-center gap-1">
                   <RawToggle section="videoPrompts" raw={result._raw?.videoPrompts} />
-                  <CopyBtn text={result.videoAdPrompts.map((p) => `[${p.angle}]\n${p.concept}`).join("\n\n")} />
+                  <CopyBtn text={editedVideoPrompts.map((p) => `[${p.angle}]\n${p.concept}`).join("\n\n")} />
                 </div>
               </div>
               <div className="space-y-3">
                 {result.videoAdPrompts.map((item, i) => (
-                  <div key={i} className="bg-stone-50 rounded-xl p-4 group relative">
-                    <div className="text-[10px] text-pink-500 font-bold uppercase tracking-wide mb-2">{item.angle}</div>
-                    <p className="text-xs text-stone-700 leading-relaxed whitespace-pre-wrap">{item.concept}</p>
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <CopyBtn text={item.concept} />
-                    </div>
-                  </div>
+                  <VideoConceptCard key={i} item={item}
+                    onConceptChange={(concept) => setEditedVideoPrompts((prev) => prev.map((p, idx) => idx === i ? { ...p, concept } : p))} />
                 ))}
               </div>
               <p className="text-[11px] text-stone-400 mt-3 bg-stone-50 rounded-xl px-4 py-2.5">
@@ -586,27 +744,27 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
                   `---`,
                   ``,
                   `## Marketing Hooks`,
-                  result.hooks.map((h, i) => `${i + 1}. ${h}`).join("\n"),
+                  editedHooks.map((h, i) => `${i + 1}. ${h}`).join("\n"),
                   ``,
                   `## Social Media Captions`,
-                  `### Facebook\n${result.captions.facebook}`,
+                  `### Facebook\n${editedCaptions.facebook}`,
                   ``,
-                  `### Instagram\n${result.captions.instagram}`,
+                  `### Instagram\n${editedCaptions.instagram}`,
                   ``,
-                  `### LINE\n${result.captions.line}`,
+                  `### LINE\n${editedCaptions.line}`,
                   ``,
                   `## Ad Angles`,
-                  result.adAngles.map((a) => `### ${a.angle}\n**${a.headline}**\n${a.body}`).join("\n\n"),
+                  editedAdAngles.map((a) => `### ${a.angle}\n**${a.headline}**\n${a.body}`).join("\n\n"),
                   ``,
                   `## UGC Video Script`,
-                  result.ugcScript,
+                  editedUgcScript,
                   ``,
                   `## Thumbnail Text`,
-                  result.thumbnailTexts.map((t, i) => `${i + 1}. ${t}`).join("\n"),
+                  editedThumbnailTexts.map((t, i) => `${i + 1}. ${t}`).join("\n"),
                   ``,
-                  result.imageAdPrompts?.length > 0 ? `## Image Ad Prompts\n${result.imageAdPrompts.map((p) => `### ${p.angle}\n${p.prompt}`).join("\n\n")}` : "",
+                  editedImagePrompts.length > 0 ? `## Image Ad Prompts\n${editedImagePrompts.map((p) => `### ${p.angle}\n${p.prompt}`).join("\n\n")}` : "",
                   ``,
-                  result.videoAdPrompts?.length > 0 ? `## Short Video Ad Concepts\n${result.videoAdPrompts.map((p) => `### ${p.angle}\n${p.concept}`).join("\n\n")}` : "",
+                  editedVideoPrompts.length > 0 ? `## Short Video Ad Concepts\n${editedVideoPrompts.map((p) => `### ${p.angle}\n${p.concept}`).join("\n\n")}` : "",
                 ].filter((l) => l !== undefined).join("\n");
                 copy(all);
               }}
@@ -627,15 +785,15 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
                       productId: selectedProduct.id,
                       lang,
                       productName: result.productName,
-                      hooks: result.hooks,
-                      captionFacebook: result.captions.facebook,
-                      captionInstagram: result.captions.instagram,
-                      captionLine: result.captions.line,
-                      adAngles: result.adAngles,
-                      ugcScript: result.ugcScript,
-                      thumbnailTexts: result.thumbnailTexts,
-                      imageAdPrompts: result.imageAdPrompts,
-                      videoAdPrompts: result.videoAdPrompts,
+                      hooks: editedHooks,
+                      captionFacebook: editedCaptions.facebook,
+                      captionInstagram: editedCaptions.instagram,
+                      captionLine: editedCaptions.line,
+                      adAngles: editedAdAngles,
+                      ugcScript: editedUgcScript,
+                      thumbnailTexts: editedThumbnailTexts,
+                      imageAdPrompts: editedImagePrompts,
+                      videoAdPrompts: editedVideoPrompts,
                       _raw: result._raw,
                     }),
                   });

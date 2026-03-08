@@ -438,7 +438,8 @@ export default function MarketingPacksPage() {
                     {hook && (
                       <p className="text-xs text-stone-500 mt-1.5 line-clamp-2">{hook}</p>
                     )}
-                    <div className="flex items-center justify-between mt-3">
+                    <p className="text-[10px] text-stone-400 font-mono mt-1.5">#{pack.id.slice(0, 8)}</p>
+                    <div className="flex items-center justify-between mt-1">
                       <span className="text-[11px] text-stone-400">{date}</span>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(pack.id); }}

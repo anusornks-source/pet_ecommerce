@@ -85,6 +85,7 @@ export default async function ShopPage({
   return (
     <div style={{ backgroundColor: bg }}>
       <style>{`
+        body { background-color: ${bg} !important; }
         .shop-primary { color: ${primary}; }
         .shop-cat-card:hover { background-color: ${primary}18; border-color: ${primary}55; }
         .shop-cat-card:hover .shop-cat-label { color: ${primary}; }

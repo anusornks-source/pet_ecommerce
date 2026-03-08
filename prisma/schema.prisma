@@ -254,11 +254,15 @@ model ProductMarketingPack {
   adAngles           Json
   ugcScript      String   @db.Text
   thumbnailTexts Json
+  imageAdPrompts Json?
+  videoAdPrompts Json?
   rawHooks       String?  @db.Text
   rawCaptions    String?  @db.Text
   rawAngles      String?  @db.Text
   rawUgc         String?  @db.Text
   rawThumbnails  String?  @db.Text
+  rawImagePrompts String? @db.Text
+  rawVideoPrompts String? @db.Text
   createdAt      DateTime @default(now())
 
   @@index([productId])

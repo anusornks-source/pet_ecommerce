@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
   const fullCtx = `${ctx}\n\n${descParts}`;
 
   try {
-    const [hooksRes, captionsRes, anglesRes, ugcRes, thumbRes] = await Promise.all([
+    const [hooksRes, captionsRes, anglesRes, ugcRes, thumbRes, imgPromptsRes, vidPromptsRes] = await Promise.all([
       // 1. Marketing Hooks
       client.messages.create({
         model: "claude-haiku-4-5-20251001",
@@ -145,6 +145,44 @@ Suggest 5 short, punchy thumbnail/banner text options (max 5-8 words each). Thes
 Return ONLY a JSON array of strings: ["text1", "text2", ...]`,
         }],
       }),
+
+      // 6. Image Ad Prompts
+      client.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 2000,
+        messages: [{
+          role: "user",
+          content: `You are an AI image prompt engineer specializing in pet product advertising.
+
+${fullCtx}
+
+Create 5 detailed image generation prompts for this product, each targeting a different advertising angle (e.g., health, emotion, lifestyle, value, convenience). Each prompt should be ready to use with Midjourney or DALL-E.
+
+Each prompt must include: product description, scene/setting, mood/emotion, lighting style, photography style, and quality tags.
+
+Return ONLY a JSON array:
+[{"angle": "angle name", "prompt": "full image generation prompt..."}, ...]`,
+        }],
+      }),
+
+      // 7. Short Video Ad Prompts
+      client.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 2000,
+        messages: [{
+          role: "user",
+          content: `You are a short-form video ad director for pet products on TikTok and Instagram Reels.
+
+${fullCtx}
+
+Create 5 short video ad concepts for this product, each targeting a different advertising angle. Each concept is for a 15-30 second video suitable for TikTok/Reels/Sora.
+
+Each concept must include: scene description, opening hook (visual), key action/demo, emotion/mood, and closing CTA. ${langInstruction}
+
+Return ONLY a JSON array:
+[{"angle": "angle name", "concept": "full video concept/prompt..."}, ...]`,
+        }],
+      }),
     ]);
 
     const extractText = (msg: Anthropic.Message) =>
@@ -178,11 +216,15 @@ Return ONLY a JSON array of strings: ["text1", "text2", ...]`,
     const adAngles = parseJsonArray(extractText(anglesRes)) as unknown as { angle: string; headline: string; body: string }[];
     const ugcScript = extractText(ugcRes);
     const thumbnailTexts = parseJsonArray(extractText(thumbRes));
+    const imageAdPrompts = parseJsonArray(extractText(imgPromptsRes)) as unknown as { angle: string; prompt: string }[];
+    const videoAdPrompts = parseJsonArray(extractText(vidPromptsRes)) as unknown as { angle: string; concept: string }[];
 
     const rawHooks = extractText(hooksRes);
     const rawCaptions = extractText(captionsRes);
     const rawAngles = extractText(anglesRes);
     const rawThumb = extractText(thumbRes);
+    const rawImgPrompts = extractText(imgPromptsRes);
+    const rawVidPrompts = extractText(vidPromptsRes);
 
     return NextResponse.json({
       success: true,
@@ -192,8 +234,10 @@ Return ONLY a JSON array of strings: ["text1", "text2", ...]`,
         adAngles: Array.isArray(adAngles) ? adAngles : [],
         ugcScript,
         thumbnailTexts,
+        imageAdPrompts: Array.isArray(imageAdPrompts) ? imageAdPrompts : [],
+        videoAdPrompts: Array.isArray(videoAdPrompts) ? videoAdPrompts : [],
         productName: product.name,
-        _raw: { hooks: rawHooks, captions: rawCaptions, angles: rawAngles, ugc: ugcScript, thumbnails: rawThumb },
+        _raw: { hooks: rawHooks, captions: rawCaptions, angles: rawAngles, ugc: ugcScript, thumbnails: rawThumb, imagePrompts: rawImgPrompts, videoPrompts: rawVidPrompts },
       },
     });
   } catch (err) {

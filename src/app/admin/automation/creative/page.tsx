@@ -12,6 +12,7 @@ interface ProductVariant {
   color: string | null;
   price: number;
   stock: number;
+  variantImage: string | null;
 }
 
 interface Product {
@@ -41,8 +42,10 @@ interface CreativeResult {
   adAngles: { angle: string; headline: string; body: string }[];
   ugcScript: string;
   thumbnailTexts: string[];
+  imageAdPrompts: { angle: string; prompt: string }[];
+  videoAdPrompts: { angle: string; concept: string }[];
   productName: string;
-  _raw?: { hooks: string; captions: string; angles: string; ugc: string; thumbnails: string };
+  _raw?: { hooks: string; captions: string; angles: string; ugc: string; thumbnails: string; imagePrompts: string; videoPrompts: string };
 }
 
 export default function CreativeStudioPage() {
@@ -55,7 +58,7 @@ export default function CreativeStudioPage() {
   const [result, setResult] = useState<CreativeResult | null>(null);
 const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
-  const [activeImg, setActiveImg] = useState(0);
+  const [activeImg, setActiveImg] = useState<string | null>(null);
 
   const searchProducts = useCallback(async (q: string) => {
     if (!q.trim()) { setProducts([]); return; }
@@ -81,7 +84,7 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
     setProducts([]);
     setSearch("");
     setResult(null);
-    setActiveImg(0);
+    setActiveImg(null);
   };
 
   const handleGenerate = async () => {
@@ -224,7 +227,7 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
             {/* Card header */}
             <div className="flex items-center justify-between px-5 py-3 bg-stone-50 border-b border-stone-100">
               <span className="text-xs font-semibold text-stone-500 uppercase tracking-wide">Selected Product</span>
-              <button onClick={() => { setSelectedProduct(null); setResult(null); setActiveImg(0); }}
+              <button onClick={() => { setSelectedProduct(null); setResult(null); setActiveImg(null); }}
                 className="text-stone-400 hover:text-stone-600 text-xl leading-none">×</button>
             </div>
 
@@ -233,13 +236,13 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
               {selectedProduct.images?.length > 0 && (
                 <div className="shrink-0 flex flex-col gap-2 w-48">
                   <div className="relative w-48 h-48 rounded-xl overflow-hidden bg-stone-100 border border-stone-100">
-                    <Image src={selectedProduct.images[activeImg] ?? selectedProduct.images[0]} alt="" fill className="object-cover" unoptimized />
+                    <Image src={activeImg ?? selectedProduct.images[0]} alt="" fill className="object-cover" unoptimized />
                   </div>
                   {selectedProduct.images.length > 1 && (
                     <div className="flex flex-wrap gap-1.5">
                       {selectedProduct.images.slice(0, 8).map((img, i) => (
-                        <button key={i} onClick={() => setActiveImg(i)}
-                          className={`relative w-10 h-10 rounded-lg overflow-hidden border-2 transition-colors ${activeImg === i ? "border-orange-400" : "border-transparent"}`}>
+                        <button key={i} onClick={() => setActiveImg(img)}
+                          className={`relative w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors ${(activeImg ?? selectedProduct.images[0]) === img ? "border-orange-400" : "border-transparent"}`}>
                           <Image src={img} alt="" fill className="object-cover" unoptimized />
                         </button>
                       ))}
@@ -325,7 +328,13 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
                     <div className="flex flex-wrap gap-1.5">
                       {selectedProduct.variants.slice(0, 12).map((v) => {
                         const label = [v.size, v.color].filter(Boolean).join(" / ") || v.sku || v.id.slice(0, 6);
-                        return (
+                        const isActive = v.variantImage && activeImg === v.variantImage;
+                        return v.variantImage ? (
+                          <button key={v.id} onClick={() => setActiveImg(v.variantImage!)}
+                            className={`text-[11px] px-2.5 py-1 rounded-lg transition-colors ${isActive ? "bg-orange-100 text-orange-600 ring-1 ring-orange-400" : "bg-stone-100 text-stone-600 hover:bg-orange-50 hover:text-orange-500"}`}>
+                            {label} <span className={isActive ? "text-orange-400" : "text-stone-400"}>฿{v.price?.toLocaleString()} · {v.stock}</span>
+                          </button>
+                        ) : (
                           <span key={v.id} className="text-[11px] bg-stone-100 text-stone-600 px-2.5 py-1 rounded-lg">
                             {label} <span className="text-stone-400">฿{v.price?.toLocaleString()} · {v.stock}</span>
                           </span>
@@ -351,7 +360,7 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
         <div className="bg-white rounded-2xl border border-stone-200 p-12 mb-6 text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-orange-500 border-t-transparent mb-4" />
           <p className="text-stone-600 font-medium">Generating creative content...</p>
-          <p className="text-xs text-stone-400 mt-1">5 AI calls running in parallel</p>
+          <p className="text-xs text-stone-400 mt-1">7 AI calls running in parallel</p>
         </div>
       )}
 
@@ -471,6 +480,74 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
             </div>
           </div>
 
+          {/* 6. Image Ad Prompts */}
+          {result.imageAdPrompts?.length > 0 && (
+            <div className="bg-white rounded-2xl border border-stone-200 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="font-bold text-stone-800 text-sm">Image Ad Prompts</h2>
+                  <p className="text-[11px] text-stone-400 mt-0.5">ใช้กับ Midjourney / DALL-E / Flux</p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <RawToggle section="imagePrompts" raw={result._raw?.imagePrompts} />
+                  <CopyBtn text={result.imageAdPrompts.map((p) => `[${p.angle}]\n${p.prompt}`).join("\n\n")} />
+                </div>
+              </div>
+              <div className="space-y-3">
+                {result.imageAdPrompts.map((item, i) => (
+                  <div key={i} className="bg-stone-50 rounded-xl p-4">
+                    <div className="text-[10px] text-purple-500 font-bold uppercase tracking-wide mb-2">{item.angle}</div>
+                    <p className="text-xs text-stone-700 leading-relaxed font-mono mb-3">{item.prompt}</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] text-stone-400 mr-1">Copy with --ar:</span>
+                      {[
+                        { label: "1:1 Feed", ar: "1:1" },
+                        { label: "4:5 Portrait", ar: "4:5" },
+                        { label: "9:16 Story/TikTok", ar: "9:16" },
+                      ].map(({ label, ar }) => (
+                        <button key={ar} onClick={() => copy(`${item.prompt} --ar ${ar}`)}
+                          className="text-[10px] px-2.5 py-1 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors font-medium">
+                          {label}
+                        </button>
+                      ))}
+                      <button onClick={() => copy(item.prompt)}
+                        className="text-[10px] px-2.5 py-1 rounded-lg bg-stone-200 text-stone-500 hover:bg-stone-300 transition-colors ml-auto">
+                        Base prompt
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 7. Video Ad Prompts */}
+          {result.videoAdPrompts?.length > 0 && (
+            <div className="bg-white rounded-2xl border border-stone-200 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="font-bold text-stone-800 text-sm">Short Video Ad Concepts</h2>
+                  <p className="text-[11px] text-stone-400 mt-0.5">ใช้กับ Sora / Runway / TikTok / Reels</p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <RawToggle section="videoPrompts" raw={result._raw?.videoPrompts} />
+                  <CopyBtn text={result.videoAdPrompts.map((p) => `[${p.angle}]\n${p.concept}`).join("\n\n")} />
+                </div>
+              </div>
+              <div className="space-y-3">
+                {result.videoAdPrompts.map((item, i) => (
+                  <div key={i} className="bg-stone-50 rounded-xl p-4 group relative">
+                    <div className="text-[10px] text-pink-500 font-bold uppercase tracking-wide mb-2">{item.angle}</div>
+                    <p className="text-xs text-stone-700 leading-relaxed whitespace-pre-wrap">{item.concept}</p>
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <CopyBtn text={item.concept} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Copy All + Regenerate */}
           <div className="flex items-center justify-center gap-4 pb-4">
             <button
@@ -511,7 +588,11 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
                   ``,
                   `## Thumbnail Text`,
                   result.thumbnailTexts.map((t, i) => `${i + 1}. ${t}`).join("\n"),
-                ].join("\n");
+                  ``,
+                  result.imageAdPrompts?.length > 0 ? `## Image Ad Prompts\n${result.imageAdPrompts.map((p) => `### ${p.angle}\n${p.prompt}`).join("\n\n")}` : "",
+                  ``,
+                  result.videoAdPrompts?.length > 0 ? `## Short Video Ad Concepts\n${result.videoAdPrompts.map((p) => `### ${p.angle}\n${p.concept}`).join("\n\n")}` : "",
+                ].filter((l) => l !== undefined).join("\n");
                 copy(all);
               }}
               className="bg-orange-500 hover:bg-orange-600 text-white text-sm px-5 py-2 rounded-xl font-medium transition-colors"
@@ -538,6 +619,8 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
                       adAngles: result.adAngles,
                       ugcScript: result.ugcScript,
                       thumbnailTexts: result.thumbnailTexts,
+                      imageAdPrompts: result.imageAdPrompts,
+                      videoAdPrompts: result.videoAdPrompts,
                       _raw: result._raw,
                     }),
                   });

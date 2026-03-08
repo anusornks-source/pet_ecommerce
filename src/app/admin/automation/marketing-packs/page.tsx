@@ -397,7 +397,7 @@ export default function MarketingPacksPage() {
             <p className="text-sm">ยังไม่มี Marketing Pack</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {filtered.map((pack) => {
               const img = pack.product.images?.[0];
               const hook = Array.isArray(pack.hooks) ? pack.hooks[0] : null;
@@ -412,15 +412,19 @@ export default function MarketingPacksPage() {
                 <div
                   key={pack.id}
                   onClick={() => router.push(`/admin/automation/marketing-packs/${pack.id}`)}
-                  className="bg-white border border-stone-200 rounded-2xl p-4 flex gap-4 cursor-pointer hover:shadow-md hover:border-orange-200 transition-all group"
+                  className="bg-white border border-stone-200 rounded-2xl overflow-hidden cursor-pointer hover:shadow-md hover:border-orange-200 transition-all group flex flex-col"
                 >
-                  {img && (
-                    <div className="shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-stone-100">
-                      <Image src={img} alt={pack.productName} width={64} height={64} className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
+                  {/* Product image */}
+                  <div className="w-full h-40 bg-stone-100 overflow-hidden">
+                    {img
+                      ? <Image src={img} alt={pack.productName} width={300} height={160} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      : <div className="w-full h-full flex items-center justify-center text-stone-300 text-3xl">📦</div>
+                    }
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 p-3">
+                    <div className="flex items-start justify-between gap-2 mb-1">
                       <div className="min-w-0">
                         <p className="font-semibold text-stone-800 text-sm truncate">{pack.productName}</p>
                         {pack.product.name_th && pack.product.name_th !== pack.productName && (
@@ -434,7 +438,7 @@ export default function MarketingPacksPage() {
                     {hook && (
                       <p className="text-xs text-stone-500 mt-1.5 line-clamp-2">{hook}</p>
                     )}
-                    <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center justify-between mt-3">
                       <span className="text-[11px] text-stone-400">{date}</span>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(pack.id); }}

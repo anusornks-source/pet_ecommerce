@@ -22,11 +22,15 @@ interface Pack {
   adAngles: AdAngle[];
   ugcScript: string;
   thumbnailTexts: string[];
+  imageAdPrompts: { angle: string; prompt: string }[] | null;
+  videoAdPrompts: { angle: string; concept: string }[] | null;
   rawHooks: string | null;
   rawCaptions: string | null;
   rawAngles: string | null;
   rawUgc: string | null;
   rawThumbnails: string | null;
+  rawImagePrompts: string | null;
+  rawVideoPrompts: string | null;
   createdAt: string;
   product: {
     name: string;
@@ -245,6 +249,70 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
                 className="bg-stone-100 hover:bg-orange-50 hover:text-orange-600 text-stone-700 text-sm px-4 py-2 rounded-xl font-medium transition-colors">
                 {text}
               </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 6. Image Ad Prompts */}
+      {pack.imageAdPrompts && pack.imageAdPrompts.length > 0 && (
+        <div className="bg-white rounded-2xl border border-stone-200 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-bold text-stone-800 text-sm">Image Ad Prompts</h2>
+              <p className="text-[11px] text-stone-400 mt-0.5">ใช้กับ Midjourney / DALL-E / Flux</p>
+            </div>
+            <div className="flex items-center gap-1">
+              <RawToggle label="imagePrompts" raw={pack.rawImagePrompts} />
+              <CopyBtn text={pack.imageAdPrompts.map((p) => `[${p.angle}]\n${p.prompt}`).join("\n\n")} />
+            </div>
+          </div>
+          <div className="space-y-3">
+            {pack.imageAdPrompts.map((item, i) => (
+              <div key={i} className="bg-stone-50 rounded-xl p-4">
+                <div className="text-[10px] text-purple-500 font-bold uppercase tracking-wide mb-2">{item.angle}</div>
+                <p className="text-xs text-stone-700 leading-relaxed font-mono mb-3">{item.prompt}</p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] text-stone-400 mr-1">Copy with --ar:</span>
+                  {([{ label: "1:1 Feed", ar: "1:1" }, { label: "4:5 Portrait", ar: "4:5" }, { label: "9:16 Story/TikTok", ar: "9:16" }] as const).map(({ label, ar }) => (
+                    <button key={ar} onClick={() => { navigator.clipboard.writeText(`${item.prompt} --ar ${ar}`); }}
+                      className="text-[10px] px-2.5 py-1 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors font-medium">
+                      {label}
+                    </button>
+                  ))}
+                  <button onClick={() => { navigator.clipboard.writeText(item.prompt); }}
+                    className="text-[10px] px-2.5 py-1 rounded-lg bg-stone-200 text-stone-500 hover:bg-stone-300 transition-colors ml-auto">
+                    Base prompt
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 7. Short Video Ad Concepts */}
+      {pack.videoAdPrompts && pack.videoAdPrompts.length > 0 && (
+        <div className="bg-white rounded-2xl border border-stone-200 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-bold text-stone-800 text-sm">Short Video Ad Concepts</h2>
+              <p className="text-[11px] text-stone-400 mt-0.5">ใช้กับ Sora / Runway / TikTok / Reels</p>
+            </div>
+            <div className="flex items-center gap-1">
+              <RawToggle label="videoPrompts" raw={pack.rawVideoPrompts} />
+              <CopyBtn text={pack.videoAdPrompts.map((p) => `[${p.angle}]\n${p.concept}`).join("\n\n")} />
+            </div>
+          </div>
+          <div className="space-y-3">
+            {pack.videoAdPrompts.map((item, i) => (
+              <div key={i} className="bg-stone-50 rounded-xl p-4 group relative">
+                <div className="text-[10px] text-pink-500 font-bold uppercase tracking-wide mb-2">{item.angle}</div>
+                <p className="text-xs text-stone-700 leading-relaxed whitespace-pre-wrap">{item.concept}</p>
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <CopyBtn text={item.concept} />
+                </div>
+              </div>
             ))}
           </div>
         </div>

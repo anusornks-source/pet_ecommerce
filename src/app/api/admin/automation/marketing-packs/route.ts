@@ -18,6 +18,8 @@ export async function POST(request: NextRequest) {
     adAngles,
     ugcScript,
     thumbnailTexts,
+    imageAdPrompts,
+    videoAdPrompts,
     _raw,
   } = body;
 
@@ -37,11 +39,15 @@ export async function POST(request: NextRequest) {
       adAngles: adAngles ?? [],
       ugcScript: ugcScript ?? "",
       thumbnailTexts: thumbnailTexts ?? [],
+      imageAdPrompts: imageAdPrompts ?? null,
+      videoAdPrompts: videoAdPrompts ?? null,
       rawHooks: _raw?.hooks ?? null,
       rawCaptions: _raw?.captions ?? null,
       rawAngles: _raw?.angles ?? null,
       rawUgc: _raw?.ugc ?? null,
       rawThumbnails: _raw?.thumbnails ?? null,
+      rawImagePrompts: _raw?.imagePrompts ?? null,
+      rawVideoPrompts: _raw?.videoPrompts ?? null,
     },
   });
 

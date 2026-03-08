@@ -38,13 +38,19 @@ export async function POST(request: NextRequest) {
     product.category ? `Category: ${product.category.name}` : "",
     product.petType ? `Pet type: ${product.petType.name}` : "",
     product.tags?.length ? `Tags: ${product.tags.map((t) => t.name).join(", ")}` : "",
-    product.shortDescription ? `Short desc: ${product.shortDescription}` : "",
+    product.shortDescription ? `Short desc (EN): ${product.shortDescription}` : "",
+    product.shortDescription_th ? `Short desc (TH): ${product.shortDescription_th}` : "",
     product.variants?.length ? `Variants: ${product.variants.map((v) => [v.size, v.color].filter(Boolean).join("/")).join(", ")}` : "",
   ].filter(Boolean).join("\n");
 
   const stripHtml = (html: string) => html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-  const desc = stripHtml(product.description ?? product.sourceDescription ?? "").slice(0, 1500);
-  const fullCtx = `${ctx}\n\nDescription: ${desc}`;
+  const descEn = stripHtml(product.description ?? "").slice(0, 2000);
+  const descTh = stripHtml(product.description_th ?? product.sourceDescription ?? "").slice(0, 2000);
+  const descParts = [
+    descEn ? `Description (EN): ${descEn}` : "",
+    descTh ? `Description (TH): ${descTh}` : "",
+  ].filter(Boolean).join("\n\n");
+  const fullCtx = `${ctx}\n\n${descParts}`;
 
   try {
     const [hooksRes, captionsRes, anglesRes, ugcRes, thumbRes] = await Promise.all([

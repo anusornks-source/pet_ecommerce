@@ -10,6 +10,8 @@ interface ProductVariant {
   cjVid: string | null;
   size: string | null;
   color: string | null;
+  price: number;
+  stock: number;
 }
 
 interface Product {
@@ -17,11 +19,19 @@ interface Product {
   name: string;
   name_th?: string | null;
   price: number;
+  normalPrice?: number | null;
+  stock: number;
   images: string[];
+  description?: string | null;
+  description_th?: string | null;
   shortDescription?: string | null;
   shortDescription_th?: string | null;
+  source?: string | null;
+  active?: boolean;
+  featured?: boolean;
   category?: { name: string } | null;
   petType?: { name: string } | null;
+  tags?: { id: string; name: string }[];
   variants?: ProductVariant[];
 }
 
@@ -43,9 +53,9 @@ export default function CreativeStudioPage() {
   const [lang, setLang] = useState<"th" | "en">("th");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CreativeResult | null>(null);
-  const [captionTab, setCaptionTab] = useState<"facebook" | "instagram" | "line">("facebook");
-  const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
+const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
+  const [activeImg, setActiveImg] = useState(0);
 
   const searchProducts = useCallback(async (q: string) => {
     if (!q.trim()) { setProducts([]); return; }
@@ -71,6 +81,7 @@ export default function CreativeStudioPage() {
     setProducts([]);
     setSearch("");
     setResult(null);
+    setActiveImg(0);
   };
 
   const handleGenerate = async () => {
@@ -161,7 +172,7 @@ export default function CreativeStudioPage() {
                     <button key={p.id} onClick={() => selectProduct(p)}
                       className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 text-left transition-colors">
                       {p.images?.[0] && (
-                        <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-stone-100">
+                        <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-stone-100">
                           <Image src={p.images[0]} alt="" fill className="object-cover" unoptimized />
                         </div>
                       )}
@@ -207,24 +218,130 @@ export default function CreativeStudioPage() {
           </div>
         </div>
 
-        {/* Selected Product Preview */}
+        {/* Selected Product — Full Detail Card */}
         {selectedProduct && (
-          <div className="mt-4 flex items-center gap-3 bg-orange-50 rounded-xl p-3">
-            {selectedProduct.images?.[0] && (
-              <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-stone-100">
-                <Image src={selectedProduct.images[0]} alt="" fill className="object-cover" unoptimized />
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-stone-800 truncate">{selectedProduct.name_th || selectedProduct.name}</p>
-              <p className="text-xs text-stone-500">{selectedProduct.category?.name} · ฿{selectedProduct.price?.toLocaleString()}</p>
-              {(selectedProduct.shortDescription_th || selectedProduct.shortDescription) && (
-                <p className="text-[10px] text-stone-400 truncate">{selectedProduct.shortDescription_th || selectedProduct.shortDescription}</p>
-              )}
-              <span className="text-[10px] text-stone-300">Product ID: {selectedProduct.id.slice(0, 8)}</span>
+          <div className="mt-5 border border-stone-200 rounded-2xl overflow-hidden">
+            {/* Card header */}
+            <div className="flex items-center justify-between px-5 py-3 bg-stone-50 border-b border-stone-100">
+              <span className="text-xs font-semibold text-stone-500 uppercase tracking-wide">Selected Product</span>
+              <button onClick={() => { setSelectedProduct(null); setResult(null); setActiveImg(0); }}
+                className="text-stone-400 hover:text-stone-600 text-xl leading-none">×</button>
             </div>
-            <button onClick={() => { setSelectedProduct(null); setResult(null); }}
-              className="text-stone-400 hover:text-stone-600 text-lg">×</button>
+
+            <div className="p-5 flex gap-6">
+              {/* Image gallery */}
+              {selectedProduct.images?.length > 0 && (
+                <div className="shrink-0 flex flex-col gap-2 w-48">
+                  <div className="relative w-48 h-48 rounded-xl overflow-hidden bg-stone-100 border border-stone-100">
+                    <Image src={selectedProduct.images[activeImg] ?? selectedProduct.images[0]} alt="" fill className="object-cover" unoptimized />
+                  </div>
+                  {selectedProduct.images.length > 1 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedProduct.images.slice(0, 8).map((img, i) => (
+                        <button key={i} onClick={() => setActiveImg(i)}
+                          className={`relative w-10 h-10 rounded-lg overflow-hidden border-2 transition-colors ${activeImg === i ? "border-orange-400" : "border-transparent"}`}>
+                          <Image src={img} alt="" fill className="object-cover" unoptimized />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Info */}
+              <div className="flex-1 min-w-0 space-y-3">
+                {/* Names */}
+                <div>
+                  <h2 className="text-base font-bold text-stone-800 leading-snug">
+                    {lang === "th" ? (selectedProduct.name_th || selectedProduct.name) : selectedProduct.name}
+                  </h2>
+                  {lang === "th"
+                    ? selectedProduct.name && selectedProduct.name_th && <p className="text-sm text-stone-400 mt-0.5">{selectedProduct.name}</p>
+                    : selectedProduct.name_th && <p className="text-sm text-stone-400 mt-0.5">{selectedProduct.name_th}</p>}
+                </div>
+
+                {/* Price & stock */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <div>
+                    <span className="text-lg font-bold text-orange-600">฿{selectedProduct.price?.toLocaleString()}</span>
+                    {selectedProduct.normalPrice && selectedProduct.normalPrice > selectedProduct.price && (
+                      <span className="ml-2 text-sm text-stone-400 line-through">฿{selectedProduct.normalPrice.toLocaleString()}</span>
+                    )}
+                  </div>
+                  <span className="text-xs text-stone-400 border border-stone-200 rounded-lg px-2 py-0.5">
+                    Stock: {selectedProduct.stock ?? 0}
+                  </span>
+                  {selectedProduct.active === false && (
+                    <span className="text-xs bg-red-100 text-red-500 rounded-lg px-2 py-0.5">Inactive</span>
+                  )}
+                  {selectedProduct.featured && (
+                    <span className="text-xs bg-amber-100 text-amber-600 rounded-lg px-2 py-0.5">Featured</span>
+                  )}
+                  {selectedProduct.source === "CJ" && (
+                    <span className="text-xs bg-blue-100 text-blue-600 rounded-lg px-2 py-0.5">CJ</span>
+                  )}
+                </div>
+
+                {/* Meta row */}
+                <div className="flex flex-wrap gap-2 text-xs text-stone-500">
+                  {selectedProduct.category && (
+                    <span className="bg-stone-100 rounded-lg px-2.5 py-1">{selectedProduct.category.name}</span>
+                  )}
+                  {selectedProduct.petType && (
+                    <span className="bg-stone-100 rounded-lg px-2.5 py-1">{selectedProduct.petType.name}</span>
+                  )}
+                  {selectedProduct.tags?.map((t) => (
+                    <span key={t.id} className="bg-orange-50 text-orange-500 rounded-lg px-2.5 py-1">{t.name}</span>
+                  ))}
+                </div>
+
+                {/* Short desc */}
+                {(() => {
+                  const sd = lang === "th"
+                    ? (selectedProduct.shortDescription_th || selectedProduct.shortDescription)
+                    : (selectedProduct.shortDescription || selectedProduct.shortDescription_th);
+                  return sd ? (
+                    <div className="text-sm text-stone-600 bg-stone-50 rounded-xl px-4 py-3">{sd}</div>
+                  ) : null;
+                })()}
+
+                {/* Description */}
+                {(() => {
+                  const desc = lang === "th"
+                    ? (selectedProduct.description_th || selectedProduct.description)
+                    : (selectedProduct.description || selectedProduct.description_th);
+                  return desc ? (
+                    <div className="text-xs text-stone-500 leading-relaxed max-h-28 overflow-y-auto bg-stone-50 rounded-xl px-4 py-3">
+                      <p className="font-semibold text-stone-600 mb-1 text-[11px] uppercase tracking-wide">Description</p>
+                      <p dangerouslySetInnerHTML={{ __html: desc }} />
+                    </div>
+                  ) : null;
+                })()}
+
+                {/* Variants */}
+                {selectedProduct.variants && selectedProduct.variants.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-semibold text-stone-400 uppercase tracking-wide mb-1.5">Variants ({selectedProduct.variants.length})</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedProduct.variants.slice(0, 12).map((v) => {
+                        const label = [v.size, v.color].filter(Boolean).join(" / ") || v.sku || v.id.slice(0, 6);
+                        return (
+                          <span key={v.id} className="text-[11px] bg-stone-100 text-stone-600 px-2.5 py-1 rounded-lg">
+                            {label} <span className="text-stone-400">฿{v.price?.toLocaleString()} · {v.stock}</span>
+                          </span>
+                        );
+                      })}
+                      {selectedProduct.variants.length > 12 && (
+                        <span className="text-[11px] text-stone-400 px-2 py-1">+{selectedProduct.variants.length - 12} more</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Product ID */}
+                <p className="text-[11px] text-stone-300 font-mono">ID: {selectedProduct.id}</p>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -241,6 +358,12 @@ export default function CreativeStudioPage() {
       {/* Results */}
       {result && !loading && (
         <div className="space-y-4">
+
+          {/* Pack label */}
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-xs font-bold text-orange-500 uppercase tracking-widest">Marketing Pack</span>
+            <span className="text-xs text-stone-400">— {result.productName}</span>
+          </div>
 
           {/* 1. Marketing Hooks */}
           <div className="bg-white rounded-2xl border border-stone-200 p-5">
@@ -267,25 +390,31 @@ export default function CreativeStudioPage() {
 
           {/* 2. Social Media Captions */}
           <div className="bg-white rounded-2xl border border-stone-200 p-5">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-stone-800 text-sm">Social Media Captions</h2>
-              <RawToggle section="captions" raw={result._raw?.captions} />
-            </div>
-            <div className="flex gap-1 bg-stone-100 rounded-xl p-1 mb-3 w-fit">
-              {(["facebook", "instagram", "line"] as const).map((platform) => (
-                <button key={platform} onClick={() => setCaptionTab(platform)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${captionTab === platform ? "bg-white text-orange-600 shadow-sm" : "text-stone-500"}`}>
-                  {platform === "line" ? "LINE" : platform.charAt(0).toUpperCase() + platform.slice(1)}
-                </button>
-              ))}
-            </div>
-            <div className="relative">
-              <pre className="text-sm text-stone-700 whitespace-pre-wrap font-sans bg-stone-50 rounded-xl p-4">
-                {result.captions[captionTab]}
-              </pre>
-              <div className="absolute top-2 right-2">
-                <CopyBtn text={result.captions[captionTab]} />
+              <div className="flex items-center gap-1">
+                <RawToggle section="captions" raw={result._raw?.captions} />
+                <CopyBtn text={[`Facebook:\n${result.captions.facebook}`, `Instagram:\n${result.captions.instagram}`, `LINE:\n${result.captions.line}`].join("\n\n")} />
               </div>
+            </div>
+            <div className="space-y-3">
+              {([
+                { key: "facebook", label: "Facebook", color: "bg-blue-50 text-blue-600" },
+                { key: "instagram", label: "Instagram", color: "bg-pink-50 text-pink-600" },
+                { key: "line", label: "LINE", color: "bg-green-50 text-green-600" },
+              ] as const).map(({ key, label, color }) => (
+                <div key={key} className="relative">
+                  <div className={`inline-flex items-center text-[11px] font-bold px-2.5 py-1 rounded-lg mb-1.5 ${color}`}>{label}</div>
+                  <div className="relative">
+                    <pre className="text-sm text-stone-700 whitespace-pre-wrap font-sans bg-stone-50 rounded-xl p-4 pr-12">
+                      {result.captions[key]}
+                    </pre>
+                    <div className="absolute top-2 right-2">
+                      <CopyBtn text={result.captions[key]} />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

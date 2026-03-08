@@ -32,7 +32,7 @@ interface ShopDetail {
   coverUrl: string | null;
   usePetType: boolean;
   active: boolean;
-  settings?: { primaryColor?: string | null; secondaryColor?: string | null; bgColor?: string | null } | null;
+  settings?: { primaryColor?: string | null; secondaryColor?: string | null } | null;
 }
 
 export default function EditShopPage({ params }: { params: Promise<{ id: string }> }) {
@@ -40,7 +40,7 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
   const router = useRouter();
   const [shop, setShop] = useState<ShopDetail | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [form, setForm] = useState({ name: "", name_th: "", slug: "", description: "", description_th: "", logoUrl: "", coverUrl: "", usePetType: true, primaryColor: "#f97316", secondaryColor: "#f59e0b", bgColor: "#ffffff" });
+  const [form, setForm] = useState({ name: "", name_th: "", slug: "", description: "", description_th: "", logoUrl: "", coverUrl: "", usePetType: true, primaryColor: "#f97316", secondaryColor: "#f59e0b" });
   const [saving, setSaving] = useState(false);
   const [savingCats, setSavingCats] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -75,7 +75,6 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
             usePetType: s.usePetType,
             primaryColor: s.settings?.primaryColor ?? "#f97316",
             secondaryColor: s.settings?.secondaryColor ?? "#f59e0b",
-            bgColor: s.settings?.bgColor ?? "#ffffff",
           });
         }
       });
@@ -197,7 +196,7 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
               <label className="text-sm font-semibold text-stone-600">Theme Colors</label>
               <button
                 type="button"
-                onClick={() => setForm((f) => ({ ...f, primaryColor: "#f97316", secondaryColor: "#f59e0b", bgColor: "#ffffff" }))}
+                onClick={() => setForm((f) => ({ ...f, primaryColor: "#f97316", secondaryColor: "#f59e0b" }))}
                 className="text-xs text-stone-400 hover:text-stone-600 border border-stone-200 rounded-lg px-2.5 py-1 transition-colors"
               >
                 Reset to default
@@ -255,51 +254,6 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
             </div>
           </div>
 
-          {/* ── Background Color ── */}
-          <div className="col-span-2 border-t border-stone-100 pt-4">
-            <label className="text-sm font-semibold text-stone-600 block mb-3">Background Color</label>
-            {/* BG presets */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {[
-                { label: "White",        color: "#ffffff" },
-                { label: "Warm White",   color: "#fffbf5" },
-                { label: "Cream",        color: "#fef9f0" },
-                { label: "Light Gray",   color: "#f8fafc" },
-                { label: "Stone",        color: "#f5f5f4" },
-                { label: "Light Blue",   color: "#eff6ff" },
-                { label: "Light Green",  color: "#f0fdf4" },
-                { label: "Light Purple", color: "#faf5ff" },
-                { label: "Light Pink",   color: "#fdf2f8" },
-                { label: "Light Yellow", color: "#fffbeb" },
-                { label: "Light Teal",   color: "#f0fdfa" },
-                { label: "Charcoal",     color: "#1c1917" },
-              ].map((p) => (
-                <button
-                  key={p.label}
-                  type="button"
-                  title={p.label}
-                  onClick={() => setForm((f) => ({ ...f, bgColor: p.color }))}
-                  className={`group relative w-9 h-9 rounded-full border-2 hover:scale-110 transition-transform ring-1 ring-stone-200 ${form.bgColor === p.color ? "border-stone-500 scale-110" : "border-stone-200"}`}
-                  style={{ backgroundColor: p.color }}
-                >
-                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-stone-500 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none bg-white/90 px-1 rounded">
-                    {p.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-            {/* Custom picker */}
-            <div className="flex items-center gap-3">
-              <input type="color" value={form.bgColor} onChange={(e) => setForm({ ...form, bgColor: e.target.value })} className="w-10 h-10 rounded-lg border border-stone-200 cursor-pointer p-0.5" />
-              <div>
-                <p className="text-xs font-medium text-stone-700">Custom</p>
-                <p className="text-xs text-stone-400 font-mono">{form.bgColor}</p>
-              </div>
-              <div className="ml-4 rounded-xl px-5 py-2 text-sm font-medium border border-stone-200" style={{ backgroundColor: form.bgColor, color: form.primaryColor }}>
-                Preview
-              </div>
-            </div>
-          </div>
         </div>
         <button onClick={handleSave} disabled={saving} className="btn-primary px-4 py-2 text-sm mt-4">
           {saving ? "Saving..." : "Save Changes"}

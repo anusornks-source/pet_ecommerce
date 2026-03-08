@@ -107,6 +107,7 @@ model ShopSettings {
   displayStockMax       Int       @default(100)
   primaryColor          String    @default("#f97316")
   secondaryColor        String    @default("#f59e0b")
+  bgColor               String    @default("#ffffff")
   updatedAt             DateTime  @updatedAt
 
   shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)

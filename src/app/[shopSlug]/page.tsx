@@ -29,12 +29,13 @@ export default async function ShopPage({
 
   const shop = await prisma.shop.findUnique({
     where: { slug: shopSlug, active: true },
-    include: { settings: { select: { primaryColor: true, secondaryColor: true } } },
+    include: { settings: { select: { primaryColor: true, secondaryColor: true, bgColor: true } } },
   });
   if (!shop) notFound();
 
   const primary = shop.settings?.primaryColor ?? "#f97316";
   const secondary = shop.settings?.secondaryColor ?? "#f59e0b";
+  const bg = shop.settings?.bgColor ?? "#ffffff";
 
   const cookieStore = await cookies();
   const lang: Lang = cookieStore.get("lang")?.value === "en" ? "en" : "th";
@@ -82,7 +83,7 @@ export default async function ShopPage({
   const shopFilter = `shopSlug=${shopSlug}`;
 
   return (
-    <div>
+    <div style={{ backgroundColor: bg }}>
       <style>{`
         .shop-primary { color: ${primary}; }
         .shop-cat-card:hover { background-color: ${primary}18; border-color: ${primary}55; }

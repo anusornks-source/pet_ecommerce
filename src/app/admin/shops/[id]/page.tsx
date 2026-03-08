@@ -32,7 +32,7 @@ interface ShopDetail {
   coverUrl: string | null;
   usePetType: boolean;
   active: boolean;
-  settings?: { primaryColor?: string | null; secondaryColor?: string | null } | null;
+  settings?: { primaryColor?: string | null; secondaryColor?: string | null; bgColor?: string | null } | null;
 }
 
 export default function EditShopPage({ params }: { params: Promise<{ id: string }> }) {
@@ -40,7 +40,7 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
   const router = useRouter();
   const [shop, setShop] = useState<ShopDetail | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [form, setForm] = useState({ name: "", name_th: "", slug: "", description: "", description_th: "", logoUrl: "", coverUrl: "", usePetType: true, primaryColor: "#f97316", secondaryColor: "#f59e0b" });
+  const [form, setForm] = useState({ name: "", name_th: "", slug: "", description: "", description_th: "", logoUrl: "", coverUrl: "", usePetType: true, primaryColor: "#f97316", secondaryColor: "#f59e0b", bgColor: "#ffffff" });
   const [saving, setSaving] = useState(false);
   const [savingCats, setSavingCats] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -75,6 +75,7 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
             usePetType: s.usePetType,
             primaryColor: s.settings?.primaryColor ?? "#f97316",
             secondaryColor: s.settings?.secondaryColor ?? "#f59e0b",
+            bgColor: s.settings?.bgColor ?? "#ffffff",
           });
         }
       });
@@ -191,8 +192,46 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
             <label htmlFor="usePetType" className="text-sm text-stone-600">Use Pet Type categories</label>
           </div>
           <div className="col-span-2 border-t border-stone-100 pt-4">
-            <label className="text-sm font-semibold text-stone-600 block mb-3">Shop Colors</label>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-sm font-semibold text-stone-600">Shop Colors</label>
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, primaryColor: "#f97316", secondaryColor: "#f59e0b", bgColor: "#ffffff" }))}
+                className="text-xs text-stone-400 hover:text-stone-600 border border-stone-200 rounded-lg px-2.5 py-1 transition-colors"
+              >
+                Reset to default
+              </button>
+            </div>
+            {/* Presets */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {[
+                { label: "Orange Sunset",   primary: "#f97316", secondary: "#f59e0b", bg: "#ffffff" },
+                { label: "Rose Petal",      primary: "#f43f5e", secondary: "#fb7185", bg: "#fff1f2" },
+                { label: "Ocean Blue",      primary: "#2563eb", secondary: "#06b6d4", bg: "#eff6ff" },
+                { label: "Forest Green",    primary: "#16a34a", secondary: "#84cc16", bg: "#f0fdf4" },
+                { label: "Purple Dream",    primary: "#7c3aed", secondary: "#a855f7", bg: "#faf5ff" },
+                { label: "Cherry Blossom",  primary: "#db2777", secondary: "#ec4899", bg: "#fdf2f8" },
+                { label: "Teal Breeze",     primary: "#0d9488", secondary: "#10b981", bg: "#f0fdfa" },
+                { label: "Golden Hour",     primary: "#d97706", secondary: "#f59e0b", bg: "#fffbeb" },
+                { label: "Slate Night",     primary: "#475569", secondary: "#64748b", bg: "#f8fafc" },
+                { label: "Coral Reef",      primary: "#ef4444", secondary: "#f97316", bg: "#fff7ed" },
+              ].map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  title={preset.label}
+                  onClick={() => setForm((f) => ({ ...f, primaryColor: preset.primary, secondaryColor: preset.secondary, bgColor: preset.bg }))}
+                  className="group relative w-9 h-9 rounded-full border-2 border-white shadow-sm hover:scale-110 transition-transform ring-1 ring-stone-200"
+                  style={{ background: `linear-gradient(135deg, ${preset.primary}, ${preset.secondary})` }}
+                >
+                  <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-[10px] text-stone-500 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    {preset.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {/* Individual pickers */}
+            <div className="flex items-center gap-6 mt-4">
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -215,6 +254,18 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
                 <div>
                   <p className="text-xs font-medium text-stone-700">Secondary</p>
                   <p className="text-xs text-stone-400 font-mono">{form.secondaryColor}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={form.bgColor}
+                  onChange={(e) => setForm({ ...form, bgColor: e.target.value })}
+                  className="w-10 h-10 rounded-lg border border-stone-200 cursor-pointer p-0.5"
+                />
+                <div>
+                  <p className="text-xs font-medium text-stone-700">Background</p>
+                  <p className="text-xs text-stone-400 font-mono">{form.bgColor}</p>
                 </div>
               </div>
               <div

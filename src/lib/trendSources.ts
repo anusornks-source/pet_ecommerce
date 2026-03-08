@@ -5,6 +5,8 @@ export interface TrendKeyword {
   source: string;
   volume?: number | null;      // search volume or popularity score
   trending?: boolean;          // is it currently trending up
+  trendScore?: number | null;  // AI estimated score 1-10
+  momentum?: "rising" | "peak" | "stable" | null; // trend momentum
 }
 
 export interface TrendInterest {
@@ -144,7 +146,7 @@ export function buildTikTokTrendPrompt(niche: string, lang: "en" | "th" = "en"):
 
 สร้าง keyword สินค้า 6 คำที่กำลัง trending บน TikTok โดยตอบเป็นภาษาไทย
 Return ONLY a JSON array:
-[{"keyword": "ชื่อสินค้าภาษาไทย", "why": "เหตุผลสั้นๆ"}]`;
+[{"keyword": "ชื่อสินค้าภาษาไทย", "why": "เหตุผลสั้นๆ", "trend_score": 1-10, "momentum": "rising"|"peak"|"stable"}]`;
   }
   return `You are a TikTok trend analyst for the pet products niche.
 
@@ -157,8 +159,12 @@ Think about:
 - Products that create strong emotional reactions (cute, funny, impressive)
 
 Generate exactly 6 specific product keywords that are trending on TikTok.
+For each keyword, estimate its viral potential:
+- trend_score: 1-10 (10 = extremely viral right now)
+- momentum: "rising" (gaining fast), "peak" (at maximum now), "stable" (consistently trending)
+
 Return ONLY a JSON array:
-[{"keyword": "product keyword", "why": "why it trends on TikTok"}]`;
+[{"keyword": "product keyword", "why": "why it trends on TikTok", "trend_score": 8, "momentum": "rising"}]`;
 }
 
 // ─── 4. AI Web Search (via Claude/GPT knowledge) ───────────────
@@ -176,7 +182,7 @@ export function buildAITrendPrompt(niche: string, lang: "en" | "th" = "en"): str
 
 สร้าง keyword สินค้า 8 คำที่กำลัง trending ตอบเป็นภาษาไทย
 Return ONLY a JSON array:
-[{"keyword": "ชื่อสินค้าภาษาไทย", "reason": "เหตุผลสั้นๆ"}]`;
+[{"keyword": "ชื่อสินค้าภาษาไทย", "reason": "เหตุผลสั้นๆ", "trend_score": 1-10, "momentum": "rising"|"peak"|"stable"}]`;
   }
   return `You are a pet product trend analyst and dropshipping expert.
 
@@ -192,6 +198,10 @@ Consider:
 Generate exactly 8 specific, searchable product keywords for sourcing from CJ Dropshipping.
 Focus on products that are trending NOW or about to trend.
 
+For each keyword, estimate its trend strength:
+- trend_score: 1-10 (10 = hottest right now)
+- momentum: "rising" (gaining fast), "peak" (at maximum now), "stable" (consistently trending)
+
 Return ONLY a JSON array of objects:
-[{"keyword": "product keyword", "reason": "why this is trending"}]`;
+[{"keyword": "product keyword", "reason": "why this is trending", "trend_score": 7, "momentum": "rising"}]`;
 }

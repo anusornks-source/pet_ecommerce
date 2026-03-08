@@ -36,6 +36,7 @@ export default function NicheKeywordsPage() {
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState("");
   const [filterFocus, setFilterFocus] = useState(false);
+  const [sort, setSort] = useState("updated");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
@@ -97,6 +98,7 @@ export default function NicheKeywordsPage() {
     const params = new URLSearchParams();
     if (filterType) params.set("type", filterType);
     if (filterFocus) params.set("focus", "true");
+    if (sort) params.set("sort", sort);
     if (search) params.set("search", search);
     params.set("page", String(page));
     try {
@@ -111,7 +113,7 @@ export default function NicheKeywordsPage() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchKeywords(); }, [filterType, filterFocus, page]);
+  useEffect(() => { fetchKeywords(); }, [filterType, filterFocus, sort, page]);
 
   const handleSearch = () => { setPage(1); fetchKeywords(); };
 
@@ -380,6 +382,21 @@ export default function NicheKeywordsPage() {
             <span>{filterFocus ? "★" : "☆"}</span> Focus
           </button>
 
+          {/* Sort */}
+          <select
+            value={sort}
+            onChange={(e) => { setSort(e.target.value); setPage(1); }}
+            className="border border-stone-200 rounded-lg px-2 py-1.5 text-xs text-stone-600 bg-white focus:outline-none focus:ring-1 focus:ring-orange-300"
+          >
+            <option value="updated">Updated ↓</option>
+            <option value="newest">Newest ↓</option>
+            <option value="oldest">Oldest ↑</option>
+            <option value="a-z">A → Z</option>
+            <option value="z-a">Z → A</option>
+            <option value="type">Type</option>
+            <option value="has-ai">Has AI Advice</option>
+          </select>
+
           {/* AI Model */}
           <div className="flex bg-stone-100 rounded-lg p-0.5 ml-auto">
             <button onClick={() => setAiModel("claude")}
@@ -433,7 +450,7 @@ export default function NicheKeywordsPage() {
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 hidden xl:table-cell w-48">Note</th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500">Tags</th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 hidden md:table-cell w-28">By</th>
-                <th className="w-24 px-3 py-3"></th>
+                <th className="w-24 px-3 py-3 text-xs font-medium text-stone-400 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -621,7 +638,7 @@ export default function NicheKeywordsPage() {
                   <tr className="border-b border-stone-50 bg-teal-50/30">
                     <td colSpan={12} className="px-10 py-2">
                       <div className="flex items-start gap-2">
-                        <span className="text-xs mt-0.5">🤖</span>
+                        <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-teal-100 text-teal-600 border border-teal-200 font-medium shrink-0 mt-0.5">✨ AI</span>
                         <div className="flex-1">
                           {expandedRecIds.has(kw.id) ? (
                             <div>

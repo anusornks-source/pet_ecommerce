@@ -144,10 +144,10 @@ export async function POST(request: NextRequest) {
           try {
             const prompt = buildTikTokTrendPrompt(niche.trim(), googleLang);
             const text = await aiComplete(aiModel, prompt, 400);
-            const parsed = parseJsonArray<{ keyword: string; why: string }>(text);
+            const parsed = parseJsonArray<{ keyword: string; why: string; trend_score?: number; momentum?: string }>(text);
             const kws: TrendKeyword[] = parsed
               .filter((p) => p.keyword?.trim())
-              .map((p) => ({ keyword: p.keyword, source: "TikTok Trending", trending: true }));
+              .map((p) => ({ keyword: p.keyword, source: "TikTok Trending", trending: true, trendScore: p.trend_score ?? null, momentum: (p.momentum as TrendKeyword["momentum"]) ?? null }));
             sourceResults.tiktok = kws;
             allTrends.push(...kws);
             log("source:tiktok", "ok", `${kws.length} keywords generated via AI (${aiModel})`, Date.now() - t0);
@@ -166,11 +166,13 @@ export async function POST(request: NextRequest) {
           try {
             const prompt = buildAITrendPrompt(niche.trim(), googleLang);
             const text = await aiComplete(aiModel, prompt, 600);
-            const parsed = parseJsonArray<{ keyword: string; reason: string }>(text);
+            const parsed = parseJsonArray<{ keyword: string; reason: string; trend_score?: number; momentum?: string }>(text);
             const kws: TrendKeyword[] = parsed.map((p) => ({
               keyword: p.keyword,
               source: `AI (${aiModel === "gpt" ? "GPT" : "Claude"})`,
               trending: true,
+              trendScore: p.trend_score ?? null,
+              momentum: (p.momentum as TrendKeyword["momentum"]) ?? null,
             }));
             sourceResults.ai = kws;
             allTrends.push(...kws);

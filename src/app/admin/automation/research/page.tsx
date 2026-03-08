@@ -20,6 +20,8 @@ interface TrendKeyword {
   source: string;
   volume?: number | null;
   trending?: boolean;
+  trendScore?: number | null;
+  momentum?: "rising" | "peak" | "stable" | null;
 }
 
 interface TrendInterest {
@@ -628,8 +630,14 @@ export default function ProductResearchPage() {
                   <button onClick={() => handleKeywordClick(tk.keyword)} className="hover:underline">
                     {tk.keyword}
                     {tk.volume != null && tk.volume > 0 && <span className="opacity-60 text-[9px] ml-0.5">({tk.volume.toLocaleString()})</span>}
-                    {tk.trending && <span className="text-[9px] ml-0.5">&#9650;</span>}
+                    {tk.trending && !tk.trendScore && <span className="text-[9px] ml-0.5">&#9650;</span>}
                   </button>
+                  {tk.trendScore != null && (
+                    <span className={`text-[9px] font-bold px-1 rounded ${tk.momentum === "rising" ? "bg-red-100 text-red-500" : tk.momentum === "peak" ? "bg-orange-100 text-orange-500" : "bg-stone-100 text-stone-400"}`}
+                      title={`AI trend score: ${tk.trendScore}/10 · ${tk.momentum ?? ""}`}>
+                      {tk.momentum === "rising" ? "↑" : tk.momentum === "peak" ? "▲" : "→"}{tk.trendScore}
+                    </span>
+                  )}
                   <button onClick={() => handleSaveOne(tk)} title={isSaved ? "Saved" : "Save to keyword bank"}
                     className={`ml-0.5 text-[10px] transition-colors ${isSaved ? "text-green-500 cursor-default" : "text-stone-300 hover:text-stone-500"}`}>
                     {isSaved ? "✓" : "＋"}

@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
   const focus = searchParams.get("focus") === "true";
   const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
   const limit = Math.min(500, Math.max(1, parseInt(searchParams.get("limit") || "300")));
+  const sort = searchParams.get("sort") || "newest";
 
   const where: Record<string, unknown> = {};
   if (type) where.type = type;
@@ -21,11 +22,23 @@ export async function GET(request: NextRequest) {
     { niche_th: { contains: search, mode: "insensitive" } },
   ];
   if (focus) where.focuses = { some: { userId: auth.userId } };
+  if (sort === "has-ai") where.aiRecommendation = { not: null };
+
+  const ORDER: Record<string, object> = {
+    newest:  { createdAt: "desc" },
+    oldest:  { createdAt: "asc" },
+    "a-z":   { niche: "asc" },
+    "z-a":   { niche: "desc" },
+    type:    { type: "asc" },
+    updated: { updatedAt: "desc" },
+    "has-ai": { updatedAt: "desc" },
+  };
+  const orderBy = ORDER[sort] ?? { createdAt: "desc" };
 
   const [keywords, total] = await Promise.all([
     prisma.nicheKeyword.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy,
       include: {
         createdBy: { select: { id: true, name: true, avatar: true } },
         focuses: { where: { userId: auth.userId }, select: { id: true, note: true } },

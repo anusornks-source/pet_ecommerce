@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     "4:5": "portrait_4_3",
     "9:16": "portrait_16_9",
   };
-  const imageSize = arMap[aspectRatio] ?? "square_hd";
+  const imageSize = (arMap[aspectRatio] ?? "square_hd") as "square_hd" | "portrait_4_3" | "portrait_16_9";
   const refImages: string[] = Array.isArray(imageUrls) ? imageUrls.filter(Boolean) : [];
 
   try {
@@ -35,7 +35,6 @@ export async function POST(request: NextRequest) {
             image_urls: refImages,
             prompt,
             num_images: 1,
-            enable_safety_checker: true,
           },
         })
       : refImages.length === 1
@@ -44,7 +43,6 @@ export async function POST(request: NextRequest) {
             image_url: refImages[0],
             prompt,
             num_images: 1,
-            enable_safety_checker: true,
           },
         })
       : await fal.subscribe("fal-ai/flux/schnell", {
@@ -53,7 +51,6 @@ export async function POST(request: NextRequest) {
             image_size: imageSize,
             num_inference_steps: 4,
             num_images: 1,
-            enable_safety_checker: true,
           },
         });
 

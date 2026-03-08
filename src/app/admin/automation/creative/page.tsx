@@ -4,6 +4,35 @@ import { useState, useCallback } from "react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 
+function ImagePromptCard({ item }: { item: { angle: string; prompt: string } }) {
+  const [copied, setCopied] = useState<string | null>(null);
+  const copyWithAr = (text: string, key: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(key);
+      setTimeout(() => setCopied(null), 1500);
+    });
+  };
+  return (
+    <div className="bg-stone-50 rounded-xl p-4">
+      <div className="text-[10px] text-purple-500 font-bold uppercase tracking-wide mb-2">{item.angle}</div>
+      <p className="text-xs text-stone-700 leading-relaxed font-mono mb-3">{item.prompt}</p>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="text-[10px] text-stone-400 mr-1">Copy with --ar:</span>
+        {([{ label: "1:1 Feed", ar: "1:1" }, { label: "4:5 Portrait", ar: "4:5" }, { label: "9:16 Story/TikTok", ar: "9:16" }] as const).map(({ label, ar }) => (
+          <button key={ar} type="button" onClick={() => copyWithAr(`${item.prompt} --ar ${ar}`, ar)}
+            className={`text-[10px] px-2.5 py-1 rounded-lg transition-colors font-medium ${copied === ar ? "bg-green-100 text-green-600" : "bg-purple-50 text-purple-600 hover:bg-purple-100"}`}>
+            {copied === ar ? "Copied!" : label}
+          </button>
+        ))}
+        <button type="button" onClick={() => copyWithAr(item.prompt, "base")}
+          className={`text-[10px] px-2.5 py-1 rounded-lg transition-colors ml-auto ${copied === "base" ? "bg-green-100 text-green-600" : "bg-stone-200 text-stone-500 hover:bg-stone-300"}`}>
+          {copied === "base" ? "Copied!" : "Base prompt"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 interface ProductVariant {
   id: string;
   sku: string | null;
@@ -495,29 +524,12 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
               </div>
               <div className="space-y-3">
                 {result.imageAdPrompts.map((item, i) => (
-                  <div key={i} className="bg-stone-50 rounded-xl p-4">
-                    <div className="text-[10px] text-purple-500 font-bold uppercase tracking-wide mb-2">{item.angle}</div>
-                    <p className="text-xs text-stone-700 leading-relaxed font-mono mb-3">{item.prompt}</p>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10px] text-stone-400 mr-1">Copy with --ar:</span>
-                      {[
-                        { label: "1:1 Feed", ar: "1:1" },
-                        { label: "4:5 Portrait", ar: "4:5" },
-                        { label: "9:16 Story/TikTok", ar: "9:16" },
-                      ].map(({ label, ar }) => (
-                        <button key={ar} onClick={() => copy(`${item.prompt} --ar ${ar}`)}
-                          className="text-[10px] px-2.5 py-1 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors font-medium">
-                          {label}
-                        </button>
-                      ))}
-                      <button onClick={() => copy(item.prompt)}
-                        className="text-[10px] px-2.5 py-1 rounded-lg bg-stone-200 text-stone-500 hover:bg-stone-300 transition-colors ml-auto">
-                        Base prompt
-                      </button>
-                    </div>
-                  </div>
+                  <ImagePromptCard key={i} item={item} />
                 ))}
               </div>
+              <p className="text-[11px] text-stone-400 mt-3 bg-stone-50 rounded-xl px-4 py-2.5">
+                💡 Prompt เป็นภาษาอังกฤษเสมอ เนื่องจาก Midjourney / DALL-E / Flux ทำงานกับ English prompt ได้ดีกว่า Thai มาก — คุณภาพรูปที่ได้จะสูงกว่าอย่างชัดเจน
+              </p>
             </div>
           )}
 
@@ -545,6 +557,9 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
                   </div>
                 ))}
               </div>
+              <p className="text-[11px] text-stone-400 mt-3 bg-stone-50 rounded-xl px-4 py-2.5">
+                💡 Concept เป็นภาษาอังกฤษเสมอ เนื่องจาก Sora / Runway / Kling ทำงานกับ English prompt ได้ดีกว่า Thai มาก — วิดีโอที่ได้จะมีคุณภาพสูงกว่าอย่างชัดเจน
+              </p>
             </div>
           )}
 

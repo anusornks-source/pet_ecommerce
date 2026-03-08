@@ -34,6 +34,8 @@ export async function POST(request: NextRequest) {
 
   try {
     // Gather shop context
+    const shop = shopId ? await prisma.shop.findUnique({ where: { id: shopId }, select: { usePetType: true } }) : null;
+
     const [categories, products, petTypes] = await Promise.all([
       prisma.category.findMany({
         where: shopId ? { shopCategories: { some: { shopId } } } : undefined,
@@ -46,7 +48,9 @@ export async function POST(request: NextRequest) {
         orderBy: { createdAt: "desc" },
         take: 30,
       }),
-      prisma.petType.findMany({ select: { name: true }, orderBy: { order: "asc" } }),
+      shop?.usePetType
+        ? prisma.petType.findMany({ select: { name: true }, orderBy: { order: "asc" } })
+        : Promise.resolve([]),
     ]);
 
     const catNames = categories.map((c) => c.name).join(", ");
@@ -56,10 +60,11 @@ export async function POST(request: NextRequest) {
       .map((p) => `${p.name_th || p.name} (${p.category?.name ?? "uncategorized"})`)
       .join("\n");
 
-    const prompt = `You are a pet ecommerce product strategist. Analyze this shop's data and suggest profitable niche keywords for product research on CJ Dropshipping.
+    const petContext = petNames ? `\nPet types sold: ${petNames}` : "";
 
-Shop categories: ${catNames || "none yet"}
-Pet types: ${petNames || "dogs, cats"}
+    const prompt = `You are an ecommerce product strategist. Analyze this shop's data and suggest profitable niche keywords for product research on CJ Dropshipping.
+
+Shop categories: ${catNames || "none yet"}${petContext}
 Recent products:
 ${productSample || "No products yet"}
 

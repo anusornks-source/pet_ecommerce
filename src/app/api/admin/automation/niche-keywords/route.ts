@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") || undefined;
   const search = searchParams.get("search") || undefined;
+  const focus = searchParams.get("focus") === "true";
   const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
   const limit = Math.min(500, Math.max(1, parseInt(searchParams.get("limit") || "300")));
 
@@ -19,19 +20,25 @@ export async function GET(request: NextRequest) {
     { niche: { contains: search, mode: "insensitive" } },
     { niche_th: { contains: search, mode: "insensitive" } },
   ];
+  if (focus) where.focuses = { some: { userId: auth.userId } };
 
   const [keywords, total] = await Promise.all([
     prisma.nicheKeyword.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      include: { createdBy: { select: { id: true, name: true, avatar: true } } },
+      include: {
+        createdBy: { select: { id: true, name: true, avatar: true } },
+        focuses: { where: { userId: auth.userId }, select: { id: true, note: true } },
+      },
       skip: (page - 1) * limit,
       take: limit,
     }),
     prisma.nicheKeyword.count({ where }),
   ]);
 
-  return NextResponse.json({ success: true, data: keywords, total, page, limit, totalPages: Math.ceil(total / limit) });
+  const data = keywords.map((k) => ({ ...k, isFocused: k.focuses.length > 0, note: k.focuses[0]?.note ?? null, focuses: undefined }));
+
+  return NextResponse.json({ success: true, data, total, page, limit, totalPages: Math.ceil(total / limit) });
 }
 
 // POST — bulk save
@@ -89,14 +96,38 @@ export async function DELETE(request: NextRequest) {
   return NextResponse.json({ success: true });
 }
 
-// PATCH — update tags
+// PATCH — update fields or toggle focus
 export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
-  const { id, tags, niche, niche_th, type, reason, reason_th, remark } = await request.json();
+  const { id, tags, niche, niche_th, type, reason, reason_th, remark, toggleFocus, note, aiRecommendation } = await request.json();
   if (!id) {
     return NextResponse.json({ success: false, error: "No id provided" }, { status: 400 });
+  }
+
+  // Save/update per-user note (upserts focus record)
+  if (note !== undefined) {
+    await prisma.nicheKeywordFocus.upsert({
+      where: { userId_nicheKeywordId: { userId: auth.userId, nicheKeywordId: id } },
+      create: { userId: auth.userId, nicheKeywordId: id, note: note || null },
+      update: { note: note || null },
+    });
+    return NextResponse.json({ success: true, note: note || null });
+  }
+
+  // Toggle focus for current user
+  if (toggleFocus !== undefined) {
+    const existing = await prisma.nicheKeywordFocus.findUnique({
+      where: { userId_nicheKeywordId: { userId: auth.userId, nicheKeywordId: id } },
+    });
+    if (existing) {
+      await prisma.nicheKeywordFocus.delete({ where: { id: existing.id } });
+      return NextResponse.json({ success: true, isFocused: false });
+    } else {
+      await prisma.nicheKeywordFocus.create({ data: { userId: auth.userId, nicheKeywordId: id } });
+      return NextResponse.json({ success: true, isFocused: true });
+    }
   }
 
   const data: Record<string, unknown> = {};
@@ -107,6 +138,7 @@ export async function PATCH(request: NextRequest) {
   if (reason !== undefined) data.reason = reason || null;
   if (reason_th !== undefined) data.reason_th = reason_th || null;
   if (remark !== undefined) data.remark = remark || null;
+  if (aiRecommendation !== undefined) data.aiRecommendation = aiRecommendation || null;
 
   const updated = await prisma.nicheKeyword.update({ where: { id }, data });
 

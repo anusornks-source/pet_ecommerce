@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useShopAdmin } from "@/context/ShopAdminContext";
@@ -14,6 +14,9 @@ interface NicheKeyword {
   reason_th: string | null;
   remark: string | null;
   tags: string[];
+  isFocused: boolean;
+  note: string | null;
+  aiRecommendation: string | null;
   createdAt: string;
   createdBy?: { id: string; name: string; avatar: string | null } | null;
 }
@@ -32,6 +35,7 @@ export default function NicheKeywordsPage() {
   const [keywords, setKeywords] = useState<NicheKeyword[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState("");
+  const [filterFocus, setFilterFocus] = useState(false);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
@@ -40,18 +44,25 @@ export default function NicheKeywordsPage() {
 
   // Add / Edit
   const [showAdd, setShowAdd] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);   // top form
-  const [tagEditId, setTagEditId] = useState<string | null>(null);   // inline tag editor
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [tagEditId, setTagEditId] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState("");
+  const [noteEditId, setNoteEditId] = useState<string | null>(null);
+  const [noteInput, setNoteInput] = useState("");
+  const [remarkEditId, setRemarkEditId] = useState<string | null>(null);
+  const [remarkInput, setRemarkInput] = useState("");
+  const [nicheEditId, setNicheEditId] = useState<string | null>(null);
+  const [nicheInput, setNicheInput] = useState({ niche: "", niche_th: "" });
   const [form, setForm] = useState({ niche: "", niche_th: "", type: "manual", reason: "", reason_th: "", remark: "" });
 
   // AI enhance
   const [aiModel, setAiModel] = useState<"claude" | "gpt">("claude");
   const [enhancingIds, setEnhancingIds] = useState<Set<string>>(new Set());
   const [enhancingBulk, setEnhancingBulk] = useState(false);
+  const [recommendingIds, setRecommendingIds] = useState<Set<string>>(new Set());
+  const [expandedRecIds, setExpandedRecIds] = useState<Set<string>>(new Set());
 
   const handleAiEnhance = async (ids: string[]) => {
-    // Fill keywords that have any missing field (TH or EN)
     const toEnhance = keywords.filter((k) => ids.includes(k.id) && (!k.niche_th?.trim() || !k.niche?.trim()));
     if (toEnhance.length === 0) { toast("All selected keywords are already complete"); return; }
     const isBulk = ids.length > 1;
@@ -85,6 +96,7 @@ export default function NicheKeywordsPage() {
     setLoading(true);
     const params = new URLSearchParams();
     if (filterType) params.set("type", filterType);
+    if (filterFocus) params.set("focus", "true");
     if (search) params.set("search", search);
     params.set("page", String(page));
     try {
@@ -99,7 +111,7 @@ export default function NicheKeywordsPage() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchKeywords(); }, [filterType, page]);
+  useEffect(() => { fetchKeywords(); }, [filterType, filterFocus, page]);
 
   const handleSearch = () => { setPage(1); fetchKeywords(); };
 
@@ -134,6 +146,24 @@ export default function NicheKeywordsPage() {
     } catch { toast.error("Delete failed"); }
   };
 
+  const handleToggleFocus = async (id: string) => {
+    try {
+      const res = await fetch("/api/admin/automation/niche-keywords", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, toggleFocus: true }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setKeywords((prev) => prev.map((k) => k.id === id ? { ...k, isFocused: data.isFocused } : k));
+        // If filtering by focus, remove unfocused items immediately
+        if (filterFocus && !data.isFocused) {
+          setKeywords((prev) => prev.filter((k) => k.id !== id));
+        }
+      }
+    } catch { toast.error("Focus toggle failed"); }
+  };
+
   const handleSaveTags = async (id: string, tags: string[]) => {
     try {
       const res = await fetch("/api/admin/automation/niche-keywords", {
@@ -148,6 +178,70 @@ export default function NicheKeywordsPage() {
         toast.success("Tags updated");
       }
     } catch { toast.error("Update failed"); }
+  };
+
+  const handleSaveNiche = async (id: string, niche: string, niche_th: string) => {
+    if (!niche.trim()) { toast.error("Keyword is required"); return; }
+    try {
+      const res = await fetch("/api/admin/automation/niche-keywords", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, niche, niche_th }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setKeywords((prev) => prev.map((k) => k.id === id ? { ...k, niche, niche_th: niche_th || null } : k));
+        setNicheEditId(null);
+      } else toast.error(data.error || "Update failed");
+    } catch { toast.error("Update failed"); }
+  };
+
+  const handleSaveRemark = async (id: string, remark: string) => {
+    try {
+      const res = await fetch("/api/admin/automation/niche-keywords", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, remark }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setKeywords((prev) => prev.map((k) => k.id === id ? { ...k, remark: remark || null } : k));
+        setRemarkEditId(null);
+      }
+    } catch { toast.error("Save remark failed"); }
+  };
+
+  const handleSaveNote = async (id: string, note: string) => {
+    try {
+      const res = await fetch("/api/admin/automation/niche-keywords", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, note }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setKeywords((prev) => prev.map((k) => k.id === id ? { ...k, note: data.note } : k));
+        setNoteEditId(null);
+      }
+    } catch { toast.error("Save note failed"); }
+  };
+
+  const handleAiRecommend = async (kw: NicheKeyword) => {
+    setRecommendingIds((prev) => new Set([...prev, kw.id]));
+    try {
+      const res = await fetch("/api/admin/automation/niche-keywords/recommend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: kw.id, niche: kw.niche, niche_th: kw.niche_th, aiModel }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setKeywords((prev) => prev.map((k) => k.id === kw.id ? { ...k, aiRecommendation: data.aiRecommendation } : k));
+        setExpandedRecIds((prev) => new Set([...prev, kw.id]));
+        toast.success("AI recommendation generated");
+      } else toast.error(data.error || "AI recommend failed");
+    } catch { toast.error("AI recommend failed"); }
+    finally { setRecommendingIds((prev) => { const next = new Set(prev); next.delete(kw.id); return next; }); }
   };
 
   const handleAdd = async () => {
@@ -266,17 +360,25 @@ export default function NicheKeywordsPage() {
 
           {/* Type filter */}
           <div className="flex gap-1 bg-stone-100 rounded-lg p-0.5">
-            <button onClick={() => setFilterType("")}
+            <button onClick={() => { setFilterType(""); setPage(1); }}
               className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${!filterType ? "bg-white text-stone-800 shadow-sm" : "text-stone-500"}`}>
               All
             </button>
             {Object.entries(TYPE_CONFIG).map(([key, cfg]) => (
-              <button key={key} onClick={() => setFilterType(key)}
+              <button key={key} onClick={() => { setFilterType(key); setPage(1); }}
                 className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${filterType === key ? "bg-white shadow-sm " + cfg.color : "text-stone-500"}`}>
                 {cfg.label}
               </button>
             ))}
           </div>
+
+          {/* Focus filter */}
+          <button
+            onClick={() => { setFilterFocus((v) => !v); setPage(1); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${filterFocus ? "bg-yellow-50 border-yellow-300 text-yellow-700" : "border-stone-200 text-stone-500 hover:border-stone-300"}`}
+          >
+            <span>{filterFocus ? "★" : "☆"}</span> Focus
+          </button>
 
           {/* AI Model */}
           <div className="flex bg-stone-100 rounded-lg p-0.5 ml-auto">
@@ -310,8 +412,8 @@ export default function NicheKeywordsPage() {
         </div>
       ) : keywords.length === 0 ? (
         <div className="bg-white rounded-2xl border border-stone-200 p-12 text-center text-stone-400">
-          <p className="text-sm">No saved keywords yet</p>
-          <p className="text-xs mt-1">Use Ideation in Product Research to generate and save keywords</p>
+          <p className="text-sm">{filterFocus ? "No focused keywords yet" : "No saved keywords yet"}</p>
+          <p className="text-xs mt-1">{filterFocus ? "Click ☆ on any keyword to mark it as focus" : "Use Ideation in Product Research to generate and save keywords"}</p>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
@@ -322,11 +424,13 @@ export default function NicheKeywordsPage() {
                   <input type="checkbox" checked={selected.size === keywords.length && keywords.length > 0}
                     onChange={toggleAll} className="rounded" />
                 </th>
+                <th className="w-8 px-3 py-3"></th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500">Keyword</th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 hidden md:table-cell">Thai</th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 w-20">Type</th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 hidden lg:table-cell w-48">Reason</th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 hidden lg:table-cell w-48">Remark</th>
+                <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 hidden xl:table-cell w-48">Note</th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500">Tags</th>
                 <th className="text-left px-3 py-3 text-xs font-medium text-stone-500 hidden md:table-cell w-28">By</th>
                 <th className="w-24 px-3 py-3"></th>
@@ -334,14 +438,65 @@ export default function NicheKeywordsPage() {
             </thead>
             <tbody>
               {keywords.map((kw) => (
-                <tr key={kw.id} className={`border-b border-stone-50 hover:bg-stone-50/50 ${selected.has(kw.id) ? "bg-orange-50/30" : ""}`}>
+                <React.Fragment key={kw.id}>
+                <tr className={`border-b border-stone-50 hover:bg-stone-50/50 ${selected.has(kw.id) ? "bg-orange-50/30" : ""}`}>
                   <td className="px-3 py-2.5">
                     <input type="checkbox" checked={selected.has(kw.id)} onChange={() => toggleSelect(kw.id)} className="rounded" />
                   </td>
                   <td className="px-3 py-2.5">
-                    <span className="font-medium text-stone-800">{kw.niche}</span>
+                    <button
+                      onClick={() => handleToggleFocus(kw.id)}
+                      title={kw.isFocused ? "Remove focus" : "Mark as focus"}
+                      className={`text-base leading-none transition-colors ${kw.isFocused ? "text-yellow-400 hover:text-yellow-500" : "text-stone-200 hover:text-yellow-300"}`}
+                    >
+                      {kw.isFocused ? "★" : "☆"}
+                    </button>
                   </td>
-                  <td className="px-3 py-2.5 text-stone-400 hidden md:table-cell">{kw.niche_th || "—"}</td>
+                  <td className="px-3 py-2.5">
+                    {nicheEditId === kw.id ? (
+                      <div className="flex flex-col gap-1">
+                        <input
+                          type="text"
+                          value={nicheInput.niche}
+                          onChange={(e) => setNicheInput((p) => ({ ...p, niche: e.target.value }))}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSaveNiche(kw.id, nicheInput.niche, nicheInput.niche_th);
+                            if (e.key === "Escape") setNicheEditId(null);
+                          }}
+                          placeholder="Keyword EN *"
+                          className="w-36 border border-stone-200 rounded px-2 py-0.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-orange-300"
+                          autoFocus
+                        />
+                        <input
+                          type="text"
+                          value={nicheInput.niche_th}
+                          onChange={(e) => setNicheInput((p) => ({ ...p, niche_th: e.target.value }))}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSaveNiche(kw.id, nicheInput.niche, nicheInput.niche_th);
+                            if (e.key === "Escape") setNicheEditId(null);
+                          }}
+                          placeholder="Keyword TH"
+                          className="w-36 border border-stone-200 rounded px-2 py-0.5 text-xs text-stone-400 focus:outline-none focus:ring-1 focus:ring-orange-300"
+                        />
+                        <div className="flex gap-1">
+                          <button onClick={() => handleSaveNiche(kw.id, nicheInput.niche, nicheInput.niche_th)} className="text-[10px] text-green-600 hover:text-green-800">Save</button>
+                          <button onClick={() => setNicheEditId(null)} className="text-[10px] text-stone-400 hover:text-stone-600">Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={() => { setNicheEditId(kw.id); setNicheInput({ niche: kw.niche, niche_th: kw.niche_th || "" }); setTagEditId(null); setRemarkEditId(null); setNoteEditId(null); }} className="text-left group">
+                        <p className="font-medium text-stone-800 group-hover:text-orange-600 transition-colors">{kw.niche}</p>
+                        <p className="text-[11px] text-stone-400 md:hidden">{kw.niche_th || ""}</p>
+                      </button>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 text-stone-400 hidden md:table-cell">
+                    {nicheEditId === kw.id ? null : (
+                      <button onClick={() => { setNicheEditId(kw.id); setNicheInput({ niche: kw.niche, niche_th: kw.niche_th || "" }); setTagEditId(null); setRemarkEditId(null); setNoteEditId(null); }} className="text-left group">
+                        <span className="text-sm text-stone-400 group-hover:text-orange-500 transition-colors">{kw.niche_th || <span className="text-stone-200 group-hover:text-stone-400 text-xs">+ TH</span>}</span>
+                      </button>
+                    )}
+                  </td>
                   <td className="px-3 py-2.5">
                     <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${TYPE_CONFIG[kw.type]?.color ?? "bg-stone-100 text-stone-500"}`}>
                       {TYPE_CONFIG[kw.type]?.label ?? kw.type}
@@ -352,10 +507,67 @@ export default function NicheKeywordsPage() {
                       {kw.reason_th || kw.reason || "—"}
                     </p>
                   </td>
-                  <td className="px-3 py-2.5 text-[11px] text-stone-300 hidden lg:table-cell w-48">
-                    <p className="truncate max-w-45" title={kw.remark || ""}>
-                      {kw.remark || "—"}
-                    </p>
+                  <td className="px-3 py-2.5 hidden lg:table-cell w-48">
+                    {remarkEditId === kw.id ? (
+                      <div className="flex gap-1 items-center">
+                        <input
+                          type="text"
+                          value={remarkInput}
+                          onChange={(e) => setRemarkInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSaveRemark(kw.id, remarkInput);
+                            if (e.key === "Escape") setRemarkEditId(null);
+                          }}
+                          placeholder="type remark..."
+                          className="w-36 border border-stone-200 rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-300"
+                          autoFocus
+                        />
+                        <button onClick={() => handleSaveRemark(kw.id, remarkInput)} className="text-[10px] text-green-600 hover:text-green-800">Save</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setRemarkEditId(kw.id); setRemarkInput(kw.remark || ""); setTagEditId(null); setNoteEditId(null); }}
+                        className="text-left w-full group"
+                        title={kw.remark || "Click to add remark"}
+                      >
+                        {kw.remark ? (
+                          <p className="truncate max-w-45 text-[11px] text-stone-400">{kw.remark}</p>
+                        ) : (
+                          <span className="text-[10px] text-stone-200 group-hover:text-stone-400">+ remark</span>
+                        )}
+                      </button>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 hidden xl:table-cell w-48">
+                    {noteEditId === kw.id ? (
+                      <div className="flex gap-1 items-center">
+                        <input
+                          type="text"
+                          value={noteInput}
+                          onChange={(e) => setNoteInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSaveNote(kw.id, noteInput);
+                            if (e.key === "Escape") setNoteEditId(null);
+                          }}
+                          placeholder="type note..."
+                          className="w-36 border border-stone-200 rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-300"
+                          autoFocus
+                        />
+                        <button onClick={() => handleSaveNote(kw.id, noteInput)} className="text-[10px] text-green-600 hover:text-green-800">Save</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setNoteEditId(kw.id); setNoteInput(kw.note || ""); setTagEditId(null); setRemarkEditId(null); }}
+                        className="text-left w-full group"
+                        title={kw.note || "Click to add note"}
+                      >
+                        {kw.note ? (
+                          <p className="truncate max-w-45 text-[11px] text-amber-600">{kw.note}</p>
+                        ) : (
+                          <span className="text-[10px] text-stone-200 group-hover:text-stone-400">+ note</span>
+                        )}
+                      </button>
+                    )}
                   </td>
                   <td className="px-3 py-2.5">
                     {tagEditId === kw.id ? (
@@ -392,6 +604,12 @@ export default function NicheKeywordsPage() {
                         title={kw.niche?.trim() && kw.niche_th?.trim() ? "Both EN and TH already filled" : "AI fill missing EN/TH"}>
                         {enhancingIds.has(kw.id) ? "..." : "✨"}
                       </button>
+                      <button onClick={() => handleAiRecommend(kw)}
+                        disabled={recommendingIds.has(kw.id)}
+                        className="text-[11px] text-teal-500 hover:text-teal-700 transition-colors disabled:opacity-40"
+                        title="AI: แนะนำสินค้า, pain point, ขั้นตอนต่อไป">
+                        {recommendingIds.has(kw.id) ? "..." : "🤖"}
+                      </button>
                       <button onClick={() => startEdit(kw)}
                         className="text-[11px] text-stone-400 hover:text-stone-600 transition-colors">Edit</button>
                       <button onClick={() => useInResearch(kw.niche)}
@@ -399,6 +617,31 @@ export default function NicheKeywordsPage() {
                     </div>
                   </td>
                 </tr>
+                {kw.aiRecommendation && (
+                  <tr className="border-b border-stone-50 bg-teal-50/30">
+                    <td colSpan={12} className="px-10 py-2">
+                      <div className="flex items-start gap-2">
+                        <span className="text-xs mt-0.5">🤖</span>
+                        <div className="flex-1">
+                          {expandedRecIds.has(kw.id) ? (
+                            <div>
+                              <p className="text-xs text-stone-600 whitespace-pre-wrap">{kw.aiRecommendation}</p>
+                              <button onClick={() => setExpandedRecIds((prev) => { const next = new Set(prev); next.delete(kw.id); return next; })}
+                                className="text-[10px] text-teal-500 hover:text-teal-700 mt-1">ย่อ ▲</button>
+                            </div>
+                          ) : (
+                            <div>
+                              <p className="text-xs text-stone-500 line-clamp-2">{kw.aiRecommendation}</p>
+                              <button onClick={() => setExpandedRecIds((prev) => new Set([...prev, kw.id]))}
+                                className="text-[10px] text-teal-500 hover:text-teal-700 mt-0.5">ดูทั้งหมด ▼</button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>

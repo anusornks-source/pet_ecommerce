@@ -83,7 +83,7 @@ const navEntries: NavEntry[] = [
 export default function AdminSidebar() {
   const pathname = usePathname();
   const { activeShop, shops, setActiveShopId, isAdmin, shopRole, loading } = useShopAdmin();
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(["สินค้า", "นำเข้าสินค้า", "เนื้อหาหน้าเว้บ"]));
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(["สินค้า", "นำเข้าสินค้า", "เนื้อหาหน้าเว้บ", "Automation"]));
 
   useEffect(() => {
     navEntries.forEach((entry) => {

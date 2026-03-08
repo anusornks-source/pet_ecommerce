@@ -22,6 +22,14 @@ interface TrendKeyword {
   trending?: boolean;
 }
 
+interface TrendInterest {
+  avg: number;
+  peak: number;
+  trend: "up" | "down" | "stable";
+  trendPct: number;
+  dataPoints: number[];
+}
+
 interface CJProduct {
   pid: string;
   productNameEn: string;
@@ -70,10 +78,12 @@ export default function ProductResearchPage() {
   const [stepIdx, setStepIdx] = useState(0);
   const [keywords, setKeywords] = useState<TrendKeyword[]>([]);
   const [sourceResults, setSourceResults] = useState<Record<string, TrendKeyword[]>>({});
+  const [googleInterest, setGoogleInterest] = useState<TrendInterest | null>(null);
 
   // Source & model selection
   const [selectedSources, setSelectedSources] = useState<Set<TrendSource>>(new Set(["tiktok", "cj", "google", "ai"]));
   const [aiModel, setAiModel] = useState<AIModel>("claude");
+  const [googleLang, setGoogleLang] = useState<"en" | "th">("en");
 
   // Logs & stats
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -196,6 +206,7 @@ export default function ProductResearchPage() {
     setStepIdx(0);
     setKeywords([]);
     setSourceResults({});
+    setGoogleInterest(null);
     setLogs([]);
 
     const interval = setInterval(() => {
@@ -210,13 +221,14 @@ export default function ProductResearchPage() {
       const res = await fetch("/api/admin/automation/research", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ niche: niche.trim(), sources: Array.from(selectedSources), aiModel }),
+        body: JSON.stringify({ niche: niche.trim(), sources: Array.from(selectedSources), aiModel, googleLang }),
       });
       const data = await res.json();
       if (data.logs) setLogs(data.logs);
       if (data.success) {
         setKeywords(data.data.keywords ?? []);
         setSourceResults(data.data.sourceResults ?? {});
+        setGoogleInterest(data.data.googleInterest ?? null);
         if (data.data.logs) setLogs(data.data.logs);
       } else {
         toast.error(data.error || "Research failed");
@@ -433,13 +445,16 @@ export default function ProductResearchPage() {
         <div className="flex gap-3">
           <input type="text" value={niche} onChange={(e) => setNiche(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !loading && handleResearch()}
-            placeholder='Enter a niche e.g. "dog toys", "cat grooming tools"'
+            placeholder='Enter one niche keyword e.g. "dog toys" (1 keyword only)'
             className="flex-1 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
           <button onClick={handleResearch} disabled={loading || !niche.trim()}
             className="bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white px-6 py-3 rounded-xl font-medium text-sm transition-colors whitespace-nowrap">
             {loading ? "Researching..." : "Research"}
           </button>
         </div>
+        {niche.includes(",") && (
+          <p className="text-xs text-amber-600 mt-1.5">ใส่ทีละ 1 keyword เท่านั้น — หลาย keyword ใช้ได้ที่ช่อง CJ Search (Box 3) ด้านล่าง</p>
+        )}
 
         {/* Trend Sources */}
         <div className="mt-4">
@@ -457,14 +472,25 @@ export default function ProductResearchPage() {
           </div>
         </div>
 
-        {/* AI Model */}
-        <div className="mt-3 flex items-center gap-2">
-          <span className="text-xs text-stone-500">AI Model:</span>
-          <div className="flex bg-stone-100 rounded-lg p-0.5">
-            <button onClick={() => setAiModel("claude")}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${aiModel === "claude" ? "bg-white text-purple-600 shadow-sm" : "text-stone-500"}`}>Claude</button>
-            <button onClick={() => setAiModel("gpt")}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${aiModel === "gpt" ? "bg-white text-green-600 shadow-sm" : "text-stone-500"}`}>GPT</button>
+        {/* AI Model + Google Lang */}
+        <div className="mt-3 flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-stone-500">AI Model:</span>
+            <div className="flex bg-stone-100 rounded-lg p-0.5">
+              <button onClick={() => setAiModel("claude")}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${aiModel === "claude" ? "bg-white text-purple-600 shadow-sm" : "text-stone-500"}`}>Claude</button>
+              <button onClick={() => setAiModel("gpt")}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${aiModel === "gpt" ? "bg-white text-green-600 shadow-sm" : "text-stone-500"}`}>GPT</button>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-stone-500">Keywords Lang:</span>
+            <div className="flex bg-stone-100 rounded-lg p-0.5">
+              <button onClick={() => setGoogleLang("en")}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${googleLang === "en" ? "bg-white text-blue-600 shadow-sm" : "text-stone-500"}`}>EN</button>
+              <button onClick={() => setGoogleLang("th")}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${googleLang === "th" ? "bg-white text-orange-600 shadow-sm" : "text-stone-500"}`}>TH</button>
+            </div>
           </div>
         </div>
       </div>
@@ -545,6 +571,35 @@ export default function ProductResearchPage() {
                         </span>
                       ))}
                       {kws.length > 3 && <span className="text-[10px] text-stone-400">+{kws.length - 3}</span>}
+                    </div>
+                  )}
+                  {/* Interest over time — shown on Google Trends card */}
+                  {key === "google" && googleInterest && (
+                    <div className="mt-2 pt-2 border-t border-stone-200">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] text-stone-400">Interest (90d) &quot;{niche}&quot;</span>
+                        <span className={`text-[10px] font-bold ${googleInterest.trend === "up" ? "text-green-600" : googleInterest.trend === "down" ? "text-red-500" : "text-stone-500"}`}>
+                          {googleInterest.trend === "up" ? "↑" : googleInterest.trend === "down" ? "↓" : "→"}
+                          {" "}{googleInterest.trendPct > 0 ? "+" : ""}{googleInterest.trendPct}%
+                        </span>
+                      </div>
+                      {/* Sparkline */}
+                      <div className="flex items-end gap-px h-6 mb-1">
+                        {googleInterest.dataPoints.map((v, i) => {
+                          const pct = googleInterest.peak > 0 ? Math.max(2, Math.round((v / googleInterest.peak) * 100)) : 2;
+                          return (
+                            <div
+                              key={i}
+                              style={{ height: `${pct}%` }}
+                              className={`flex-1 rounded-sm ${googleInterest.trend === "up" ? "bg-green-400" : googleInterest.trend === "down" ? "bg-red-300" : "bg-blue-300"}`}
+                            />
+                          );
+                        })}
+                      </div>
+                      <div className="flex justify-between text-[9px] text-stone-300">
+                        <span>avg {googleInterest.avg}</span>
+                        <span>peak {googleInterest.peak}</span>
+                      </div>
                     </div>
                   )}
                 </div>

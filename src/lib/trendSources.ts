@@ -7,19 +7,30 @@ export interface TrendKeyword {
   trending?: boolean;          // is it currently trending up
 }
 
+export interface TrendInterest {
+  avg: number;           // average interest score 0-100
+  peak: number;          // peak score in period
+  trend: "up" | "down" | "stable";
+  trendPct: number;      // % change first half vs second half
+  dataPoints: number[];  // last 12 weekly values for sparkline
+}
+
 // ─── 1. Google Trends ───────────────────────────────────────────
-export async function getGoogleTrends(niche: string): Promise<TrendKeyword[]> {
+export async function getGoogleTrends(niche: string, lang: "en" | "th" = "en"): Promise<TrendKeyword[]> {
   const googleTrends = await import("google-trends-api");
   const results: TrendKeyword[] = [];
 
-  // Try global queries first (no geo = more data), then TH-specific
-  const queries = [niche, `${niche} pet`, `${niche} dog`, `${niche} cat`];
+  const queries =
+    lang === "th"
+      ? [niche, `${niche} สัตว์เลี้ยง`, `${niche} สุนัข`, `${niche} แมว`]
+      : [niche, `${niche} pet`, `${niche} dog`, `${niche} cat`];
+
+  const geoOptions = lang === "th" ? { hl: "th", geo: "TH" } : {};
 
   for (const query of queries) {
     if (results.length >= 8) break;
     try {
-      // Try without geo restriction first — much more likely to return data
-      const relatedData = await googleTrends.relatedQueries({ keyword: query });
+      const relatedData = await googleTrends.relatedQueries({ keyword: query, ...geoOptions });
       const parsed = JSON.parse(relatedData);
 
       const topQueries = parsed?.default?.rankedList?.[0]?.rankedKeyword ?? [];
@@ -39,6 +50,45 @@ export async function getGoogleTrends(niche: string): Promise<TrendKeyword[]> {
   }
 
   return results;
+}
+
+// ─── 1b. Google Trends Interest Over Time ───────────────────────
+export async function getGoogleTrendsInterest(niche: string, lang: "en" | "th" = "en"): Promise<TrendInterest | null> {
+  const googleTrends = await import("google-trends-api");
+  const geoOptions = lang === "th" ? { geo: "TH" } : {};
+  try {
+    const raw = await googleTrends.interestOverTime({
+      keyword: niche,
+      startTime: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 90 days
+      ...geoOptions,
+    });
+    const parsed = JSON.parse(raw);
+    const timeline = parsed?.default?.timelineData ?? [];
+    const values: number[] = timeline
+      .map((d: { value: number[] }) => d.value?.[0] ?? 0)
+      .filter((v: number) => v >= 0);
+
+    if (values.length === 0) return null;
+
+    const nonZero = values.filter((v) => v > 0);
+    if (nonZero.length === 0) return null;
+
+    const avg = Math.round(nonZero.reduce((a, b) => a + b, 0) / nonZero.length);
+    const peak = Math.max(...nonZero);
+
+    // Compare first half vs second half to detect trend direction
+    const mid = Math.floor(values.length / 2);
+    const firstAvg = values.slice(0, mid).reduce((a, b) => a + b, 0) / mid;
+    const secondAvg = values.slice(mid).reduce((a, b) => a + b, 0) / (values.length - mid);
+    const trendPct = firstAvg > 0 ? Math.round(((secondAvg - firstAvg) / firstAvg) * 100) : 0;
+    const trend: "up" | "down" | "stable" = trendPct > 10 ? "up" : trendPct < -10 ? "down" : "stable";
+
+    const dataPoints = values.slice(-12);
+
+    return { avg, peak, trend, trendPct, dataPoints };
+  } catch {
+    return null;
+  }
 }
 
 // ─── 2. CJ Bestsellers ─────────────────────────────────────────
@@ -81,7 +131,21 @@ export async function getCJBestsellers(niche: string): Promise<TrendKeyword[]> {
 // ─── 3. TikTok Trending (AI-powered) ────────────────────────────
 // TikTok Creative Center API requires authenticated session — not accessible server-side.
 // We use AI to generate TikTok-style trending product keywords instead.
-export function buildTikTokTrendPrompt(niche: string): string {
+export function buildTikTokTrendPrompt(niche: string, lang: "en" | "th" = "en"): string {
+  if (lang === "th") {
+    return `คุณคือนักวิเคราะห์เทรนด์ TikTok สำหรับสินค้าสัตว์เลี้ยง
+
+วิเคราะห์สิ่งที่กำลัง trending บน TikTok ตอนนี้สำหรับ: "${niche}"
+
+คิดถึง:
+- วิดีโอสินค้าสัตว์เลี้ยงที่ viral (ASMR unboxing, ปฏิกิริยาของสัตว์, before/after)
+- แฮชแท็กอย่าง #สัตว์เลี้ยง #แมว #สุนัข
+- สินค้าที่ขายได้ดีในโฆษณาวิดีโอสั้น
+
+สร้าง keyword สินค้า 6 คำที่กำลัง trending บน TikTok โดยตอบเป็นภาษาไทย
+Return ONLY a JSON array:
+[{"keyword": "ชื่อสินค้าภาษาไทย", "why": "เหตุผลสั้นๆ"}]`;
+  }
   return `You are a TikTok trend analyst for the pet products niche.
 
 Based on what's trending on TikTok right now for: "${niche}"
@@ -98,7 +162,22 @@ Return ONLY a JSON array:
 }
 
 // ─── 4. AI Web Search (via Claude/GPT knowledge) ───────────────
-export function buildAITrendPrompt(niche: string): string {
+export function buildAITrendPrompt(niche: string, lang: "en" | "th" = "en"): string {
+  if (lang === "th") {
+    return `คุณคือนักวิเคราะห์เทรนด์สินค้าสัตว์เลี้ยงและผู้เชี่ยวชาญ dropshipping
+
+วิเคราะห์สินค้าสัตว์เลี้ยงที่กำลัง trending สำหรับ: "${niche}"
+
+พิจารณา:
+- สินค้าสัตว์เลี้ยงที่ viral บน Social media
+- เทรนด์ตามฤดูกาลและวันหยุดที่กำลังจะมาถึง
+- นวัตกรรมการดูแลสัตว์เลี้ยงใหม่ๆ
+- สิ่งที่เจ้าของสัตว์เลี้ยงในไทยกำลังค้นหา
+
+สร้าง keyword สินค้า 8 คำที่กำลัง trending ตอบเป็นภาษาไทย
+Return ONLY a JSON array:
+[{"keyword": "ชื่อสินค้าภาษาไทย", "reason": "เหตุผลสั้นๆ"}]`;
+  }
   return `You are a pet product trend analyst and dropshipping expert.
 
 Analyze current trending products for the pet niche: "${niche}"

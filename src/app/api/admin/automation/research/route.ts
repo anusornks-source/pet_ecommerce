@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
-import { getGoogleTrends, getCJBestsellers, buildTikTokTrendPrompt, buildAITrendPrompt, TrendKeyword } from "@/lib/trendSources";
+import { getGoogleTrends, getGoogleTrendsInterest, getCJBestsellers, buildTikTokTrendPrompt, buildAITrendPrompt, TrendKeyword, TrendInterest } from "@/lib/trendSources";
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 
@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
     niche,
     sources = ["ai"] as TrendSource[],
     aiModel = "claude" as AIModel,
+    googleLang = "en" as "en" | "th",
   } = await request.json();
 
   const logs: LogEntry[] = [];
@@ -96,16 +97,21 @@ export async function POST(request: NextRequest) {
     const allTrends: TrendKeyword[] = [];
     const sourceResults: Record<string, TrendKeyword[]> = {};
     const sourcePromises: Promise<void>[] = [];
+    let googleInterest: TrendInterest | null = null;
 
     if (sources.includes("google")) {
       sourcePromises.push(
         (async () => {
           const t0 = Date.now();
           try {
-            const kws = await getGoogleTrends(niche.trim());
+            const [kws, interest] = await Promise.all([
+              getGoogleTrends(niche.trim(), googleLang),
+              getGoogleTrendsInterest(niche.trim(), googleLang),
+            ]);
+            googleInterest = interest;
             sourceResults.google = kws;
             allTrends.push(...kws);
-            log("source:google", "ok", `${kws.length} keywords found`, Date.now() - t0);
+            log("source:google", "ok", `${kws.length} related keywords, interest avg: ${interest?.avg ?? "N/A"}`, Date.now() - t0);
           } catch (e) {
             sourceResults.google = [];
             log("source:google", "error", e instanceof Error ? e.message : "Unknown error", Date.now() - t0);
@@ -136,7 +142,7 @@ export async function POST(request: NextRequest) {
         (async () => {
           const t0 = Date.now();
           try {
-            const prompt = buildTikTokTrendPrompt(niche.trim());
+            const prompt = buildTikTokTrendPrompt(niche.trim(), googleLang);
             const text = await aiComplete(aiModel, prompt, 400);
             const parsed = parseJsonArray<{ keyword: string; why: string }>(text);
             const kws: TrendKeyword[] = parsed
@@ -158,7 +164,7 @@ export async function POST(request: NextRequest) {
         (async () => {
           const t0 = Date.now();
           try {
-            const prompt = buildAITrendPrompt(niche.trim());
+            const prompt = buildAITrendPrompt(niche.trim(), googleLang);
             const text = await aiComplete(aiModel, prompt, 600);
             const parsed = parseJsonArray<{ keyword: string; reason: string }>(text);
             const kws: TrendKeyword[] = parsed.map((p) => ({
@@ -212,7 +218,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: { keywords: uniqueKeywords, sourceResults, logs },
+      data: { keywords: uniqueKeywords, sourceResults, googleInterest, logs },
     });
   } catch (err) {
     log("fatal", "error", err instanceof Error ? err.message : "Research failed");

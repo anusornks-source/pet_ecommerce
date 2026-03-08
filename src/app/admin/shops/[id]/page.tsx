@@ -191,9 +191,10 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
             <input type="checkbox" checked={form.usePetType} onChange={(e) => setForm({ ...form, usePetType: e.target.checked })} id="usePetType" />
             <label htmlFor="usePetType" className="text-sm text-stone-600">Use Pet Type categories</label>
           </div>
+          {/* ── Primary & Secondary Colors ── */}
           <div className="col-span-2 border-t border-stone-100 pt-4">
             <div className="flex items-center justify-between mb-3">
-              <label className="text-sm font-semibold text-stone-600">Shop Colors</label>
+              <label className="text-sm font-semibold text-stone-600">Theme Colors</label>
               <button
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, primaryColor: "#f97316", secondaryColor: "#f59e0b", bgColor: "#ffffff" }))}
@@ -202,76 +203,99 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
                 Reset to default
               </button>
             </div>
-            {/* Presets */}
+            {/* Color presets */}
             <div className="flex flex-wrap gap-2 mb-4">
               {[
-                { label: "Orange Sunset",   primary: "#f97316", secondary: "#f59e0b", bg: "#ffffff" },
-                { label: "Rose Petal",      primary: "#f43f5e", secondary: "#fb7185", bg: "#fff1f2" },
-                { label: "Ocean Blue",      primary: "#2563eb", secondary: "#06b6d4", bg: "#eff6ff" },
-                { label: "Forest Green",    primary: "#16a34a", secondary: "#84cc16", bg: "#f0fdf4" },
-                { label: "Purple Dream",    primary: "#7c3aed", secondary: "#a855f7", bg: "#faf5ff" },
-                { label: "Cherry Blossom",  primary: "#db2777", secondary: "#ec4899", bg: "#fdf2f8" },
-                { label: "Teal Breeze",     primary: "#0d9488", secondary: "#10b981", bg: "#f0fdfa" },
-                { label: "Golden Hour",     primary: "#d97706", secondary: "#f59e0b", bg: "#fffbeb" },
-                { label: "Slate Night",     primary: "#475569", secondary: "#64748b", bg: "#f8fafc" },
-                { label: "Coral Reef",      primary: "#ef4444", secondary: "#f97316", bg: "#fff7ed" },
+                { label: "Orange Sunset",  primary: "#f97316", secondary: "#f59e0b" },
+                { label: "Rose Petal",     primary: "#f43f5e", secondary: "#fb7185" },
+                { label: "Ocean Blue",     primary: "#2563eb", secondary: "#06b6d4" },
+                { label: "Forest Green",   primary: "#16a34a", secondary: "#84cc16" },
+                { label: "Purple Dream",   primary: "#7c3aed", secondary: "#a855f7" },
+                { label: "Cherry Blossom", primary: "#db2777", secondary: "#ec4899" },
+                { label: "Teal Breeze",    primary: "#0d9488", secondary: "#10b981" },
+                { label: "Golden Hour",    primary: "#d97706", secondary: "#fbbf24" },
+                { label: "Slate Cool",     primary: "#475569", secondary: "#64748b" },
+                { label: "Coral Reef",     primary: "#ef4444", secondary: "#f97316" },
+                { label: "Indigo Night",   primary: "#4f46e5", secondary: "#7c3aed" },
+                { label: "Lime Fresh",     primary: "#65a30d", secondary: "#84cc16" },
               ].map((preset) => (
                 <button
                   key={preset.label}
                   type="button"
                   title={preset.label}
-                  onClick={() => setForm((f) => ({ ...f, primaryColor: preset.primary, secondaryColor: preset.secondary, bgColor: preset.bg }))}
+                  onClick={() => setForm((f) => ({ ...f, primaryColor: preset.primary, secondaryColor: preset.secondary }))}
                   className="group relative w-9 h-9 rounded-full border-2 border-white shadow-sm hover:scale-110 transition-transform ring-1 ring-stone-200"
                   style={{ background: `linear-gradient(135deg, ${preset.primary}, ${preset.secondary})` }}
                 >
-                  <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-[10px] text-stone-500 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-stone-500 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none bg-white/90 px-1 rounded">
                     {preset.label}
                   </span>
                 </button>
               ))}
             </div>
-            {/* Individual pickers */}
-            <div className="flex items-center gap-6 mt-4">
+            {/* Individual pickers + preview */}
+            <div className="flex items-center gap-5">
               <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={form.primaryColor}
-                  onChange={(e) => setForm({ ...form, primaryColor: e.target.value })}
-                  className="w-10 h-10 rounded-lg border border-stone-200 cursor-pointer p-0.5"
-                />
+                <input type="color" value={form.primaryColor} onChange={(e) => setForm({ ...form, primaryColor: e.target.value })} className="w-10 h-10 rounded-lg border border-stone-200 cursor-pointer p-0.5" />
                 <div>
                   <p className="text-xs font-medium text-stone-700">Primary</p>
                   <p className="text-xs text-stone-400 font-mono">{form.primaryColor}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={form.secondaryColor}
-                  onChange={(e) => setForm({ ...form, secondaryColor: e.target.value })}
-                  className="w-10 h-10 rounded-lg border border-stone-200 cursor-pointer p-0.5"
-                />
+                <input type="color" value={form.secondaryColor} onChange={(e) => setForm({ ...form, secondaryColor: e.target.value })} className="w-10 h-10 rounded-lg border border-stone-200 cursor-pointer p-0.5" />
                 <div>
                   <p className="text-xs font-medium text-stone-700">Secondary</p>
                   <p className="text-xs text-stone-400 font-mono">{form.secondaryColor}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={form.bgColor}
-                  onChange={(e) => setForm({ ...form, bgColor: e.target.value })}
-                  className="w-10 h-10 rounded-lg border border-stone-200 cursor-pointer p-0.5"
-                />
-                <div>
-                  <p className="text-xs font-medium text-stone-700">Background</p>
-                  <p className="text-xs text-stone-400 font-mono">{form.bgColor}</p>
-                </div>
+              <div className="ml-auto rounded-xl px-5 py-2 text-white text-sm font-medium" style={{ background: `linear-gradient(to right, ${form.primaryColor}, ${form.secondaryColor})` }}>
+                Preview
               </div>
-              <div
-                className="ml-auto rounded-xl px-5 py-2 text-white text-sm font-medium"
-                style={{ background: `linear-gradient(to right, ${form.primaryColor}, ${form.secondaryColor})` }}
-              >
+            </div>
+          </div>
+
+          {/* ── Background Color ── */}
+          <div className="col-span-2 border-t border-stone-100 pt-4">
+            <label className="text-sm font-semibold text-stone-600 block mb-3">Background Color</label>
+            {/* BG presets */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {[
+                { label: "White",        color: "#ffffff" },
+                { label: "Warm White",   color: "#fffbf5" },
+                { label: "Cream",        color: "#fef9f0" },
+                { label: "Light Gray",   color: "#f8fafc" },
+                { label: "Stone",        color: "#f5f5f4" },
+                { label: "Light Blue",   color: "#eff6ff" },
+                { label: "Light Green",  color: "#f0fdf4" },
+                { label: "Light Purple", color: "#faf5ff" },
+                { label: "Light Pink",   color: "#fdf2f8" },
+                { label: "Light Yellow", color: "#fffbeb" },
+                { label: "Light Teal",   color: "#f0fdfa" },
+                { label: "Charcoal",     color: "#1c1917" },
+              ].map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  title={p.label}
+                  onClick={() => setForm((f) => ({ ...f, bgColor: p.color }))}
+                  className={`group relative w-9 h-9 rounded-full border-2 hover:scale-110 transition-transform ring-1 ring-stone-200 ${form.bgColor === p.color ? "border-stone-500 scale-110" : "border-stone-200"}`}
+                  style={{ backgroundColor: p.color }}
+                >
+                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-stone-500 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none bg-white/90 px-1 rounded">
+                    {p.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {/* Custom picker */}
+            <div className="flex items-center gap-3">
+              <input type="color" value={form.bgColor} onChange={(e) => setForm({ ...form, bgColor: e.target.value })} className="w-10 h-10 rounded-lg border border-stone-200 cursor-pointer p-0.5" />
+              <div>
+                <p className="text-xs font-medium text-stone-700">Custom</p>
+                <p className="text-xs text-stone-400 font-mono">{form.bgColor}</p>
+              </div>
+              <div className="ml-4 rounded-xl px-5 py-2 text-sm font-medium border border-stone-200" style={{ backgroundColor: form.bgColor, color: form.primaryColor }}>
                 Preview
               </div>
             </div>

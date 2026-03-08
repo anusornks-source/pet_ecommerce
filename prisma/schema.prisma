@@ -477,6 +477,18 @@ model HeroBanner {
   secondaryCtaLabel    String?
   secondaryCtaLabel_th String?
   secondaryCtaUrl      String?
+  feat1Enabled         Boolean  @default(true)
+  feat1Icon            String?  @default("✅")
+  feat1Label           String?  @default("Quality Products")
+  feat1Label_th        String?  @default("สินค้าคุณภาพ")
+  feat2Enabled         Boolean  @default(true)
+  feat2Icon            String?  @default("🚚")
+  feat2Label           String?  @default("Nationwide Shipping")
+  feat2Label_th        String?  @default("จัดส่งทั่วไทย")
+  feat3Enabled         Boolean  @default(true)
+  feat3Icon            String?  @default("💬")
+  feat3Label           String?  @default("After Sales")
+  feat3Label_th        String?  @default("ดูแลหลังขาย")
   order                Int      @default(0)
   active               Boolean  @default(true)
   createdAt            DateTime @default(now())

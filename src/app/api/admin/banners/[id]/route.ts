@@ -16,6 +16,9 @@ export async function PUT(
     imageUrl, badge, badge_th, title, title_th, titleHighlight, titleHighlight_th,
     subtitle, subtitle_th, ctaLabel, ctaLabel_th, ctaUrl,
     secondaryCtaLabel, secondaryCtaLabel_th, secondaryCtaUrl, order, active,
+    feat1Enabled, feat1Icon, feat1Label, feat1Label_th,
+    feat2Enabled, feat2Icon, feat2Label, feat2Label_th,
+    feat3Enabled, feat3Icon, feat3Label, feat3Label_th,
   } = body;
 
   // Verify banner belongs to this shop
@@ -44,6 +47,18 @@ export async function PUT(
       ...(secondaryCtaUrl !== undefined && { secondaryCtaUrl: secondaryCtaUrl?.trim() || null }),
       ...(order !== undefined && { order: parseInt(order) || 0 }),
       ...(active !== undefined && { active: !!active }),
+      ...(feat1Enabled !== undefined && { feat1Enabled: !!feat1Enabled }),
+      ...(feat1Icon !== undefined && { feat1Icon: feat1Icon?.trim() || "✅" }),
+      ...(feat1Label !== undefined && { feat1Label: feat1Label?.trim() || null }),
+      ...(feat1Label_th !== undefined && { feat1Label_th: feat1Label_th?.trim() || null }),
+      ...(feat2Enabled !== undefined && { feat2Enabled: !!feat2Enabled }),
+      ...(feat2Icon !== undefined && { feat2Icon: feat2Icon?.trim() || "🚚" }),
+      ...(feat2Label !== undefined && { feat2Label: feat2Label?.trim() || null }),
+      ...(feat2Label_th !== undefined && { feat2Label_th: feat2Label_th?.trim() || null }),
+      ...(feat3Enabled !== undefined && { feat3Enabled: !!feat3Enabled }),
+      ...(feat3Icon !== undefined && { feat3Icon: feat3Icon?.trim() || "💬" }),
+      ...(feat3Label !== undefined && { feat3Label: feat3Label?.trim() || null }),
+      ...(feat3Label_th !== undefined && { feat3Label_th: feat3Label_th?.trim() || null }),
     },
   });
 

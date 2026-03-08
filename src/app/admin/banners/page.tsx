@@ -37,6 +37,18 @@ interface Banner {
   secondaryCtaLabel: string | null;
   secondaryCtaLabel_th: string | null;
   secondaryCtaUrl: string | null;
+  feat1Enabled: boolean;
+  feat1Icon: string | null;
+  feat1Label: string | null;
+  feat1Label_th: string | null;
+  feat2Enabled: boolean;
+  feat2Icon: string | null;
+  feat2Label: string | null;
+  feat2Label_th: string | null;
+  feat3Enabled: boolean;
+  feat3Icon: string | null;
+  feat3Label: string | null;
+  feat3Label_th: string | null;
   order: number;
   active: boolean;
 }
@@ -57,6 +69,18 @@ const emptyForm = {
   secondaryCtaLabel: "",
   secondaryCtaLabel_th: "",
   secondaryCtaUrl: "",
+  feat1Enabled: true,
+  feat1Icon: "✅",
+  feat1Label: "Quality Products",
+  feat1Label_th: "สินค้าคุณภาพ",
+  feat2Enabled: true,
+  feat2Icon: "🚚",
+  feat2Label: "Nationwide Shipping",
+  feat2Label_th: "จัดส่งทั่วไทย",
+  feat3Enabled: true,
+  feat3Icon: "💬",
+  feat3Label: "After Sales",
+  feat3Label_th: "ดูแลหลังขาย",
   active: true,
 };
 
@@ -230,6 +254,18 @@ export default function AdminBannersPage() {
       secondaryCtaLabel: b.secondaryCtaLabel ?? "",
       secondaryCtaLabel_th: b.secondaryCtaLabel_th ?? "",
       secondaryCtaUrl: b.secondaryCtaUrl ?? "",
+      feat1Enabled: b.feat1Enabled,
+      feat1Icon: b.feat1Icon ?? "✅",
+      feat1Label: b.feat1Label ?? emptyForm.feat1Label,
+      feat1Label_th: b.feat1Label_th ?? emptyForm.feat1Label_th,
+      feat2Enabled: b.feat2Enabled,
+      feat2Icon: b.feat2Icon ?? "🚚",
+      feat2Label: b.feat2Label ?? emptyForm.feat2Label,
+      feat2Label_th: b.feat2Label_th ?? emptyForm.feat2Label_th,
+      feat3Enabled: b.feat3Enabled,
+      feat3Icon: b.feat3Icon ?? "💬",
+      feat3Label: b.feat3Label ?? emptyForm.feat3Label,
+      feat3Label_th: b.feat3Label_th ?? emptyForm.feat3Label_th,
       active: b.active,
     });
     setEditId(b.id);
@@ -553,6 +589,60 @@ export default function AdminBannersPage() {
               <label className="block text-xs text-stone-500 mb-1">ปุ่มรอง URL</label>
               <input value={form.secondaryCtaUrl} onChange={(e) => setForm((f) => ({ ...f, secondaryCtaUrl: e.target.value }))} placeholder="/products?category=dogs" className={inputCls} />
             </div>
+          </div>
+
+          {/* Feature badges */}
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">Feature Badges (แถบด้านล่าง Banner)</p>
+            {([1, 2, 3] as const).map((n) => {
+              const enabledKey = `feat${n}Enabled` as const;
+              const iconKey = `feat${n}Icon` as const;
+              const labelKey = `feat${n}Label` as const;
+              const labelThKey = `feat${n}Label_th` as const;
+              return (
+                <div key={n} className="border border-stone-100 rounded-xl p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id={`feat${n}Enabled`}
+                      checked={form[enabledKey]}
+                      onChange={(e) => setForm((f) => ({ ...f, [enabledKey]: e.target.checked }))}
+                      className="w-4 h-4 accent-orange-500"
+                    />
+                    <label htmlFor={`feat${n}Enabled`} className="text-sm font-medium text-stone-600">Badge {n}</label>
+                  </div>
+                  {form[enabledKey] && (
+                    <div className="grid grid-cols-[60px_1fr_1fr] gap-2">
+                      <div>
+                        <label className="block text-xs text-stone-400 mb-1">Icon</label>
+                        <input
+                          value={form[iconKey]}
+                          onChange={(e) => setForm((f) => ({ ...f, [iconKey]: e.target.value }))}
+                          className={inputCls}
+                          maxLength={4}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-stone-400 mb-1">ข้อความ EN</label>
+                        <input
+                          value={form[labelKey]}
+                          onChange={(e) => setForm((f) => ({ ...f, [labelKey]: e.target.value }))}
+                          className={inputCls}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-stone-400 mb-1">ข้อความ TH</label>
+                        <input
+                          value={form[labelThKey]}
+                          onChange={(e) => setForm((f) => ({ ...f, [labelThKey]: e.target.value }))}
+                          className={inputCls}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           <div className="flex items-center gap-2">

@@ -22,6 +22,18 @@ interface Banner {
   secondaryCtaLabel: string | null;
   secondaryCtaLabel_th: string | null;
   secondaryCtaUrl: string | null;
+  feat1Enabled: boolean;
+  feat1Icon: string | null;
+  feat1Label: string | null;
+  feat1Label_th: string | null;
+  feat2Enabled: boolean;
+  feat2Icon: string | null;
+  feat2Label: string | null;
+  feat2Label_th: string | null;
+  feat3Enabled: boolean;
+  feat3Icon: string | null;
+  feat3Label: string | null;
+  feat3Label_th: string | null;
 }
 
 const DEFAULT_BANNER: Banner = {
@@ -41,6 +53,18 @@ const DEFAULT_BANNER: Banner = {
   secondaryCtaLabel: "View Pets",
   secondaryCtaLabel_th: "ดูสัตว์เลี้ยง",
   secondaryCtaUrl: "/products?category=dogs",
+  feat1Enabled: true,
+  feat1Icon: "✅",
+  feat1Label: "Quality Products",
+  feat1Label_th: "สินค้าคุณภาพ",
+  feat2Enabled: true,
+  feat2Icon: "🚚",
+  feat2Label: "Nationwide Shipping",
+  feat2Label_th: "จัดส่งทั่วไทย",
+  feat3Enabled: true,
+  feat3Icon: "💬",
+  feat3Label: "After Sales",
+  feat3Label_th: "ดูแลหลังขาย",
 };
 
 interface Props {
@@ -162,11 +186,25 @@ export default function HeroSlider({ banners }: Props) {
             </div>
           )}
 
-          <div className="flex items-center gap-6 text-sm text-white/80">
-            <div className="flex items-center gap-1.5">✅ {pick("สินค้าคุณภาพ", "Quality Products")}</div>
-            <div className="flex items-center gap-1.5">🚚 {pick("จัดส่งทั่วไทย", "Nationwide Shipping")}</div>
-            <div className="flex items-center gap-1.5">💬 {pick("ดูแลหลังขาย", "After Sales")}</div>
-          </div>
+          {(slide.feat1Enabled || slide.feat2Enabled || slide.feat3Enabled) && (
+            <div className="flex items-center gap-6 text-sm text-white/80">
+              {slide.feat1Enabled && (
+                <div className="flex items-center gap-1.5">
+                  {slide.feat1Icon} {pick(slide.feat1Label_th, slide.feat1Label)}
+                </div>
+              )}
+              {slide.feat2Enabled && (
+                <div className="flex items-center gap-1.5">
+                  {slide.feat2Icon} {pick(slide.feat2Label_th, slide.feat2Label)}
+                </div>
+              )}
+              {slide.feat3Enabled && (
+                <div className="flex items-center gap-1.5">
+                  {slide.feat3Icon} {pick(slide.feat3Label_th, slide.feat3Label)}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -206,19 +244,7 @@ export default function HeroSlider({ banners }: Props) {
         </>
       )}
 
-      {/* Floating badges */}
-      <div className="absolute bottom-6 right-6 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-3 flex items-center gap-2 z-20">
-        <span className="text-2xl">⭐</span>
-        <div>
-          <p className="text-xs text-stone-500">ความพึงพอใจ</p>
-          <p className="font-bold text-stone-800">4.9/5.0</p>
-        </div>
-      </div>
-      <div className="absolute top-6 right-6 bg-orange-500/90 backdrop-blur-sm text-white rounded-2xl shadow-lg p-3 z-20 text-center">
-        <p className="text-xs font-medium">สินค้ามากกว่า</p>
-        <p className="text-2xl font-bold">500+</p>
-        <p className="text-xs">รายการ</p>
-      </div>
+      {/* Floating badges - hidden */}
     </section>
   );
 }

@@ -21,6 +21,9 @@ export async function POST(request: NextRequest) {
     imageUrl, badge, badge_th, title, title_th, titleHighlight, titleHighlight_th,
     subtitle, subtitle_th, ctaLabel, ctaLabel_th, ctaUrl,
     secondaryCtaLabel, secondaryCtaLabel_th, secondaryCtaUrl, order, active,
+    feat1Enabled, feat1Icon, feat1Label, feat1Label_th,
+    feat2Enabled, feat2Icon, feat2Label, feat2Label_th,
+    feat3Enabled, feat3Icon, feat3Label, feat3Label_th,
   } = body;
 
   if (!imageUrl?.trim()) {
@@ -47,6 +50,18 @@ export async function POST(request: NextRequest) {
       secondaryCtaUrl: secondaryCtaUrl?.trim() || null,
       order: parseInt(order) || 0,
       active: active !== false,
+      feat1Enabled: feat1Enabled !== false,
+      feat1Icon: feat1Icon?.trim() || "✅",
+      feat1Label: feat1Label?.trim() || "Quality Products",
+      feat1Label_th: feat1Label_th?.trim() || "สินค้าคุณภาพ",
+      feat2Enabled: feat2Enabled !== false,
+      feat2Icon: feat2Icon?.trim() || "🚚",
+      feat2Label: feat2Label?.trim() || "Nationwide Shipping",
+      feat2Label_th: feat2Label_th?.trim() || "จัดส่งทั่วไทย",
+      feat3Enabled: feat3Enabled !== false,
+      feat3Icon: feat3Icon?.trim() || "💬",
+      feat3Label: feat3Label?.trim() || "After Sales",
+      feat3Label_th: feat3Label_th?.trim() || "ดูแลหลังขาย",
     },
   });
 

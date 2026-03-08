@@ -7,24 +7,40 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
-  const { id, niche, niche_th, aiModel = "claude" } = await request.json();
+  const { id, niche, niche_th, aiModel = "claude", shopId } = await request.json();
   if (!id || !niche?.trim()) {
     return NextResponse.json({ success: false, error: "id and niche required" }, { status: 400 });
   }
 
+  // Fetch shop context if provided
+  let shopContext = "ร้าน dropshipping ในตลาดไทย";
+  if (shopId) {
+    const shop = await prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { name: true, name_th: true, description: true, usePetType: true },
+    });
+    if (shop) {
+      const shopName = shop.name_th || shop.name;
+      const desc = shop.description ? ` (${shop.description})` : "";
+      shopContext = shop.usePetType
+        ? `ร้าน dropshipping สัตว์เลี้ยง "${shopName}"${desc} ในตลาดไทย`
+        : `ร้าน dropshipping "${shopName}"${desc} ในตลาดไทย`;
+    }
+  }
+
   const nicheLabel = niche_th ? `${niche} (${niche_th})` : niche;
 
-  const prompt = `คุณเป็นที่ปรึกษา dropshipping สัตว์เลี้ยงในตลาดไทย
+  const prompt = `คุณเป็นที่ปรึกษา dropshipping สำหรับ${shopContext}
 
 Niche keyword: "${nicheLabel}"
 
 วิเคราะห์และแนะนำ (ตอบภาษาไทย, กระชับ):
 
 **สินค้าที่ควรขาย** (3-5 รายการ)
-ระบุสินค้าที่น่าขายในนิชนี้ พร้อมเหตุผลสั้นๆ
+ระบุสินค้าที่น่าขายในนิชนี้สำหรับร้านนี้ พร้อมเหตุผลสั้นๆ
 
 **Pain point ของลูกค้า**
-ปัญหาหลักที่เจ้าของสัตว์เลี้ยงเจอ ที่สินค้าในนิชนี้แก้ได้
+ปัญหาหลักของลูกค้าที่สินค้าในนิชนี้แก้ได้
 
 **ขั้นตอนต่อไป**
 ควรทำอะไรต่อ? (research keyword ไหน, ดู competitor ไหน, ทดสอบ ad แบบไหน)

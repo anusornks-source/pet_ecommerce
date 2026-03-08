@@ -232,7 +232,7 @@ export default function NicheKeywordsPage() {
       const res = await fetch("/api/admin/automation/niche-keywords/recommend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: kw.id, niche: kw.niche, niche_th: kw.niche_th, aiModel }),
+        body: JSON.stringify({ id: kw.id, niche: kw.niche, niche_th: kw.niche_th, aiModel, shopId: activeShop?.id }),
       });
       const data = await res.json();
       if (data.success) {
@@ -392,8 +392,8 @@ export default function NicheKeywordsPage() {
           {selected.size > 0 && (
             <div className="flex gap-2">
               <button onClick={() => handleAiEnhance(Array.from(selected))} disabled={enhancingBulk}
-                className="text-xs text-purple-600 hover:text-purple-800 border border-purple-200 bg-purple-50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1">
-                {enhancingBulk ? "AI..." : `✨ AI Fill (${selected.size})`}
+                className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 border border-violet-200 transition-colors disabled:opacity-50">
+                {enhancingBulk ? <><span className="inline-block w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" /> Fill...</> : <>✨ AI Fill ({selected.size})</>}
               </button>
               <button onClick={handleDelete}
                 className="text-xs text-red-500 hover:text-red-700 border border-red-200 px-3 py-1.5 rounded-lg transition-colors">
@@ -597,18 +597,18 @@ export default function NicheKeywordsPage() {
                     <span className="text-[11px] text-stone-400">{kw.createdBy?.name ?? "—"}</span>
                   </td>
                   <td className="px-3 py-2.5">
-                    <div className="flex gap-2 items-center">
+                    <div className="flex flex-wrap gap-1.5 items-center">
                       <button onClick={() => handleAiEnhance([kw.id])}
                         disabled={enhancingIds.has(kw.id) || (!!kw.niche?.trim() && !!kw.niche_th?.trim())}
-                        className="text-[11px] text-purple-500 hover:text-purple-700 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
-                        title={kw.niche?.trim() && kw.niche_th?.trim() ? "Both EN and TH already filled" : "AI fill missing EN/TH"}>
-                        {enhancingIds.has(kw.id) ? "..." : "✨"}
+                        title={kw.niche?.trim() && kw.niche_th?.trim() ? "Both EN and TH already filled" : "AI fill missing EN/TH"}
+                        className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-violet-50 hover:bg-violet-100 text-violet-600 border border-violet-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                        {enhancingIds.has(kw.id) ? <><span className="inline-block w-2.5 h-2.5 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" /></> : <>✨ Fill</>}
                       </button>
                       <button onClick={() => handleAiRecommend(kw)}
                         disabled={recommendingIds.has(kw.id)}
-                        className="text-[11px] text-teal-500 hover:text-teal-700 transition-colors disabled:opacity-40"
-                        title="AI: แนะนำสินค้า, pain point, ขั้นตอนต่อไป">
-                        {recommendingIds.has(kw.id) ? "..." : "🤖"}
+                        title="AI: แนะนำสินค้า, pain point, ขั้นตอนต่อไป"
+                        className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-teal-50 hover:bg-teal-100 text-teal-600 border border-teal-200 transition-colors disabled:opacity-40">
+                        {recommendingIds.has(kw.id) ? <><span className="inline-block w-2.5 h-2.5 border-2 border-teal-400 border-t-transparent rounded-full animate-spin" /></> : <>✨ Advise</>}
                       </button>
                       <button onClick={() => startEdit(kw)}
                         className="text-[11px] text-stone-400 hover:text-stone-600 transition-colors">Edit</button>

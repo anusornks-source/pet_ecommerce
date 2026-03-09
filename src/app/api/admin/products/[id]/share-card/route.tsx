@@ -58,114 +58,43 @@ export async function GET(
 
     return new ImageResponse(
       (
-        <div
-          style={{
-            width: 1080,
-            height: 1080,
-            display: "flex",
-            flexDirection: "column",
-            backgroundColor: "#e7e5e4",
-          }}
-        >
-          {/* Top: product image */}
-          <div
-            style={{
-              width: 1080,
-              height: 648,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "#e7e5e4",
-            }}
-          >
+        <div style={{ width: 1080, height: 1080, display: "flex", flexDirection: "column", backgroundColor: "#e7e5e4" }}>
+
+          {/* Top: product image 648px */}
+          <div style={{ width: 1080, height: 648, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#e7e5e4" }}>
             {productImageBase64 ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={productImageBase64}
-                alt=""
-                style={{ width: 1080, height: 648 }}
-              />
+              <img src={productImageBase64} alt="" style={{ width: 1080, height: 648 }} />
             ) : (
               <div style={{ display: "flex", fontSize: 100, color: "#a8a29e" }}>🐾</div>
             )}
           </div>
 
-          {/* Bottom: info bar */}
-          <div
-            style={{
-              width: 1080,
-              height: 432,
-              backgroundColor: primaryColor,
-              display: "flex",
-              flexDirection: "row",
-              alignItems: "center",
-              paddingTop: 36,
-              paddingBottom: 36,
-              paddingLeft: 56,
-              paddingRight: 56,
-            }}
-          >
+          {/* Bottom: info 432px */}
+          <div style={{ width: 1080, height: 432, backgroundColor: primaryColor, display: "flex", flexDirection: "row", alignItems: "center", paddingTop: 40, paddingBottom: 40, paddingLeft: 56, paddingRight: 56 }}>
+
             {/* Text */}
-            <div
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                paddingRight: 32,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 46,
-                  fontWeight: 700,
-                  color: "#ffffff",
-                  lineHeight: 1.3,
-                  marginBottom: 16,
-                }}
-              >
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", paddingRight: 32 }}>
+              <div style={{ fontSize: 44, fontWeight: 700, color: "#ffffff", lineHeight: 1.3, marginBottom: 14 }}>
                 {name}
               </div>
-              <div
-                style={{
-                  fontSize: 68,
-                  fontWeight: 800,
-                  color: "#ffffff",
-                  lineHeight: 1,
-                  marginBottom: 16,
-                }}
-              >
+              <div style={{ fontSize: 64, fontWeight: 800, color: "#ffffff", lineHeight: 1, marginBottom: 14 }}>
                 ฿{price}
               </div>
               {shopName ? (
-                <div style={{ fontSize: 30, color: "#fef3c7" }}>
-                  {shopName}
-                </div>
+                <div style={{ fontSize: 28, color: "#fef3c7" }}>{shopName}</div>
               ) : null}
             </div>
 
-            {/* QR */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={qrDataUrl}
-                alt="QR"
-                style={{
-                  width: 210,
-                  height: 210,
-                  backgroundColor: "#ffffff",
-                  borderRadius: 12,
-                  padding: 8,
-                  marginBottom: 10,
-                }}
-              />
+            {/* QR wrapped in div */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <div style={{ width: 220, height: 220, backgroundColor: "#ffffff", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={qrDataUrl} alt="QR" style={{ width: 200, height: 200 }} />
+              </div>
               <div style={{ fontSize: 22, color: "#fef3c7" }}>สแกนดูสินค้า</div>
             </div>
+
           </div>
         </div>
       ),

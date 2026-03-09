@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import toast from "react-hot-toast";
 
@@ -48,9 +48,11 @@ const emptyForm = () => ({
 function ManualAddModal({
   onClose,
   onSaved,
+  initialProductId,
 }: {
   onClose: () => void;
   onSaved: (pack: PackSummary) => void;
+  initialProductId?: string;
 }) {
   const [productSearch, setProductSearch] = useState("");
   const [productOptions, setProductOptions] = useState<ProductOption[]>([]);
@@ -58,6 +60,18 @@ function ManualAddModal({
   const [showDropdown, setShowDropdown] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!initialProductId) return;
+    fetch(`/api/admin/products/${initialProductId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) {
+          const p = d.data;
+          setSelectedProduct({ id: p.id, name: p.name, name_th: p.name_th, images: p.images });
+        }
+      });
+  }, [initialProductId]);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const searchProducts = (q: string) => {
@@ -306,6 +320,8 @@ function ManualAddModal({
 
 export default function MarketingPacksPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const filterProductId = searchParams.get("productId") ?? "";
   const [packs, setPacks] = useState<PackSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -315,13 +331,16 @@ export default function MarketingPacksPage() {
   const fetchPacks = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/automation/marketing-packs");
+      const url = filterProductId
+        ? `/api/admin/automation/marketing-packs?productId=${filterProductId}`
+        : "/api/admin/automation/marketing-packs";
+      const res = await fetch(url);
       const data = await res.json();
       if (data.success) setPacks(data.data);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filterProductId]);
 
   useEffect(() => {
     fetchPacks();
@@ -348,12 +367,17 @@ export default function MarketingPacksPage() {
     );
   });
 
+  const filteredByProduct = filterProductId
+    ? filtered.filter((p) => p.productId === filterProductId)
+    : filtered;
+
   return (
     <>
       {showManualAdd && (
         <ManualAddModal
           onClose={() => setShowManualAdd(false)}
           onSaved={(pack) => setPacks((prev) => [pack, ...prev])}
+          initialProductId={filterProductId || undefined}
         />
       )}
 
@@ -362,7 +386,15 @@ export default function MarketingPacksPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-stone-800">Marketing Packs</h1>
-            <p className="text-sm text-stone-500 mt-1">{packs.length} packs ทั้งหมด</p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-sm text-stone-500">{packs.length} packs</p>
+              {filterProductId && (
+                <span className="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
+                  เฉพาะสินค้านี้ ·{" "}
+                  <button onClick={() => router.push("/admin/automation/marketing-packs")} className="underline">ดูทั้งหมด</button>
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex gap-2">
             <button
@@ -391,14 +423,14 @@ export default function MarketingPacksPage() {
         {/* List */}
         {loading ? (
           <div className="text-center py-16 text-stone-400 text-sm">กำลังโหลด...</div>
-        ) : filtered.length === 0 ? (
+        ) : filteredByProduct.length === 0 ? (
           <div className="text-center py-16 text-stone-400">
             <div className="text-4xl mb-3">📦</div>
             <p className="text-sm">ยังไม่มี Marketing Pack</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {filtered.map((pack) => {
+            {filteredByProduct.map((pack) => {
               const img = pack.product.images?.[0];
               const hook = Array.isArray(pack.hooks) ? pack.hooks[0] : null;
               const date = new Date(pack.createdAt).toLocaleDateString("th-TH", {

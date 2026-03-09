@@ -3,9 +3,17 @@
 import { useEffect, useState } from "react";
 import { use } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import ProductForm from "../ProductForm";
 import { useShopAdmin } from "@/context/ShopAdminContext";
 import toast from "react-hot-toast";
+
+interface PackSummary {
+  id: string;
+  lang: string;
+  hooks: string[];
+  createdAt: string;
+}
 
 interface ProductVariant {
   id: string;
@@ -62,6 +70,8 @@ export default function EditProductPage({
   const [syncing, setSyncing] = useState(false);
   const [togglingCJ, setTogglingCJ] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  const [packs, setPacks] = useState<PackSummary[]>([]);
+  const [packsLoading, setPacksLoading] = useState(true);
 
   const handleDuplicate = async () => {
     if (!product) return;
@@ -134,10 +144,12 @@ export default function EditProductPage({
   useEffect(() => {
     fetch(`/api/admin/products/${id}`)
       .then((r) => r.json())
-      .then((d) => {
-        if (d.success) setProduct(d.data);
-      })
+      .then((d) => { if (d.success) setProduct(d.data); })
       .finally(() => setLoading(false));
+    fetch(`/api/admin/automation/marketing-packs?productId=${id}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setPacks(d.data); })
+      .finally(() => setPacksLoading(false));
   }, [id]);
 
   if (loading) {
@@ -205,6 +217,54 @@ export default function EditProductPage({
           )}
         </div>
       </div>
+      {/* Marketing Packs section */}
+      <div className="bg-white rounded-2xl border border-stone-100 p-6 max-w-6xl">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-semibold text-stone-800">Marketing Packs</h2>
+            <p className="text-xs text-stone-400 mt-0.5">{packsLoading ? "..." : `${packs.length} pack`}</p>
+          </div>
+          <div className="flex gap-2">
+            <Link
+              href={`/admin/automation/marketing-packs?productId=${id}`}
+              className="text-xs px-3 py-1.5 rounded-lg border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors font-medium"
+            >
+              + Manual Add
+            </Link>
+            <Link
+              href="/admin/automation/creative"
+              className="text-xs px-3 py-1.5 rounded-lg border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors font-medium"
+            >
+              ✨ AI Generate
+            </Link>
+          </div>
+        </div>
+        {packsLoading ? (
+          <div className="text-xs text-stone-400">กำลังโหลด...</div>
+        ) : packs.length === 0 ? (
+          <div className="text-xs text-stone-400 py-2">ยังไม่มี Marketing Pack — สร้างใหม่ได้เลย</div>
+        ) : (
+          <div className="space-y-2">
+            {packs.map((pack) => (
+              <Link
+                key={pack.id}
+                href={`/admin/automation/marketing-packs/${pack.id}`}
+                className="flex items-center gap-3 p-3 rounded-xl border border-stone-100 hover:border-orange-200 hover:bg-orange-50 transition-colors group"
+              >
+                <span className="text-xs font-bold uppercase px-2 py-0.5 rounded bg-stone-100 text-stone-500 group-hover:bg-orange-100 group-hover:text-orange-600">{pack.lang}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-stone-600 truncate">{pack.hooks[0] ?? "—"}</p>
+                </div>
+                <span className="text-[11px] text-stone-400 shrink-0">
+                  {new Date(pack.createdAt).toLocaleDateString("th-TH", { day: "2-digit", month: "2-digit", year: "2-digit" })}
+                </span>
+                <span className="text-stone-300 group-hover:text-orange-400 text-xs">→</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="bg-white rounded-2xl border border-stone-100 p-6 max-w-6xl">
         <ProductForm
           productId={id}

@@ -30,6 +30,7 @@ model User {
   shopMemberships    ShopMember[]
   nicheKeywords      NicheKeyword[]
   nicheKeywordFocuses NicheKeywordFocus[]
+  painPoints         PainPoint[]
 
   @@unique([provider, oauthId])
   @@map("users")
@@ -63,6 +64,7 @@ model Shop {
   tags           Tag[]
   cjApiLogs      CjApiLog[]
   stores         Store[]
+  painPoints     PainPoint[]
 
   @@map("shops")
 }
@@ -701,6 +703,27 @@ model ApiLog {
   @@map("api_logs")
 }
 
+model PainPoint {
+  id                 String   @id @default(cuid())
+  shopId             String?
+  category           String
+  painPoint          String   @db.Text
+  painPoint_en       String?  @db.Text
+  severity           String
+  productOpportunity String   @db.Text
+  nicheKeyword       String
+  shopCanSolve       Boolean  @default(false)
+  createdById        String?
+  createdAt          DateTime @default(now())
+
+  shop          Shop?          @relation(fields: [shopId], references: [id])
+  createdBy     User?          @relation(fields: [createdById], references: [id])
+  nicheKeywords NicheKeyword[]
+
+  @@index([shopId])
+  @@map("pain_points")
+}
+
 model NicheKeyword {
   id          String   @id @default(cuid())
   niche       String
@@ -711,14 +734,17 @@ model NicheKeyword {
   remark            String?
   aiRecommendation  String?
   tags              String[]
+  painPointId       String?
   createdById String?
-  createdBy   User?    @relation(fields: [createdById], references: [id])
+  createdBy   User?      @relation(fields: [createdById], references: [id])
+  painPoint   PainPoint? @relation(fields: [painPointId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   focuses     NicheKeywordFocus[]
 
   @@unique([niche])
+  @@index([painPointId])
   @@map("niche_keywords")
 }
 

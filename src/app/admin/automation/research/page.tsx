@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -44,6 +44,16 @@ interface CJProduct {
 
 interface Category { id: string; name: string; icon: string | null }
 interface PetType { id: string; name: string; slug: string; icon: string | null }
+
+interface PainPointItem {
+  category: string;
+  painPoint: string;
+  painPoint_en: string;
+  severity: "high" | "medium" | "low";
+  productOpportunity: string;
+  nicheKeyword: string;
+  shopCanSolve: boolean;
+}
 
 type TrendSource = "google" | "cj" | "tiktok" | "ai";
 type AIModel = "claude" | "gpt";
@@ -96,6 +106,17 @@ export default function ProductResearchPage() {
   const [suggestions, setSuggestions] = useState<{ niche: string; niche_th?: string; type: string; reason: string; reason_th?: string }[]>([]);
   const [suggestLoading, setSuggestLoading] = useState(false);
   const [suggestError, setSuggestError] = useState("");
+
+  // Pain Points (Step 1)
+  const [painPoints, setPainPoints] = useState<PainPointItem[]>([]);
+  const [painLoading, setPainLoading] = useState(false);
+  const [painError, setPainError] = useState("");
+  const [savedPainIds, setSavedPainIds] = useState<Set<string>>(new Set());
+  const [bankPainPoints, setBankPainPoints] = useState<PainPointItem[]>([]);
+  const [bankLoading, setBankLoading] = useState(false);
+  const trendSectionRef = useRef<HTMLDivElement>(null);
+
+  const painPointsForNiche = painPoints.length > 0 ? painPoints : bankPainPoints;
 
   // Saved keywords tracking
   const [savedKeywords, setSavedKeywords] = useState<Set<string>>(new Set());
@@ -177,6 +198,71 @@ export default function ProductResearchPage() {
     });
   };
 
+  // ─── Pain Points ─────────────────────────────────────────────
+
+  const handlePainPoints = async () => {
+    setPainLoading(true);
+    setPainError("");
+    setPainPoints([]);
+    try {
+      const res = await fetch("/api/admin/automation/pain-points", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shopId: selectedShopId || activeShop?.id, aiModel }),
+      });
+      const data = await res.json();
+      if (data.success) setPainPoints(data.data);
+      else { setPainError(data.error || "Failed"); toast.error(data.error || "Failed"); }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed";
+      setPainError(msg);
+      toast.error(msg);
+    } finally {
+      setPainLoading(false);
+    }
+  };
+
+  const handleSavePainPoint = async (pp: PainPointItem) => {
+    if (savedPainIds.has(pp.nicheKeyword)) return;
+    try {
+      const res = await fetch("/api/admin/automation/pain-points/bank", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shopId: selectedShopId || activeShop?.id, ...pp }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSavedPainIds((prev) => new Set([...prev, pp.nicheKeyword]));
+        toast(data.skipped ? "มีอยู่แล้วใน Pain Point Bank" : "บันทึกแล้ว");
+      } else toast.error("บันทึกไม่สำเร็จ");
+    } catch {
+      toast.error("บันทึกไม่สำเร็จ");
+    }
+  };
+
+  const handleSendToTrend = (keyword: string) => {
+    setNiche(keyword);
+    setTimeout(() => {
+      trendSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  };
+
+  const handleLoadPainBank = async () => {
+    setBankLoading(true);
+    try {
+      const res = await fetch(`/api/admin/automation/pain-points/bank?shopId=${selectedShopId || activeShop?.id}`);
+      const data = await res.json();
+      if (data.success) {
+        setBankPainPoints(data.data);
+        toast.success(`โหลด ${data.data.length} pain points จาก bank`);
+      }
+    } catch {
+      toast.error("โหลดไม่สำเร็จ");
+    } finally {
+      setBankLoading(false);
+    }
+  };
+
   // ─── Ideation ─────────────────────────────────────────────────
 
   const handleSuggestNiches = async () => {
@@ -187,7 +273,7 @@ export default function ProductResearchPage() {
       const res = await fetch("/api/admin/automation/suggest-niches", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shopId: selectedShopId || activeShop?.id, aiModel }),
+        body: JSON.stringify({ shopId: selectedShopId || activeShop?.id, aiModel, painPoints: painPointsForNiche.length > 0 ? painPointsForNiche : undefined }),
       });
       const data = await res.json();
       if (data.success) setSuggestions(data.data);
@@ -322,7 +408,7 @@ export default function ProductResearchPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-stone-800">Product Research</h1>
-          <p className="text-sm text-stone-500 mt-1">Ideation → Trend Research → CJ Product Search</p>
+          <p className="text-sm text-stone-500 mt-1">Pain Points → Ideation → Trend Research → CJ Product Search</p>
         </div>
         {shops.length > 1 && (
           <select value={selectedShopId} onChange={(e) => setSelectedShopId(e.target.value)}
@@ -332,11 +418,92 @@ export default function ProductResearchPage() {
         )}
       </div>
 
-      {/* ═══════════════ BOX 1: Ideation ═══════════════ */}
+      {/* ═══════════════ BOX 1: Pain Points ═══════════════ */}
+      <div className="bg-white rounded-2xl border border-violet-100 p-5 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-sm font-bold text-violet-700">1. Pain Points Exploration</h2>
+            <p className="text-[11px] text-stone-400 mt-0.5">AI วิเคราะห์ pain points ของลูกค้าจากข้อมูลร้าน และบอกว่าร้านแก้ปัญหาไหนได้แล้วบ้าง</p>
+          </div>
+          <button onClick={handlePainPoints} disabled={painLoading}
+            className="border border-violet-200 bg-violet-50 hover:bg-violet-100 disabled:bg-stone-100 disabled:border-stone-200 text-violet-600 disabled:text-stone-400 px-4 py-1.5 rounded-lg font-medium text-xs transition-colors whitespace-nowrap">
+            {painLoading ? "Analyzing..." : painPoints.length > 0 ? "Regenerate" : "Explore Pain Points"}
+          </button>
+        </div>
+
+        {painLoading && (
+          <div className="flex items-center gap-2 py-6 justify-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-violet-500 border-t-transparent" />
+            <span className="text-xs text-violet-400">กำลังวิเคราะห์ Pain Points...</span>
+          </div>
+        )}
+
+        {!painLoading && painPoints.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex gap-3 text-xs text-stone-500 bg-stone-50 rounded-xl px-4 py-2">
+              <span>ร้านแก้ได้แล้ว: <b>{painPoints.filter((p) => p.shopCanSolve).length}</b></span>
+              <span>โอกาสใหม่: <b className="text-violet-600">{painPoints.filter((p) => !p.shopCanSolve).length}</b></span>
+            </div>
+            {Array.from(new Set(painPoints.map((p) => p.category))).map((cat) => (
+              <div key={cat}>
+                <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-violet-100 text-violet-600">{cat}</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                  {painPoints.filter((p) => p.category === cat).map((pp, i) => (
+                    <div key={i} className={`border rounded-xl p-3 transition-colors ${pp.shopCanSolve ? "border-stone-200 bg-stone-50 opacity-60" : "border-violet-200 bg-white hover:border-violet-300"}`}>
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <p className="text-xs text-stone-700 font-medium leading-snug flex-1">{pp.painPoint}</p>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            pp.severity === "high" ? "bg-red-100 text-red-600" :
+                            pp.severity === "medium" ? "bg-amber-100 text-amber-600" : "bg-green-100 text-green-600"
+                          }`}>{pp.severity === "high" ? "สูง" : pp.severity === "medium" ? "กลาง" : "ต่ำ"}</span>
+                          {pp.shopCanSolve && <span className="text-[10px] bg-stone-200 text-stone-500 px-1.5 py-0.5 rounded-full">มีแล้ว</span>}
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-violet-600 mb-2">{pp.productOpportunity}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[11px] font-mono bg-stone-100 px-2 py-0.5 rounded text-stone-600">{pp.nicheKeyword}</span>
+                        {!pp.shopCanSolve && (
+                          <button onClick={() => handleSendToTrend(pp.nicheKeyword)}
+                            className="text-[11px] text-orange-500 border border-orange-200 hover:bg-orange-50 px-2 py-0.5 rounded transition-colors">
+                            Trend Research
+                          </button>
+                        )}
+                        <button onClick={() => handleSavePainPoint(pp)}
+                          disabled={savedPainIds.has(pp.nicheKeyword)}
+                          className={`text-[11px] border px-2 py-0.5 rounded transition-colors ${
+                            savedPainIds.has(pp.nicheKeyword) ? "text-green-500 border-green-200 cursor-default" : "text-stone-400 border-stone-200 hover:text-violet-600 hover:border-violet-200"
+                          }`}>
+                          {savedPainIds.has(pp.nicheKeyword) ? "Saved" : "Save"}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!painLoading && painError && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-600">
+            <p className="font-medium mb-1">Error</p>
+            <p className="text-red-500">{painError}</p>
+          </div>
+        )}
+
+        {!painLoading && !painError && painPoints.length === 0 && (
+          <p className="text-xs text-stone-400 text-center py-3">
+            คลิก &quot;Explore Pain Points&quot; เพื่อให้ AI วิเคราะห์ pain points จากข้อมูลร้าน
+          </p>
+        )}
+      </div>
+
+      {/* ═══════════════ BOX 2: Ideation ═══════════════ */}
       <div className="bg-white rounded-2xl border border-purple-100 p-5 mb-4">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="text-sm font-bold text-purple-700">1. Niche Ideation</h2>
+            <h2 className="text-sm font-bold text-purple-700">2. Niche Ideation</h2>
             <p className="text-[11px] text-stone-400 mt-0.5">AI analyzes your shop data to suggest niche ideas</p>
           </div>
           <div className="flex items-center gap-2">
@@ -363,6 +530,15 @@ export default function ProductResearchPage() {
                   Copy All
                 </button>
               </>
+            )}
+            <button onClick={handleLoadPainBank} disabled={bankLoading}
+              className="text-[11px] text-violet-500 hover:text-violet-700 border border-violet-200 hover:bg-violet-50 px-2.5 py-1.5 rounded-lg transition-colors">
+              {bankLoading ? "Loading..." : bankPainPoints.length > 0 ? `Pain Bank (${bankPainPoints.length})` : "Load Pain Bank"}
+            </button>
+            {painPointsForNiche.length > 0 && (
+              <span className="text-[10px] bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full">
+                {painPointsForNiche.length} pain points as context
+              </span>
             )}
             <button onClick={handleSuggestNiches} disabled={suggestLoading}
               className="border border-purple-200 bg-purple-50 hover:bg-purple-100 disabled:bg-stone-100 disabled:border-stone-200 text-purple-600 disabled:text-stone-400 px-4 py-1.5 rounded-lg font-medium text-xs transition-colors whitespace-nowrap">
@@ -441,9 +617,9 @@ export default function ProductResearchPage() {
         )}
       </div>
 
-      {/* ═══════════════ BOX 2: Trend Research ═══════════════ */}
-      <div className="bg-white rounded-2xl border border-stone-200 p-6 mb-4">
-        <h2 className="text-sm font-bold text-stone-700 mb-3">2. Trend Research</h2>
+      {/* ═══════════════ BOX 3: Trend Research ═══════════════ */}
+      <div ref={trendSectionRef} className="bg-white rounded-2xl border border-stone-200 p-6 mb-4">
+        <h2 className="text-sm font-bold text-stone-700 mb-3">3. Trend Research</h2>
         <div className="flex gap-3">
           <input type="text" value={niche} onChange={(e) => setNiche(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !loading && handleResearch()}
@@ -679,9 +855,9 @@ export default function ProductResearchPage() {
         </div>
       )}
 
-      {/* ═══════════════ BOX 3: CJ Product Search ═══════════════ */}
+      {/* ═══════════════ BOX 4: CJ Product Search ═══════════════ */}
       <div className="bg-white rounded-2xl border border-orange-100 p-5 mb-4">
-        <h2 className="text-sm font-bold text-orange-700 mb-3">3. CJ Product Search</h2>
+        <h2 className="text-sm font-bold text-orange-700 mb-3">4. CJ Product Search</h2>
         <div className="flex gap-3">
           <input type="text" value={cjQuery} onChange={(e) => setCjQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !cjLoading && handleCJSearch()}

@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
-  const { shopId, aiModel = "claude" } = await request.json();
+  const { shopId, aiModel = "claude", painPoints } = await request.json();
 
   try {
     // Gather shop context
@@ -62,11 +62,16 @@ export async function POST(request: NextRequest) {
 
     const petContext = petNames ? `\nPet types sold: ${petNames}` : "";
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const painPointContext = Array.isArray(painPoints) && painPoints.length > 0
+      ? `\n\nPain Points discovered (use as context to generate targeted niches):\n${painPoints.map((pp: any) => `- ${pp.painPoint || pp.painPoint_en} → keyword: ${pp.nicheKeyword}`).join("\n")}\n\nGenerate niches that specifically address these pain points.`
+      : "";
+
     const prompt = `You are an ecommerce product strategist. Analyze this shop's data and suggest profitable niche keywords for product research on CJ Dropshipping.
 
 Shop categories: ${catNames || "none yet"}${petContext}
 Recent products:
-${productSample || "No products yet"}
+${productSample || "No products yet"}${painPointContext}
 
 Generate 12 niche keyword suggestions. Mix these types:
 - Gaps: niches the shop is missing but should have

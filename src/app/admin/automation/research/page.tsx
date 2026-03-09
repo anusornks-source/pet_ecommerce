@@ -111,6 +111,8 @@ export default function ProductResearchPage() {
   const [painPoints, setPainPoints] = useState<PainPointItem[]>([]);
   const [painLoading, setPainLoading] = useState(false);
   const [painError, setPainError] = useState("");
+  const [painRaw, setPainRaw] = useState<string>("");
+  const [showPainLog, setShowPainLog] = useState(false);
   const [savedPainIds, setSavedPainIds] = useState<Set<string>>(new Set());
   const [bankPainPoints, setBankPainPoints] = useState<PainPointItem[]>([]);
   const [bankLoading, setBankLoading] = useState(false);
@@ -204,6 +206,7 @@ export default function ProductResearchPage() {
     setPainLoading(true);
     setPainError("");
     setPainPoints([]);
+    setPainRaw("");
     try {
       const res = await fetch("/api/admin/automation/pain-points", {
         method: "POST",
@@ -211,11 +214,15 @@ export default function ProductResearchPage() {
         body: JSON.stringify({ shopId: selectedShopId || activeShop?.id, aiModel }),
       });
       const data = await res.json();
-      if (data.success) setPainPoints(data.data);
-      else { setPainError(data.error || "Failed"); toast.error(data.error || "Failed"); }
+      setPainRaw(JSON.stringify(data, null, 2));
+      if (data.success) {
+        setPainPoints(data.data);
+        if (data.data.length === 0) setPainError("AI returned empty result — ลองกด Regenerate อีกครั้ง");
+      } else { setPainError(data.error || "Failed"); toast.error(data.error || "Failed"); }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed";
       setPainError(msg);
+      setPainRaw(msg);
       toast.error(msg);
     } finally {
       setPainLoading(false);
@@ -425,10 +432,18 @@ export default function ProductResearchPage() {
             <h2 className="text-sm font-bold text-violet-700">1. Pain Points Exploration</h2>
             <p className="text-[11px] text-stone-400 mt-0.5">AI วิเคราะห์ pain points ของลูกค้าจากข้อมูลร้าน และบอกว่าร้านแก้ปัญหาไหนได้แล้วบ้าง</p>
           </div>
-          <button onClick={handlePainPoints} disabled={painLoading}
-            className="border border-violet-200 bg-violet-50 hover:bg-violet-100 disabled:bg-stone-100 disabled:border-stone-200 text-violet-600 disabled:text-stone-400 px-4 py-1.5 rounded-lg font-medium text-xs transition-colors whitespace-nowrap">
-            {painLoading ? "Analyzing..." : painPoints.length > 0 ? "Regenerate" : "Explore Pain Points"}
-          </button>
+          <div className="flex items-center gap-2">
+            {painRaw && (
+              <button onClick={() => setShowPainLog((v) => !v)}
+                className="text-[10px] text-stone-400 hover:text-blue-500 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors">
+                {showPainLog ? "Hide Log" : "Log"}
+              </button>
+            )}
+            <button onClick={handlePainPoints} disabled={painLoading}
+              className="border border-violet-200 bg-violet-50 hover:bg-violet-100 disabled:bg-stone-100 disabled:border-stone-200 text-violet-600 disabled:text-stone-400 px-4 py-1.5 rounded-lg font-medium text-xs transition-colors whitespace-nowrap">
+              {painLoading ? "Analyzing..." : painPoints.length > 0 ? "Regenerate" : "Explore Pain Points"}
+            </button>
+          </div>
         </div>
 
         {painLoading && (
@@ -483,6 +498,12 @@ export default function ProductResearchPage() {
               </div>
             ))}
           </div>
+        )}
+
+        {showPainLog && painRaw && (
+          <pre className="text-[11px] text-stone-500 font-mono bg-stone-50 border border-stone-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap max-h-64 overflow-y-auto">
+            {painRaw}
+          </pre>
         )}
 
         {!painLoading && painError && (

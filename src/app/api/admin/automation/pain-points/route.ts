@@ -113,7 +113,7 @@ Return ONLY a JSON array (ไม่ต้องมีข้อความอื
     }
     const painPoints = match ? JSON.parse(match[0]) : [];
 
-    return NextResponse.json({ success: true, data: painPoints });
+    return NextResponse.json({ success: true, data: painPoints, _raw: rawText });
   } catch (err) {
     return NextResponse.json({
       success: false,

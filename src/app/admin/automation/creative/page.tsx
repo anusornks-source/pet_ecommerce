@@ -1,8 +1,29 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import Image from "next/image";
 import toast from "react-hot-toast";
+
+function AutoTextarea({ value, onChange, className, minHeight = 72 }: { value: string; onChange: (v: string) => void; className?: string; minHeight?: number }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const resize = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.max(el.scrollHeight, minHeight) + "px";
+  }, [minHeight]);
+  useEffect(() => { resize(); }, [value, resize]);
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={(e) => { onChange(e.target.value); resize(); }}
+      className={className}
+      style={{ resize: "none", overflow: "hidden", minHeight }}
+      rows={1}
+    />
+  );
+}
 
 const AR_OPTIONS = [
   { label: "1:1 Feed", ar: "1:1" },
@@ -22,11 +43,11 @@ function VideoConceptCard({ item, onConceptChange }: { item: { angle: string; co
   return (
     <div className="bg-stone-50 rounded-xl p-4">
       <div className="text-[10px] text-pink-500 font-bold uppercase tracking-wide mb-2">{item.angle}</div>
-      <textarea
+      <AutoTextarea
         value={edited}
-        onChange={(e) => { setEdited(e.target.value); onConceptChange?.(e.target.value); }}
-        className="w-full text-xs text-stone-700 leading-relaxed font-sans bg-white border border-stone-200 rounded-lg px-3 py-2 mb-2 focus:outline-none focus:ring-1 focus:ring-pink-300 resize-none min-h-[3rem]"
-        style={{ fieldSizing: "content" } as unknown as React.CSSProperties}
+        onChange={(v) => { setEdited(v); onConceptChange?.(v); }}
+        className="w-full text-xs text-stone-700 leading-relaxed font-sans bg-white border border-stone-200 rounded-lg px-3 py-2 mb-2 focus:outline-none focus:ring-1 focus:ring-pink-300"
+        minHeight={72}
       />
       <div className="flex justify-end">
         <button onClick={copy}
@@ -82,11 +103,11 @@ function ImagePromptCard({ item, productImages, onPromptChange }: { item: { angl
   return (
     <div className="bg-stone-50 rounded-xl p-4">
       <div className="text-[10px] text-purple-500 font-bold uppercase tracking-wide mb-2">{item.angle}</div>
-      <textarea
+      <AutoTextarea
         value={editedPrompt}
-        onChange={(e) => { setEditedPrompt(e.target.value); onPromptChange?.(e.target.value); }}
-        className="w-full text-xs text-stone-700 leading-relaxed font-mono bg-white border border-stone-200 rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring-1 focus:ring-purple-300 resize-none min-h-12"
-        style={{ fieldSizing: "content" } as unknown as React.CSSProperties}
+        onChange={(v) => { setEditedPrompt(v); onPromptChange?.(v); }}
+        className="w-full text-xs text-stone-700 leading-relaxed font-mono bg-white border border-stone-200 rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring-1 focus:ring-purple-300"
+        minHeight={72}
       />
 
       {/* Reference image picker for img2img */}
@@ -565,11 +586,11 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
               {editedHooks.map((hook, i) => (
                 <div key={i} className="flex items-start gap-2">
                   <span className="text-xs text-stone-400 mt-2.5 shrink-0">{i + 1}.</span>
-                  <textarea
+                  <AutoTextarea
                     value={hook}
-                    onChange={(e) => setEditedHooks((prev) => prev.map((h, idx) => idx === i ? e.target.value : h))}
-                    className="flex-1 text-sm text-stone-700 bg-white border border-stone-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-stone-300 resize-none min-h-10"
-                    style={{ fieldSizing: "content" } as unknown as React.CSSProperties}
+                    onChange={(v) => setEditedHooks((prev) => prev.map((h, idx) => idx === i ? v : h))}
+                    className="flex-1 text-sm text-stone-700 bg-white border border-stone-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-stone-300"
+                    minHeight={72}
                   />
                   <button onClick={() => copy(hook)} className="text-[10px] text-stone-400 hover:text-orange-500 shrink-0 mt-2.5">Copy</button>
                 </div>
@@ -594,11 +615,11 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
                 </button>
               ))}
             </div>
-            <textarea
+            <AutoTextarea
               value={editedCaptions[captionTab]}
-              onChange={(e) => setEditedCaptions((prev) => ({ ...prev, [captionTab]: e.target.value }))}
-              className="w-full text-sm text-stone-700 font-sans bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-stone-300 resize-none min-h-28 leading-relaxed"
-              style={{ fieldSizing: "content" } as unknown as React.CSSProperties}
+              onChange={(v) => setEditedCaptions((prev) => ({ ...prev, [captionTab]: v }))}
+              className="w-full text-sm text-stone-700 font-sans bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-stone-300 leading-relaxed"
+              minHeight={72}
             />
           </div>
 
@@ -620,11 +641,11 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
                     onChange={(e) => setEditedAdAngles((prev) => prev.map((a, idx) => idx === i ? { ...a, headline: e.target.value } : a))}
                     className="w-full text-sm font-bold text-stone-800 bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-orange-300"
                   />
-                  <textarea
+                  <AutoTextarea
                     value={angle.body}
-                    onChange={(e) => setEditedAdAngles((prev) => prev.map((a, idx) => idx === i ? { ...a, body: e.target.value } : a))}
-                    className="w-full text-xs text-stone-600 bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-orange-300 resize-none min-h-10"
-                    style={{ fieldSizing: "content" } as unknown as React.CSSProperties}
+                    onChange={(v) => setEditedAdAngles((prev) => prev.map((a, idx) => idx === i ? { ...a, body: v } : a))}
+                    className="w-full text-xs text-stone-600 bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-orange-300"
+                    minHeight={72}
                   />
                   <div className="flex justify-end">
                     <CopyBtn text={`${angle.headline}\n${angle.body}`} />
@@ -640,11 +661,11 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
               <h2 className="font-bold text-stone-800 text-sm">UGC Video Script</h2>
               <CopyBtn text={editedUgcScript} />
             </div>
-            <textarea
+            <AutoTextarea
               value={editedUgcScript}
-              onChange={(e) => setEditedUgcScript(e.target.value)}
-              className="w-full text-sm text-stone-700 font-sans bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-stone-300 resize-none min-h-28 leading-relaxed"
-              style={{ fieldSizing: "content" } as unknown as React.CSSProperties}
+              onChange={setEditedUgcScript}
+              className="w-full text-sm text-stone-700 font-sans bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-stone-300 leading-relaxed"
+              minHeight={72}
             />
           </div>
 

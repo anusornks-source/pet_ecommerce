@@ -326,6 +326,7 @@ export default function MarketingPacksPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [duplicating, setDuplicating] = useState<string | null>(null);
   const [showManualAdd, setShowManualAdd] = useState(false);
   const [filterProduct, setFilterProduct] = useState<{ id: string; name: string; name_th: string | null; images: string[] } | null>(null);
 
@@ -364,6 +365,45 @@ export default function MarketingPacksPage() {
       setPacks((prev) => prev.filter((p) => p.id !== id));
     } finally {
       setDeleting(null);
+    }
+  };
+
+  const handleDuplicate = async (id: string) => {
+    setDuplicating(id);
+    try {
+      const res = await fetch(`/api/admin/automation/marketing-packs/${id}`);
+      const data = await res.json();
+      if (!data.success) { toast.error("โหลด pack ไม่สำเร็จ"); return; }
+      const src = data.data;
+      const dupRes = await fetch("/api/admin/automation/marketing-packs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: src.productId,
+          lang: src.lang,
+          productName: src.productName,
+          hooks: src.hooks,
+          captionFacebook: src.captionFacebook,
+          captionInstagram: src.captionInstagram,
+          captionLine: src.captionLine,
+          adAngles: src.adAngles,
+          ugcScript: src.ugcScript,
+          thumbnailTexts: src.thumbnailTexts,
+          imageAdPrompts: src.imageAdPrompts,
+          videoAdPrompts: src.videoAdPrompts,
+        }),
+      });
+      const dupData = await dupRes.json();
+      if (dupData.success) {
+        toast.success("Duplicated!");
+        setPacks((prev) => [{ ...dupData.data, product: src.product }, ...prev]);
+      } else {
+        toast.error(dupData.error ?? "Duplicate ไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("Duplicate ไม่สำเร็จ");
+    } finally {
+      setDuplicating(null);
     }
   };
 
@@ -508,13 +548,22 @@ export default function MarketingPacksPage() {
                     <p className="text-[10px] text-stone-400 font-mono mt-1.5">#{pack.id.slice(0, 8)}</p>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-[11px] text-stone-400">{date}</span>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDelete(pack.id); }}
-                        disabled={deleting === pack.id}
-                        className="text-[11px] text-stone-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                      >
-                        {deleting === pack.id ? "กำลังลบ..." : "ลบ"}
-                      </button>
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDuplicate(pack.id); }}
+                          disabled={duplicating === pack.id}
+                          className="text-[11px] text-stone-300 hover:text-violet-500 transition-colors"
+                        >
+                          {duplicating === pack.id ? "..." : "Dup"}
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDelete(pack.id); }}
+                          disabled={deleting === pack.id}
+                          className="text-[11px] text-stone-300 hover:text-red-400 transition-colors"
+                        >
+                          {deleting === pack.id ? "..." : "ลบ"}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

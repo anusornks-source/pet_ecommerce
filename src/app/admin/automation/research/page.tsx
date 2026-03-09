@@ -116,9 +116,18 @@ export default function ProductResearchPage() {
   const [savedPainIds, setSavedPainIds] = useState<Set<string>>(new Set());
   const [bankPainPoints, setBankPainPoints] = useState<PainPointItem[]>([]);
   const [bankLoading, setBankLoading] = useState(false);
+  const [showBankPicker, setShowBankPicker] = useState(false);
+  const [bankAllItems, setBankAllItems] = useState<PainPointItem[]>([]);
+  const [bankSelected, setBankSelected] = useState<Set<string>>(new Set());
+  const [selectedPainForNiche, setSelectedPainForNiche] = useState<Set<string>>(new Set());
   const trendSectionRef = useRef<HTMLDivElement>(null);
 
-  const painPointsForNiche = painPoints.length > 0 ? painPoints : bankPainPoints;
+  // pain points สำหรับ niche context: ที่ tick จาก Step 1 > bank > ทั้งหมด
+  const painPointsForNiche = selectedPainForNiche.size > 0
+    ? painPoints.filter((p) => selectedPainForNiche.has(p.nicheKeyword))
+    : bankPainPoints.length > 0
+      ? bankPainPoints
+      : [];
 
   // Saved keywords tracking
   const [savedKeywords, setSavedKeywords] = useState<Set<string>>(new Set());
@@ -263,15 +272,26 @@ export default function ProductResearchPage() {
     try {
       const res = await fetch(`/api/admin/automation/pain-points/bank?shopId=${selectedShopId || activeShop?.id}`);
       const data = await res.json();
-      if (data.success) {
-        setBankPainPoints(data.data);
-        toast.success(`โหลด ${data.data.length} pain points จาก bank`);
+      if (data.success && data.data.length > 0) {
+        setBankAllItems(data.data);
+        // Pre-select all
+        setBankSelected(new Set(data.data.map((p: PainPointItem) => p.nicheKeyword)));
+        setShowBankPicker(true);
+      } else {
+        toast("ยังไม่มี Pain Point ใน Bank");
       }
     } catch {
       toast.error("โหลดไม่สำเร็จ");
     } finally {
       setBankLoading(false);
     }
+  };
+
+  const handleConfirmBankSelection = () => {
+    const selected = bankAllItems.filter((p) => bankSelected.has(p.nicheKeyword));
+    setBankPainPoints(selected);
+    setShowBankPicker(false);
+    toast.success(`เลือก ${selected.length} pain points เป็น context`);
   };
 
   // ─── Ideation ─────────────────────────────────────────────────
@@ -415,6 +435,69 @@ export default function ProductResearchPage() {
 
   return (
     <div className="max-w-6xl mx-auto">
+      {/* Pain Bank Picker Modal */}
+      {showBankPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowBankPicker(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[80vh] flex flex-col mx-4">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
+              <div>
+                <h3 className="font-bold text-stone-800 text-sm">เลือก Pain Points เป็น context</h3>
+                <p className="text-[11px] text-stone-400 mt-0.5">เลือก pain points ที่จะใช้ generate niches</p>
+              </div>
+              <button onClick={() => setShowBankPicker(false)} className="text-stone-400 hover:text-stone-600 text-xl leading-none">×</button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 py-3 space-y-1.5">
+              {/* Select all / none */}
+              <div className="flex items-center gap-3 pb-2 border-b border-stone-100 mb-2">
+                <button onClick={() => setBankSelected(new Set(bankAllItems.map((p) => p.nicheKeyword)))}
+                  className="text-[11px] text-violet-500 hover:text-violet-700">เลือกทั้งหมด</button>
+                <button onClick={() => setBankSelected(new Set())}
+                  className="text-[11px] text-stone-400 hover:text-stone-600">ไม่เลือก</button>
+                <span className="text-[11px] text-stone-400 ml-auto">{bankSelected.size}/{bankAllItems.length}</span>
+              </div>
+              {bankAllItems.map((pp) => (
+                <label key={pp.nicheKeyword}
+                  className={`flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors ${
+                    bankSelected.has(pp.nicheKeyword) ? "bg-violet-50 border border-violet-200" : "bg-stone-50 border border-transparent hover:bg-stone-100"
+                  }`}>
+                  <input type="checkbox" checked={bankSelected.has(pp.nicheKeyword)}
+                    onChange={() => setBankSelected((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(pp.nicheKeyword)) next.delete(pp.nicheKeyword);
+                      else next.add(pp.nicheKeyword);
+                      return next;
+                    })}
+                    className="mt-0.5 accent-violet-500" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-stone-700 font-medium leading-snug">{pp.painPoint_th || pp.painPoint}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] font-mono bg-white border border-stone-200 px-1.5 py-0.5 rounded text-stone-500">{pp.nicheKeyword}</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                        pp.severity === "high" ? "bg-red-100 text-red-600" :
+                        pp.severity === "medium" ? "bg-amber-100 text-amber-600" : "bg-green-100 text-green-600"
+                      }`}>{pp.severity === "high" ? "สูง" : pp.severity === "medium" ? "กลาง" : "ต่ำ"}</span>
+                      {pp.shopCanSolve && <span className="text-[10px] bg-stone-200 text-stone-500 px-1.5 py-0.5 rounded-full">มีแล้ว</span>}
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <div className="px-5 py-4 border-t border-stone-100 flex items-center gap-3">
+              <button onClick={handleConfirmBankSelection}
+                disabled={bankSelected.size === 0}
+                className="flex-1 bg-violet-500 hover:bg-violet-600 disabled:bg-stone-300 text-white text-sm py-2.5 rounded-xl font-medium transition-colors">
+                ใช้ {bankSelected.size} pain points เป็น context
+              </button>
+              <button onClick={() => setShowBankPicker(false)}
+                className="px-4 text-sm text-stone-500 hover:text-stone-700 border border-stone-200 rounded-xl py-2.5 transition-colors">
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -463,6 +546,17 @@ export default function ProductResearchPage() {
               <span>ร้านแก้ได้แล้ว: <b>{painPoints.filter((p) => p.shopCanSolve).length}</b></span>
               <span>โอกาสใหม่: <b className="text-violet-600">{painPoints.filter((p) => !p.shopCanSolve).length}</b></span>
               <div className="ml-auto flex items-center gap-2">
+                {selectedPainForNiche.size > 0 && (
+                  <span className="text-[10px] bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full">
+                    {selectedPainForNiche.size} selected for niche
+                  </span>
+                )}
+                <button onClick={() => {
+                  if (selectedPainForNiche.size === painPoints.length) setSelectedPainForNiche(new Set());
+                  else setSelectedPainForNiche(new Set(painPoints.map((p) => p.nicheKeyword)));
+                }} className="text-[11px] text-stone-400 hover:text-violet-600 border border-stone-200 hover:border-violet-200 px-2 py-0.5 rounded-lg transition-colors">
+                  {selectedPainForNiche.size === painPoints.length ? "Deselect All" : "Select All"}
+                </button>
                 <button
                   onClick={async () => {
                     const unsaved = painPoints.filter((pp) => !savedPainIds.has(pp.nicheKeyword));
@@ -479,9 +573,17 @@ export default function ProductResearchPage() {
               <div key={cat}>
                 <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-violet-100 text-violet-600">{cat}</span>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                  {painPoints.filter((p) => p.category === cat).map((pp, i) => (
-                    <div key={i} className={`border rounded-xl p-3 transition-colors ${pp.shopCanSolve ? "border-stone-200 bg-stone-50 opacity-60" : "border-violet-200 bg-white hover:border-violet-300"}`}>
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                  {(() => { const catItems = painPoints.filter((p) => p.category === cat); return catItems.map((pp, i) => (
+                    <div key={i} className={`border rounded-xl p-3 transition-colors ${i === catItems.length - 1 && catItems.length % 2 === 1 ? "md:col-span-2" : ""} ${selectedPainForNiche.has(pp.nicheKeyword) ? "ring-2 ring-violet-300" : ""} ${pp.shopCanSolve ? "border-stone-200 bg-stone-50 opacity-60" : "border-violet-200 bg-white hover:border-violet-300"}`}>
+                      <div className="flex items-start gap-2 mb-1.5">
+                        <input type="checkbox" checked={selectedPainForNiche.has(pp.nicheKeyword)}
+                          onChange={() => setSelectedPainForNiche((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(pp.nicheKeyword)) next.delete(pp.nicheKeyword);
+                            else next.add(pp.nicheKeyword);
+                            return next;
+                          })}
+                          className="mt-0.5 accent-violet-500 shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-xs text-stone-700 font-medium leading-snug">{pp.painPoint_th || pp.painPoint}</p>
                           {pp.painPoint && pp.painPoint_th && (
@@ -514,7 +616,7 @@ export default function ProductResearchPage() {
                         </button>
                       </div>
                     </div>
-                  ))}
+                  )); })()}
                 </div>
               </div>
             ))}

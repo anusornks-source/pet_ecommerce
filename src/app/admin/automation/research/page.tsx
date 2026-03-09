@@ -106,6 +106,8 @@ export default function ProductResearchPage() {
   const [suggestions, setSuggestions] = useState<{ niche: string; niche_th?: string; type: string; reason: string; reason_th?: string }[]>([]);
   const [suggestLoading, setSuggestLoading] = useState(false);
   const [suggestError, setSuggestError] = useState("");
+  const [suggestRaw, setSuggestRaw] = useState("");
+  const [showSuggestLog, setShowSuggestLog] = useState(false);
 
   // Pain Points (Step 1)
   const [painPoints, setPainPoints] = useState<PainPointItem[]>([]);
@@ -117,6 +119,8 @@ export default function ProductResearchPage() {
   const [bankPainPoints, setBankPainPoints] = useState<PainPointItem[]>([]);
   const [bankLoading, setBankLoading] = useState(false);
   const [showBankPicker, setShowBankPicker] = useState(false);
+  const [showContextDetail, setShowContextDetail] = useState(false);
+  const [showBankDetail, setShowBankDetail] = useState(false);
   const [bankAllItems, setBankAllItems] = useState<PainPointItem[]>([]);
   const [bankSelected, setBankSelected] = useState<Set<string>>(new Set());
   const [bankPickerPage, setBankPickerPage] = useState(1);
@@ -276,8 +280,12 @@ export default function ProductResearchPage() {
       const data = await res.json();
       if (data.success && data.data.length > 0) {
         setBankAllItems(data.data);
-        setBankSelected(new Set());
+        // Keep previous selection — only reset if opening fresh (no prior selection)
+        if (bankPainPoints.length > 0) {
+          setBankSelected(new Set(bankPainPoints.map((p) => p.nicheKeyword)));
+        }
         setBankPickerPage(1);
+        setBankPickerSearch("");
         setShowBankPicker(true);
       } else {
         toast("ยังไม่มี Pain Point ใน Bank");
@@ -302,6 +310,7 @@ export default function ProductResearchPage() {
     setSuggestLoading(true);
     setSuggestError("");
     setSuggestions([]);
+    setSuggestRaw("");
     try {
       const res = await fetch("/api/admin/automation/suggest-niches", {
         method: "POST",
@@ -309,11 +318,17 @@ export default function ProductResearchPage() {
         body: JSON.stringify({ shopId: selectedShopId || activeShop?.id, aiModel, painPoints: painPointsForNiche.length > 0 ? painPointsForNiche : undefined }),
       });
       const data = await res.json();
-      if (data.success) setSuggestions(data.data);
-      else { setSuggestError(data.error || "Failed"); toast.error(data.error || "Failed"); }
+      setSuggestRaw(data._raw || JSON.stringify(data, null, 2));
+      if (data.success) {
+        setSuggestions(data.data);
+        if (data.data.length === 0) {
+          setSuggestError("AI returned empty result — ลองกด Regenerate อีกครั้ง");
+          setShowSuggestLog(true);
+        }
+      } else { setSuggestError(data.error || "Failed"); toast.error(data.error || "Failed"); }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed";
-      setSuggestError(msg); toast.error(msg);
+      setSuggestError(msg); setSuggestRaw(msg); toast.error(msg);
     } finally { setSuggestLoading(false); }
   };
 
@@ -657,6 +672,13 @@ export default function ProductResearchPage() {
                           }`}>
                           {savedPainIds.has(pp.nicheKeyword) ? "Saved" : "Save"}
                         </button>
+                        <button onClick={() => {
+                          setPainPoints((prev) => prev.filter((p) => p.nicheKeyword !== pp.nicheKeyword));
+                          setSelectedPainForNiche((prev) => { const next = new Set(prev); next.delete(pp.nicheKeyword); return next; });
+                        }}
+                          className="text-[11px] text-stone-300 hover:text-red-400 border border-transparent hover:border-red-200 px-1.5 py-0.5 rounded transition-colors">
+                          ×
+                        </button>
                       </div>
                     </div>
                   )); })()}
@@ -683,6 +705,88 @@ export default function ProductResearchPage() {
           <p className="text-xs text-stone-400 text-center py-3">
             คลิก &quot;Explore Pain Points&quot; เพื่อให้ AI วิเคราะห์ pain points จากข้อมูลร้าน
           </p>
+        )}
+
+        {/* Manual add pain point */}
+        {!painLoading && (
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-stone-100">
+            <input
+              id="manualPainTh"
+              placeholder="Pain point (TH)..."
+              className="flex-1 min-w-0 text-xs border border-stone-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-violet-300"
+            />
+            <input
+              id="manualPainEn"
+              placeholder="Pain point (EN)..."
+              className="flex-1 min-w-0 text-xs border border-stone-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-violet-300"
+            />
+            <input
+              id="manualPainKeyword"
+              placeholder="Niche keyword (EN)"
+              className="flex-1 min-w-0 text-xs border border-stone-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-violet-300 font-mono"
+            />
+            <button
+              onClick={() => {
+                const thEl = document.getElementById("manualPainTh") as HTMLInputElement;
+                const enEl = document.getElementById("manualPainEn") as HTMLInputElement;
+                const kwEl = document.getElementById("manualPainKeyword") as HTMLInputElement;
+                const th = thEl?.value?.trim();
+                const en = enEl?.value?.trim();
+                const kw = kwEl?.value?.trim();
+                if (!th && !en) { toast.error("กรุณาพิมพ์ pain point"); return; }
+                const manual: PainPointItem = {
+                  category: "Manual",
+                  painPoint: en || th,
+                  painPoint_th: th || en,
+                  severity: "medium",
+                  productOpportunity: "",
+                  nicheKeyword: kw || en || th,
+                  shopCanSolve: false,
+                };
+                setPainPoints((prev) => [...prev, manual]);
+                if (thEl) thEl.value = "";
+                if (enEl) enEl.value = "";
+                if (kwEl) kwEl.value = "";
+                toast.success("เพิ่ม pain point แล้ว");
+              }}
+              className="text-[11px] text-violet-600 border border-violet-200 hover:bg-violet-50 px-3 py-2 rounded-lg transition-colors whitespace-nowrap font-medium">
+              + Add
+            </button>
+            <button
+              onClick={async () => {
+                const thEl = document.getElementById("manualPainTh") as HTMLInputElement;
+                const enEl = document.getElementById("manualPainEn") as HTMLInputElement;
+                const kwEl = document.getElementById("manualPainKeyword") as HTMLInputElement;
+                const th = thEl?.value?.trim();
+                const en = enEl?.value?.trim();
+                if (!th && !en) { toast.error("กรุณาพิมพ์อย่างน้อย 1 ภาษา"); return; }
+                const source = th || en;
+                const direction = th ? "TH→EN" : "EN→TH";
+                toast(`AI translating ${direction}...`);
+                try {
+                  const res = await fetch("/api/admin/automation/pain-points", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      shopId: selectedShopId || activeShop?.id,
+                      aiModel,
+                      translate: { source, direction },
+                    }),
+                  });
+                  const data = await res.json();
+                  if (data.translated) {
+                    if (th && !en) { enEl.value = data.translated.en || ""; kwEl.value = data.translated.keyword || ""; }
+                    if (en && !th) { thEl.value = data.translated.th || ""; kwEl.value = data.translated.keyword || kwEl.value; }
+                    toast.success("AI translated!");
+                  } else {
+                    toast.error("Translation failed");
+                  }
+                } catch { toast.error("Translation failed"); }
+              }}
+              className="text-[11px] text-stone-400 border border-stone-200 hover:text-violet-600 hover:border-violet-200 hover:bg-violet-50 px-2 py-2 rounded-lg transition-colors whitespace-nowrap">
+              AI
+            </button>
+          </div>
         )}
       </div>
 
@@ -718,14 +822,49 @@ export default function ProductResearchPage() {
                 </button>
               </>
             )}
-            <button onClick={handleLoadPainBank} disabled={bankLoading}
-              className="text-[11px] text-violet-500 hover:text-violet-700 border border-violet-200 hover:bg-violet-50 px-2.5 py-1.5 rounded-lg transition-colors">
-              {bankLoading ? "Loading..." : bankPainPoints.length > 0 ? `Pain Bank (${bankPainPoints.length})` : "Load Pain Bank"}
-            </button>
+            <div className="relative">
+              <button onClick={handleLoadPainBank} disabled={bankLoading}
+                className="text-[11px] text-violet-500 hover:text-violet-700 border border-violet-200 hover:bg-violet-50 px-2.5 py-1.5 rounded-lg transition-colors">
+                {bankLoading ? "Loading..." : bankPainPoints.length > 0 ? `Pain Bank (${bankPainPoints.length})` : "Pain Bank"}
+              </button>
+            </div>
             {painPointsForNiche.length > 0 && (
-              <span className="text-[10px] bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full">
-                {painPointsForNiche.length} pain points as context
-              </span>
+              <div className="relative">
+                <button onClick={() => setShowContextDetail((v) => !v)}
+                  className="text-[11px] text-violet-500 hover:text-violet-700 border border-violet-200 hover:bg-violet-50 px-2.5 py-1.5 rounded-lg transition-colors">
+                  {painPointsForNiche.length} context {showContextDetail ? "▲" : "▼"}
+                </button>
+                {showContextDetail && (
+                  <div className="absolute right-0 top-full mt-1 w-[28rem] bg-white border border-violet-200 rounded-xl shadow-lg z-30 p-3 space-y-2 max-h-72 overflow-y-auto">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold text-stone-500 uppercase">Pain Points as Niche Context</span>
+                      <button onClick={() => { setBankPainPoints([]); setSelectedPainForNiche(new Set()); setShowContextDetail(false); }}
+                        className="text-[10px] text-red-400 hover:text-red-600">Clear</button>
+                    </div>
+                    {painPointsForNiche.map((pp, i) => (
+                      <div key={i} className="bg-stone-50 rounded-lg p-2">
+                        <p className="text-[11px] text-stone-700 font-medium leading-snug">{pp.painPoint_th || pp.painPoint}</p>
+                        {pp.painPoint && pp.painPoint_th && (
+                          <p className="text-[10px] text-stone-500 leading-snug mt-0.5">{pp.painPoint}</p>
+                        )}
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="text-[10px] font-mono bg-white border border-stone-200 px-1.5 py-0.5 rounded text-stone-500">{pp.nicheKeyword}</span>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                            pp.severity === "high" ? "bg-red-100 text-red-600" :
+                            pp.severity === "medium" ? "bg-amber-100 text-amber-600" : "bg-green-100 text-green-600"
+                          }`}>{pp.severity}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {suggestRaw && (
+              <button onClick={() => setShowSuggestLog((v) => !v)}
+                className="text-[10px] text-stone-400 hover:text-blue-500 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors">
+                {showSuggestLog ? "Hide Log" : "Log"}
+              </button>
             )}
             <button onClick={handleSuggestNiches} disabled={suggestLoading}
               className="border border-purple-200 bg-purple-50 hover:bg-purple-100 disabled:bg-stone-100 disabled:border-stone-200 text-purple-600 disabled:text-stone-400 px-4 py-1.5 rounded-lg font-medium text-xs transition-colors whitespace-nowrap">
@@ -738,6 +877,18 @@ export default function ProductResearchPage() {
           <div className="flex items-center gap-2 py-6 justify-center">
             <div className="animate-spin rounded-full h-4 w-4 border-2 border-purple-500 border-t-transparent" />
             <span className="text-xs text-purple-400">Analyzing shop data...</span>
+          </div>
+        )}
+
+        {showSuggestLog && suggestRaw && (
+          <pre className="text-[11px] text-stone-500 font-mono bg-stone-50 border border-stone-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap max-h-64 overflow-y-auto mb-3">
+            {suggestRaw}
+          </pre>
+        )}
+
+        {!suggestLoading && suggestError && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-600 mb-3">
+            <p className="text-red-500">{suggestError}</p>
           </div>
         )}
 

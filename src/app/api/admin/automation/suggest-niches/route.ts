@@ -85,7 +85,7 @@ Also provide a Thai translation of both the niche and reason.
 Return ONLY a JSON array:
 [{"niche": "keyword phrase in English", "niche_th": "คำแปลภาษาไทย", "type": "gap|trending|seasonal|upsell", "reason": "short reason why in English", "reason_th": "เหตุผลสั้นๆ ภาษาไทย"}]`;
 
-    const rawText = await aiComplete(aiModel, prompt, 2000);
+    const rawText = await aiComplete(aiModel, prompt, 3000);
     // Strip markdown code blocks if present
     const text = rawText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     let match = text.match(/\[[\s\S]*\]/);
@@ -96,7 +96,7 @@ Return ONLY a JSON array:
     }
     const suggestions = match ? JSON.parse(match[0]) : [];
 
-    return NextResponse.json({ success: true, data: suggestions });
+    return NextResponse.json({ success: true, data: suggestions, _raw: rawText });
   } catch (err) {
     return NextResponse.json({
       success: false,

@@ -30,7 +30,24 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
-  const { shopId, aiModel = "claude" } = await request.json();
+  const { shopId, aiModel = "claude", translate } = await request.json();
+
+  // Quick translate mode
+  if (translate) {
+    try {
+      const { source, direction } = translate;
+      const prompt = direction === "TH→EN"
+        ? `Translate this Thai pet pain point to English. Also suggest a 2-4 word CJ search keyword.\n\nThai: "${source}"\n\nReturn ONLY JSON: {"en": "English translation", "keyword": "cj search keyword"}`
+        : `Translate this English pet pain point to Thai. Also suggest a 2-4 word CJ search keyword.\n\nEnglish: "${source}"\n\nReturn ONLY JSON: {"th": "Thai translation", "keyword": "cj search keyword"}`;
+      const raw = await aiComplete(aiModel, prompt, 300);
+      const text = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      const match = text.match(/\{[\s\S]*\}/);
+      const translated = match ? JSON.parse(match[0]) : null;
+      return NextResponse.json({ success: true, translated });
+    } catch {
+      return NextResponse.json({ success: false, error: "Translation failed" });
+    }
+  }
 
   try {
     const shop = shopId

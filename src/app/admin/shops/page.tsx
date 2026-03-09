@@ -145,16 +145,17 @@ export default function ShopsPage() {
       <div className="grid gap-4">
         {filteredShops.map((shop) => (
           <div key={shop.id} className="bg-white rounded-2xl border border-stone-100 p-5 flex items-center gap-4">
-            <div className="w-32 h-32 rounded-2xl bg-stone-100 flex items-center justify-center shrink-0 overflow-hidden">
+            <a href={`/${shop.slug}`} target="_blank" rel="noopener noreferrer"
+              className="w-32 h-32 rounded-2xl bg-stone-100 flex items-center justify-center shrink-0 overflow-hidden hover:opacity-80 transition-opacity">
               {shop.logoUrl ? (
                 <img src={shop.logoUrl} alt="" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-4xl font-bold text-stone-400">{shop.name[0]?.toUpperCase()}</span>
               )}
-            </div>
+            </a>
             <div className="w-56 shrink-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="font-semibold text-stone-800">{shop.name}</h3>
+                <Link href={`/admin/shops/${shop.id}`} className="font-semibold text-orange-600 hover:text-orange-800 hover:underline transition-colors">{shop.name}</Link>
                 {shop.name_th && <span className="text-sm text-stone-400">({shop.name_th})</span>}
                 <span className={`text-xs px-2 py-0.5 rounded-full ${shop.active ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
                   {shop.active ? "Active" : "Inactive"}

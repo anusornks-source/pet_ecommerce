@@ -794,8 +794,8 @@ function PlatformCard({ label, icon, initialContent }: { label: string; icon: st
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        className="w-full text-xs text-stone-700 leading-relaxed font-sans bg-white border border-stone-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-300 resize-none"
-        style={{ fieldSizing: "content", minHeight: "80px" } as unknown as React.CSSProperties}
+        className="w-full text-sm text-stone-700 leading-relaxed font-sans bg-white border border-stone-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-orange-300 resize-none"
+        style={{ fieldSizing: "content", minHeight: "140px" } as unknown as React.CSSProperties}
       />
     </div>
   );

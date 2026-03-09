@@ -30,11 +30,7 @@ export async function GET(
 
     const product = await prisma.product.findUnique({
       where: { id },
-      include: {
-        shop: {
-          include: { settings: true },
-        },
-      },
+      include: { shop: { include: { settings: true } } },
     });
 
     if (!product) {
@@ -42,11 +38,10 @@ export async function GET(
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://example.com";
-    const productUrl = `${appUrl}/products/${id}`;
 
     const [qrDataUrl, productImageBase64] = await Promise.all([
-      QRCode.toDataURL(productUrl, {
-        width: 220,
+      QRCode.toDataURL(`${appUrl}/products/${id}`, {
+        width: 200,
         margin: 1,
         color: { dark: "#1c1917", light: "#ffffff" },
       }),
@@ -57,9 +52,9 @@ export async function GET(
       (product.shop?.settings as { primaryColor?: string } | null)?.primaryColor ??
       "#f97316";
 
-    const name = (product.name_th ?? product.name).slice(0, 60);
+    const name = (product.name_th ?? product.name).slice(0, 50);
     const shopName = product.shop?.name ?? "";
-    const price = product.price.toLocaleString("th-TH", { minimumFractionDigits: 0 });
+    const price = product.price.toLocaleString("th-TH");
 
     return new ImageResponse(
       (
@@ -69,10 +64,10 @@ export async function GET(
             height: 1080,
             display: "flex",
             flexDirection: "column",
-            backgroundColor: "#f5f5f4",
+            backgroundColor: "#e7e5e4",
           }}
         >
-          {/* Product image — top 60% */}
+          {/* Top: product image */}
           <div
             style={{
               width: 1080,
@@ -80,7 +75,6 @@ export async function GET(
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              overflow: "hidden",
               backgroundColor: "#e7e5e4",
             }}
           >
@@ -89,14 +83,14 @@ export async function GET(
               <img
                 src={productImageBase64}
                 alt=""
-                style={{ width: 1080, height: 648, objectFit: "cover" }}
+                style={{ width: 1080, height: 648 }}
               />
             ) : (
-              <span style={{ fontSize: 120, color: "#d6d3d1" }}>🐾</span>
+              <div style={{ display: "flex", fontSize: 100, color: "#a8a29e" }}>🐾</div>
             )}
           </div>
 
-          {/* Bottom section — 40% */}
+          {/* Bottom: info bar */}
           <div
             style={{
               width: 1080,
@@ -105,62 +99,56 @@ export async function GET(
               display: "flex",
               flexDirection: "row",
               alignItems: "center",
-              padding: "36px 48px",
-              gap: 32,
+              paddingTop: 36,
+              paddingBottom: 36,
+              paddingLeft: 56,
+              paddingRight: 56,
             }}
           >
-            {/* Text block */}
+            {/* Text */}
             <div
               style={{
                 flex: 1,
                 display: "flex",
                 flexDirection: "column",
-                gap: 16,
-                overflow: "hidden",
+                paddingRight: 32,
               }}
             >
               <div
                 style={{
-                  fontSize: 48,
+                  fontSize: 46,
                   fontWeight: 700,
                   color: "#ffffff",
-                  lineHeight: 1.25,
-                  maxHeight: 120,
-                  overflow: "hidden",
+                  lineHeight: 1.3,
+                  marginBottom: 16,
                 }}
               >
                 {name}
               </div>
               <div
                 style={{
-                  fontSize: 64,
+                  fontSize: 68,
                   fontWeight: 800,
                   color: "#ffffff",
                   lineHeight: 1,
+                  marginBottom: 16,
                 }}
               >
                 ฿{price}
               </div>
               {shopName ? (
-                <div
-                  style={{
-                    fontSize: 30,
-                    color: "rgba(255,255,255,0.8)",
-                  }}
-                >
+                <div style={{ fontSize: 30, color: "#fef3c7" }}>
                   {shopName}
                 </div>
               ) : null}
             </div>
 
-            {/* QR code */}
+            {/* QR */}
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                gap: 12,
-                flexShrink: 0,
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -168,27 +156,23 @@ export async function GET(
                 src={qrDataUrl}
                 alt="QR"
                 style={{
-                  width: 220,
-                  height: 220,
-                  borderRadius: 12,
+                  width: 210,
+                  height: 210,
                   backgroundColor: "#ffffff",
+                  borderRadius: 12,
                   padding: 8,
+                  marginBottom: 10,
                 }}
               />
-              <span style={{ fontSize: 24, color: "rgba(255,255,255,0.8)" }}>
-                สแกนดูสินค้า
-              </span>
+              <div style={{ fontSize: 22, color: "#fef3c7" }}>สแกนดูสินค้า</div>
             </div>
           </div>
         </div>
       ),
-      {
-        width: 1080,
-        height: 1080,
-      }
+      { width: 1080, height: 1080 }
     );
   } catch (err) {
-    console.error("[share-card] error:", err);
-    return new Response(`Error generating share card: ${String(err)}`, { status: 500 });
+    console.error("[share-card]", err);
+    return new Response(`Error: ${String(err)}`, { status: 500 });
   }
 }

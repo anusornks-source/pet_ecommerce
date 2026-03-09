@@ -327,6 +327,7 @@ export default function MarketingPacksPage() {
   const [search, setSearch] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
   const [showManualAdd, setShowManualAdd] = useState(false);
+  const [filterProduct, setFilterProduct] = useState<{ id: string; name: string; name_th: string | null; images: string[] } | null>(null);
 
   const fetchPacks = useCallback(async () => {
     setLoading(true);
@@ -345,6 +346,15 @@ export default function MarketingPacksPage() {
   useEffect(() => {
     fetchPacks();
   }, [fetchPacks]);
+
+  useEffect(() => {
+    if (!filterProductId) { setFilterProduct(null); return; }
+    fetch(`/api/admin/products/${filterProductId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setFilterProduct({ id: d.data.id, name: d.data.name, name_th: d.data.name_th, images: d.data.images });
+      });
+  }, [filterProductId]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("ลบ Marketing Pack นี้?")) return;
@@ -386,15 +396,7 @@ export default function MarketingPacksPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-stone-800">Marketing Packs</h1>
-            <div className="flex items-center gap-2 mt-1">
-              <p className="text-sm text-stone-500">{packs.length} packs</p>
-              {filterProductId && (
-                <span className="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
-                  เฉพาะสินค้านี้ ·{" "}
-                  <button onClick={() => router.push("/admin/automation/marketing-packs")} className="underline">ดูทั้งหมด</button>
-                </span>
-              )}
-            </div>
+            <p className="text-sm text-stone-500 mt-1">{packs.length} packs</p>
           </div>
           <div className="flex gap-2">
             <button
@@ -412,13 +414,46 @@ export default function MarketingPacksPage() {
           </div>
         </div>
 
-        {/* Search */}
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="ค้นหาสินค้า..."
-          className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-        />
+        {/* Product context banner */}
+        {filterProduct && (
+          <div className="flex items-center gap-4 bg-orange-50 border border-orange-100 rounded-2xl p-4">
+            {filterProduct.images[0] && (
+              <Image src={filterProduct.images[0]} alt="" width={64} height={64} className="w-16 h-16 rounded-xl object-cover shrink-0" unoptimized />
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-orange-500 font-semibold uppercase tracking-wide mb-0.5">สินค้า</p>
+              <p className="font-semibold text-stone-800 truncate">{filterProduct.name}</p>
+              {filterProduct.name_th && filterProduct.name_th !== filterProduct.name && (
+                <p className="text-sm text-stone-400 truncate">{filterProduct.name_th}</p>
+              )}
+              <p className="text-xs text-stone-400 mt-1">{packs.length} pack</p>
+            </div>
+            <div className="flex flex-col gap-2 shrink-0">
+              <button
+                onClick={() => router.push(`/admin/products/${filterProduct.id}`)}
+                className="text-xs px-3 py-1.5 rounded-lg border border-stone-200 text-stone-600 hover:bg-white transition-colors"
+              >
+                ← กลับสินค้า
+              </button>
+              <button
+                onClick={() => router.push("/admin/automation/marketing-packs")}
+                className="text-xs px-3 py-1.5 rounded-lg border border-stone-200 text-stone-500 hover:bg-white transition-colors"
+              >
+                ดู Packs ทั้งหมด
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Search — only show when not filtered by product */}
+        {!filterProductId && (
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="ค้นหาสินค้า..."
+            className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+          />
+        )}
 
         {/* List */}
         {loading ? (

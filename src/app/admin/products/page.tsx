@@ -430,7 +430,7 @@ export default function AdminProductsPage() {
                 <th className="text-center px-4 py-3 text-stone-500 font-medium">
                   เผยแพร่
                 </th>
-                <th className="px-4 py-3" />
+                <th className="text-center px-4 py-3 text-stone-500 font-medium">Marketing</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-50">

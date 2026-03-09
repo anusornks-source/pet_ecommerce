@@ -85,8 +85,8 @@ ${productSample || "ยังไม่มีสินค้า"}
 Return ONLY a JSON array (ไม่ต้องมีข้อความอื่น):
 [{
   "category": "หมวดหมู่ภาษาไทย",
-  "painPoint": "คำอธิบาย Pain Point ภาษาไทย (1-2 ประโยค)",
-  "painPoint_en": "English description of the pain point",
+  "painPoint": "English description of the pain point (1-2 sentences)",
+  "painPoint_th": "คำอธิบาย Pain Point ภาษาไทย (1-2 ประโยค)",
   "severity": "high|medium|low",
   "productOpportunity": "สินค้าที่แก้ปัญหานี้ได้ (ภาษาไทย)",
   "nicheKeyword": "english keyword for CJ search (2-4 words)",
@@ -99,21 +99,51 @@ Return ONLY a JSON array (ไม่ต้องมีข้อความอื
 - shopCanSolve: ดูจากหมวดหมู่และสินค้าที่มีอยู่ ถ้าร้านมีสินค้าที่ตอบโจทย์ pain point นี้แล้ว = true
 - เน้นปัญหาจริงที่เจ้าของสัตว์เลี้ยงเจอในชีวิตประจำวัน`;
 
-    const rawText = await aiComplete(aiModel, prompt, 2500);
+    const rawText = await aiComplete(aiModel, prompt, 4000);
     const text = rawText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+
+    let painPoints: unknown[] = [];
+    let parseError: string | null = null;
+
+    // Try 1: Full JSON array match
     let match = text.match(/\[[\s\S]*\]/);
+
+    // Try 2: Truncated JSON — attempt to close it
     if (!match && text.includes("[")) {
-      const partial = text.slice(text.indexOf("[")).replace(/,\s*$/, "").replace(/}\s*$/, "}]");
+      let partial = text.slice(text.indexOf("["));
+      // Remove trailing comma or incomplete object
+      partial = partial.replace(/,\s*$/, "");
+      // If it ends mid-object, try closing it
+      if (!partial.endsWith("]")) {
+        // Close any open object
+        if (partial.includes("{") && !partial.endsWith("}")) {
+          partial = partial.slice(0, partial.lastIndexOf("{"));
+          partial = partial.replace(/,\s*$/, "");
+        }
+        if (!partial.endsWith("]")) partial += "]";
+      }
       try {
-        JSON.parse(partial);
+        painPoints = JSON.parse(partial);
         match = [partial];
-      } catch {
-        match = null;
+      } catch (e) {
+        parseError = `JSON parse failed: ${e instanceof Error ? e.message : "unknown"}`;
       }
     }
-    const painPoints = match ? JSON.parse(match[0]) : [];
 
-    return NextResponse.json({ success: true, data: painPoints, _raw: rawText });
+    if (match && painPoints.length === 0) {
+      try {
+        painPoints = JSON.parse(match[0]);
+      } catch (e) {
+        parseError = `JSON parse failed: ${e instanceof Error ? e.message : "unknown"}`;
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: painPoints,
+      _raw: rawText,
+      _parseError: parseError,
+    });
   } catch (err) {
     return NextResponse.json({
       success: false,

@@ -48,7 +48,7 @@ interface PetType { id: string; name: string; slug: string; icon: string | null 
 interface PainPointItem {
   category: string;
   painPoint: string;
-  painPoint_en: string;
+  painPoint_th: string;
   severity: "high" | "medium" | "low";
   productOpportunity: string;
   nicheKeyword: string;
@@ -214,10 +214,14 @@ export default function ProductResearchPage() {
         body: JSON.stringify({ shopId: selectedShopId || activeShop?.id, aiModel }),
       });
       const data = await res.json();
-      setPainRaw(JSON.stringify(data, null, 2));
+      setPainRaw(data._raw || JSON.stringify(data, null, 2));
       if (data.success) {
         setPainPoints(data.data);
-        if (data.data.length === 0) setPainError("AI returned empty result — ลองกด Regenerate อีกครั้ง");
+        if (data.data.length === 0) {
+          const hint = data._parseError ? `Parse error: ${data._parseError}` : "AI returned empty result";
+          setPainError(`${hint} — ลองกด Regenerate อีกครั้ง`);
+          setShowPainLog(true);
+        }
       } else { setPainError(data.error || "Failed"); toast.error(data.error || "Failed"); }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed";
@@ -455,9 +459,21 @@ export default function ProductResearchPage() {
 
         {!painLoading && painPoints.length > 0 && (
           <div className="space-y-4">
-            <div className="flex gap-3 text-xs text-stone-500 bg-stone-50 rounded-xl px-4 py-2">
+            <div className="flex items-center gap-3 text-xs text-stone-500 bg-stone-50 rounded-xl px-4 py-2">
               <span>ร้านแก้ได้แล้ว: <b>{painPoints.filter((p) => p.shopCanSolve).length}</b></span>
               <span>โอกาสใหม่: <b className="text-violet-600">{painPoints.filter((p) => !p.shopCanSolve).length}</b></span>
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  onClick={async () => {
+                    const unsaved = painPoints.filter((pp) => !savedPainIds.has(pp.nicheKeyword));
+                    if (unsaved.length === 0) { toast("All already saved"); return; }
+                    for (const pp of unsaved) { await handleSavePainPoint(pp); }
+                    toast.success(`Saved ${unsaved.length} pain points`);
+                  }}
+                  className="text-[11px] text-violet-500 hover:text-violet-700 border border-violet-200 hover:bg-violet-50 px-2.5 py-1 rounded-lg transition-colors">
+                  Save All ({painPoints.filter((pp) => !savedPainIds.has(pp.nicheKeyword)).length})
+                </button>
+              </div>
             </div>
             {Array.from(new Set(painPoints.map((p) => p.category))).map((cat) => (
               <div key={cat}>
@@ -466,7 +482,12 @@ export default function ProductResearchPage() {
                   {painPoints.filter((p) => p.category === cat).map((pp, i) => (
                     <div key={i} className={`border rounded-xl p-3 transition-colors ${pp.shopCanSolve ? "border-stone-200 bg-stone-50 opacity-60" : "border-violet-200 bg-white hover:border-violet-300"}`}>
                       <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <p className="text-xs text-stone-700 font-medium leading-snug flex-1">{pp.painPoint}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-stone-700 font-medium leading-snug">{pp.painPoint_th || pp.painPoint}</p>
+                          {pp.painPoint && pp.painPoint_th && (
+                            <p className="text-[11px] text-stone-500 leading-snug mt-0.5">{pp.painPoint}</p>
+                          )}
+                        </div>
                         <div className="flex flex-col items-end gap-1 shrink-0">
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                             pp.severity === "high" ? "bg-red-100 text-red-600" :

@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
   if (isNextResponse(auth)) return auth;
 
   const body = await request.json();
-  const { shopId, category, painPoint, painPoint_en, severity, productOpportunity, nicheKeyword, shopCanSolve } = body;
+  const { shopId, category, painPoint, painPoint_th, severity, productOpportunity, nicheKeyword, shopCanSolve } = body;
   const createdById = auth.userId;
 
   if (!nicheKeyword) {
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       shopId: shopId ?? null,
       category: category ?? "",
       painPoint: painPoint ?? "",
-      painPoint_en: painPoint_en ?? null,
+      painPoint_th: painPoint_th ?? null,
       severity: severity ?? "medium",
       productOpportunity: productOpportunity ?? "",
       nicheKeyword,

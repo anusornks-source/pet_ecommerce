@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const painPointContext = Array.isArray(painPoints) && painPoints.length > 0
-      ? `\n\nPain Points discovered (use as context to generate targeted niches):\n${painPoints.map((pp: any) => `- ${pp.painPoint || pp.painPoint_en} → keyword: ${pp.nicheKeyword}`).join("\n")}\n\nGenerate niches that specifically address these pain points.`
+      ? `\n\nPain Points discovered (use as context to generate targeted niches):\n${painPoints.map((pp: any) => `- ${pp.painPoint_th || pp.painPoint} → keyword: ${pp.nicheKeyword}`).join("\n")}\n\nGenerate niches that specifically address these pain points.`
       : "";
 
     const prompt = `You are an ecommerce product strategist. Analyze this shop's data and suggest profitable niche keywords for product research on CJ Dropshipping.

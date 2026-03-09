@@ -506,6 +506,10 @@ export default function MarketingPacksPage() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {filteredByProduct.map((pack) => {
+              // version: count how many packs for same product, sorted by date
+              const sibling = filteredByProduct.filter((p) => p.productId === pack.productId).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+              const ver = sibling.findIndex((p) => p.id === pack.id) + 1;
+              const totalVer = sibling.length;
               const img = pack.product.images?.[0];
               const hook = Array.isArray(pack.hooks) ? pack.hooks[0] : null;
               const date = new Date(pack.createdAt).toLocaleDateString("th-TH", {
@@ -522,11 +526,16 @@ export default function MarketingPacksPage() {
                   className="bg-white border border-stone-200 rounded-2xl overflow-hidden cursor-pointer hover:shadow-md hover:border-orange-200 transition-all group flex flex-col"
                 >
                   {/* Product image */}
-                  <div className="w-full h-40 bg-stone-100 overflow-hidden">
+                  <div className="relative w-full h-40 bg-stone-100 overflow-hidden">
                     {img
                       ? <Image src={img} alt={pack.productName} width={300} height={160} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                       : <div className="w-full h-full flex items-center justify-center text-stone-300 text-3xl">📦</div>
                     }
+                    {totalVer > 1 && (
+                      <span className="absolute top-2 left-2 text-[10px] font-bold bg-black/60 text-white px-1.5 py-0.5 rounded-md">
+                        v{ver}/{totalVer}
+                      </span>
+                    )}
                   </div>
 
                   {/* Info */}
@@ -547,7 +556,8 @@ export default function MarketingPacksPage() {
                     )}
                     <div className="flex items-center gap-2 mt-1.5">
                       <p className="text-[10px] text-stone-400 font-mono">#{pack.id.slice(0, 8)}</p>
-                      <p className="text-[10px] text-stone-300 font-mono truncate">pid:{pack.productId.slice(0, 8)}</p>
+                      <a href={`/admin/products/${pack.productId}`} onClick={(e) => e.stopPropagation()}
+                        className="text-[10px] text-stone-300 font-mono truncate hover:text-orange-500 transition-colors">pid:{pack.productId.slice(0, 8)}</a>
                     </div>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-[11px] text-stone-400">{date}</span>

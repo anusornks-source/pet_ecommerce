@@ -271,6 +271,7 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activeImg, setActiveImg] = useState<string | null>(null);
+  const [versionInfo, setVersionInfo] = useState<{ ver: number; total: number } | null>(null);
   const [editedHooks, setEditedHooks] = useState<string[]>([]);
   const [editedCaptionFacebook, setEditedCaptionFacebook] = useState("");
   const [editedCaptionInstagram, setEditedCaptionInstagram] = useState("");
@@ -296,6 +297,16 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
           setEditedThumbnailTexts(Array.isArray(d.data.thumbnailTexts) ? d.data.thumbnailTexts : []);
           if (Array.isArray(d.data.imageAdPrompts)) setEditedImagePrompts(d.data.imageAdPrompts);
           if (Array.isArray(d.data.videoAdPrompts)) setEditedVideoPrompts(d.data.videoAdPrompts);
+          // Fetch version info
+          fetch(`/api/admin/automation/marketing-packs?productId=${d.data.productId}`)
+            .then((r) => r.json())
+            .then((v) => {
+              if (v.success) {
+                const sorted = [...v.data].sort((a: { createdAt: string }, b: { createdAt: string }) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+                const idx = sorted.findIndex((p: { id: string }) => p.id === id);
+                setVersionInfo({ ver: idx + 1, total: sorted.length });
+              }
+            });
         }
       })
       .finally(() => setLoading(false));
@@ -369,8 +380,15 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${pack.lang === "en" ? "bg-blue-100 text-blue-600" : "bg-amber-100 text-amber-600"}`}>
               {pack.lang}
             </span>
+            {versionInfo && versionInfo.total > 1 && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-600">
+                v{versionInfo.ver}/{versionInfo.total}
+              </span>
+            )}
             <span className="text-xs text-stone-400">{date}</span>
             <span className="text-[10px] text-stone-400 font-mono">#{pack.id.slice(0, 8)}</span>
+            <a href={`/admin/products/${pack.productId}`} onClick={(e) => e.stopPropagation()}
+              className="text-[10px] text-stone-300 font-mono hover:text-orange-500 transition-colors">pid:{pack.productId.slice(0, 8)}</a>
           </div>
         </div>
         <div className="flex items-start gap-2 shrink-0 pt-8">

@@ -49,11 +49,23 @@ export async function GET(request: NextRequest) {
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
   const PAGE_SIZE = 50;
 
+  const sort = searchParams.get("sort") || "newest";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orderBy: any =
+    sort === "oldest"    ? { createdAt: "asc" } :
+    sort === "price_asc" ? { price: "asc" } :
+    sort === "price_desc"? { price: "desc" } :
+    sort === "stock_asc" ? { stock: "asc" } :
+    sort === "stock_desc"? { stock: "desc" } :
+    sort === "name_asc"  ? { name: "asc" } :
+    sort === "name_desc" ? { name: "desc" } :
+                           { createdAt: "desc" };
+
   const [products, total] = await Promise.all([
     prisma.product.findMany({
       where,
       include: { category: true, petType: true, tags: true, shop: includeShop, variants: { select: { id: true, sku: true, cjVid: true, size: true, color: true, price: true, stock: true, variantImage: true } }, _count: { select: { marketingPacks: true } } },
-      orderBy: { createdAt: "desc" },
+      orderBy,
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     }),

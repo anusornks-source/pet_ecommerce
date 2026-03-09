@@ -80,6 +80,7 @@ export default function AdminProductsPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [filterTag, setFilterTag] = useState("");
+  const [sort, setSort] = useState("newest");
   const [editingCell, setEditingCell] = useState<{ productId: string; field: "category" | "petType" | "tags" | "shop" } | null>(null);
   const [savingCell, setSavingCell] = useState<string | null>(null);
 
@@ -179,11 +180,12 @@ export default function AdminProductsPage() {
     if (filterPetType) params.set("petType", filterPetType);
     if (filterTag) params.set("tagId", filterTag);
     if (shopFilter) params.set("shopId", shopFilter);
+    if (sort && sort !== "newest") params.set("sort", sort);
     const res = await fetch(`/api/admin/products?${params.toString()}`);
     const data = await res.json();
     if (data.success) { setProducts(data.data); setTotal(data.total); }
     setLoading(false);
-  }, [search, filterSource, filterActive, filterCategory, filterPetType, filterTag, shopFilter]);
+  }, [search, filterSource, filterActive, filterCategory, filterPetType, filterTag, shopFilter, sort]);
 
   const activeFilterCount = [filterSource, filterActive, filterCategory, filterPetType, filterTag].filter(Boolean).length;
 
@@ -353,6 +355,20 @@ export default function AdminProductsPage() {
             {petTypes.map((p) => (
               <option key={p.slug} value={p.slug}>{p.icon} {p.name}</option>
             ))}
+          </select>
+          <select
+            value={sort}
+            onChange={(e) => { setSort(e.target.value); setPage(1); }}
+            className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
+          >
+            <option value="newest">เรียง: ใหม่ก่อน</option>
+            <option value="oldest">เรียง: เก่าก่อน</option>
+            <option value="price_asc">ราคา: น้อย → มาก</option>
+            <option value="price_desc">ราคา: มาก → น้อย</option>
+            <option value="stock_asc">สต็อก: น้อย → มาก</option>
+            <option value="stock_desc">สต็อก: มาก → น้อย</option>
+            <option value="name_asc">ชื่อ: A → Z</option>
+            <option value="name_desc">ชื่อ: Z → A</option>
           </select>
           {tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 items-center">

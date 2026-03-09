@@ -156,7 +156,7 @@ export default function ShopsPage() {
             <div className="w-56 shrink-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <Link href={`/admin/shops/${shop.id}`} className="font-semibold text-orange-600 hover:text-orange-800 hover:underline transition-colors">{shop.name}</Link>
-                {shop.name_th && <span className="text-sm text-stone-400">({shop.name_th})</span>}
+                {shop.name_th && shop.name_th !== shop.name && <span className="text-sm text-stone-400">({shop.name_th})</span>}
                 <span className={`text-xs px-2 py-0.5 rounded-full ${shop.active ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
                   {shop.active ? "Active" : "Inactive"}
                 </span>

@@ -12,6 +12,10 @@ export async function GET(request: NextRequest) {
   const data = await prisma.painPoint.findMany({
     where: shopId ? { shopId } : {},
     orderBy: { createdAt: "desc" },
+    include: {
+      nicheKeywords: { select: { id: true, niche: true, niche_th: true, type: true } },
+      createdBy: { select: { name: true } },
+    },
   });
 
   return NextResponse.json({ success: true, data });

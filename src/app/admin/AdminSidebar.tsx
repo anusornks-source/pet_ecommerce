@@ -172,7 +172,7 @@ export default function AdminSidebar() {
               <div key={entry.label}>
                 <button
                   onClick={() => toggleGroup(entry.label)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors ${
                     hasActive
                       ? "text-orange-600 bg-orange-50"
                       : "text-stone-600 hover:bg-stone-50 hover:text-stone-800"
@@ -214,7 +214,7 @@ export default function AdminSidebar() {
             <Link
               key={entry.href}
               href={resolveHref(entry.href)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors ${
                 isItemActive(entry.href, entry.exact)
                   ? "bg-orange-50 text-orange-600"
                   : "text-stone-600 hover:bg-stone-50 hover:text-stone-800"

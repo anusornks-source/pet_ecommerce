@@ -164,7 +164,7 @@ export default function ShopsPage() {
                   <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-600">🐾 Pet Type</span>
                 )}
               </div>
-              <a href={`/${shop.slug}`} target="_blank" rel="noopener noreferrer" className="text-sm text-stone-400 hover:text-orange-500 hover:underline transition-colors">/{shop.slug}</a>
+              <a href={`/${shop.slug}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:text-blue-700 hover:underline transition-colors">/{shop.slug}</a>
               <div className="flex gap-4 mt-1 text-xs text-stone-400">
                 <span>{shop._count.products} products</span>
                 <span>{shop._count.orders} orders</span>

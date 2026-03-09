@@ -500,7 +500,7 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
               <textarea
                 value={hook}
                 onChange={(e) => setEditedHooks((prev) => prev.map((h, idx) => idx === i ? e.target.value : h))}
-                className="flex-1 text-sm text-stone-700 bg-white border border-stone-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-stone-300 resize-none min-h-10"
+                className="flex-1 text-sm text-stone-700 bg-white border border-stone-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-stone-300 resize-none min-h-28"
                 style={{ fieldSizing: "content" } as unknown as React.CSSProperties}
               />
               <button onClick={() => copy(hook)} className="text-[10px] text-stone-400 hover:text-orange-500 transition-all shrink-0 mt-2.5">Copy</button>
@@ -529,7 +529,7 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
                 <textarea
                   value={editedCaptionFacebook}
                   onChange={(e) => setEditedCaptionFacebook(e.target.value)}
-                  className="w-full text-sm text-stone-700 font-sans bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-blue-300 resize-none min-h-20 leading-relaxed"
+                  className="w-full text-sm text-stone-700 font-sans bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-blue-300 resize-none min-h-40 leading-relaxed"
                   style={{ fieldSizing: "content" } as unknown as React.CSSProperties}
                 />
               </div>
@@ -543,7 +543,7 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
                 <textarea
                   value={editedCaptionInstagram}
                   onChange={(e) => setEditedCaptionInstagram(e.target.value)}
-                  className="w-full text-sm text-stone-700 font-sans bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-pink-300 resize-none min-h-20 leading-relaxed"
+                  className="w-full text-sm text-stone-700 font-sans bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-pink-300 resize-none min-h-40 leading-relaxed"
                   style={{ fieldSizing: "content" } as unknown as React.CSSProperties}
                 />
               </div>
@@ -557,7 +557,7 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
                 <textarea
                   value={editedCaptionLine}
                   onChange={(e) => setEditedCaptionLine(e.target.value)}
-                  className="w-full text-sm text-stone-700 font-sans bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-green-300 resize-none min-h-20 leading-relaxed"
+                  className="w-full text-sm text-stone-700 font-sans bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-green-300 resize-none min-h-40 leading-relaxed"
                   style={{ fieldSizing: "content" } as unknown as React.CSSProperties}
                 />
               </div>
@@ -588,7 +588,7 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
                 <textarea
                   value={angle.body}
                   onChange={(e) => setEditedAdAngles((prev) => prev.map((a, idx) => idx === i ? { ...a, body: e.target.value } : a))}
-                  className="w-full text-xs text-stone-600 bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-orange-300 resize-none min-h-10"
+                  className="w-full text-xs text-stone-600 bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-orange-300 resize-none min-h-28"
                   style={{ fieldSizing: "content" } as unknown as React.CSSProperties}
                 />
                 <div className="flex justify-end">
@@ -795,7 +795,7 @@ function PlatformCard({ label, icon, initialContent }: { label: string; icon: st
         value={content}
         onChange={(e) => setContent(e.target.value)}
         className="w-full text-sm text-stone-700 leading-relaxed font-sans bg-white border border-stone-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-orange-300 resize-none"
-        style={{ fieldSizing: "content", minHeight: "140px" } as unknown as React.CSSProperties}
+        style={{ fieldSizing: "content", minHeight: "220px" } as unknown as React.CSSProperties}
       />
     </div>
   );

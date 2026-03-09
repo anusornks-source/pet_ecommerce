@@ -591,27 +591,48 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
 
           {/* 2. Social Media Captions */}
           <div className="bg-white rounded-2xl border border-stone-200 p-5">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-stone-800 text-sm">Social Media Captions</h2>
               <div className="flex items-center gap-1">
                 <RawToggle section="captions" raw={result._raw?.captions} />
-                <CopyBtn text={editedCaptions[captionTab]} />
+                <CopyBtn text={[editedCaptions.facebook, editedCaptions.instagram, editedCaptions.line].filter(Boolean).join("\n\n---\n\n")} />
               </div>
             </div>
-            <div className="flex gap-1 bg-stone-100 rounded-xl p-1 mb-3 w-fit">
-              {(["facebook", "instagram", "line"] as const).map((platform) => (
-                <button key={platform} onClick={() => setCaptionTab(platform)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${captionTab === platform ? "bg-white text-orange-600 shadow-sm" : "text-stone-500"}`}>
-                  {platform === "line" ? "LINE" : platform.charAt(0).toUpperCase() + platform.slice(1)}
-                </button>
-              ))}
+            <div className="space-y-4">
+              {editedCaptions.facebook && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full">Facebook</span>
+                    <CopyBtn text={editedCaptions.facebook} />
+                  </div>
+                  <AutoTextarea value={editedCaptions.facebook} onChange={(v) => setEditedCaptions((prev) => ({ ...prev, facebook: v }))}
+                    className="w-full text-sm text-stone-700 font-sans bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-blue-300 leading-relaxed"
+                    minHeight={72} />
+                </div>
+              )}
+              {editedCaptions.instagram && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-bold text-pink-600 bg-pink-50 px-2.5 py-0.5 rounded-full">Instagram</span>
+                    <CopyBtn text={editedCaptions.instagram} />
+                  </div>
+                  <AutoTextarea value={editedCaptions.instagram} onChange={(v) => setEditedCaptions((prev) => ({ ...prev, instagram: v }))}
+                    className="w-full text-sm text-stone-700 font-sans bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-pink-300 leading-relaxed"
+                    minHeight={72} />
+                </div>
+              )}
+              {editedCaptions.line && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-bold text-green-700 bg-green-50 px-2.5 py-0.5 rounded-full">LINE</span>
+                    <CopyBtn text={editedCaptions.line} />
+                  </div>
+                  <AutoTextarea value={editedCaptions.line} onChange={(v) => setEditedCaptions((prev) => ({ ...prev, line: v }))}
+                    className="w-full text-sm text-stone-700 font-sans bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-green-300 leading-relaxed"
+                    minHeight={72} />
+                </div>
+              )}
             </div>
-            <AutoTextarea
-              value={editedCaptions[captionTab]}
-              onChange={(v) => setEditedCaptions((prev) => ({ ...prev, [captionTab]: v }))}
-              className="w-full text-sm text-stone-700 font-sans bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-stone-300 leading-relaxed"
-              minHeight={72}
-            />
           </div>
 
           {/* 3. Ad Angles */}

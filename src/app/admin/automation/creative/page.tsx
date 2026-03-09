@@ -251,6 +251,14 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
   const [editedThumbnailTexts, setEditedThumbnailTexts] = useState<string[]>([]);
   const [editedImagePrompts, setEditedImagePrompts] = useState<{ angle: string; prompt: string }[]>([]);
   const [editedVideoPrompts, setEditedVideoPrompts] = useState<{ angle: string; concept: string }[]>([]);
+  const [recentProducts, setRecentProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    fetch("/api/admin/products?limit=12&sort=newest")
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setRecentProducts(d.data ?? d.products ?? []); })
+      .catch(() => {});
+  }, []);
 
   const searchProducts = useCallback(async (q: string) => {
     if (!q.trim()) { setProducts([]); return; }
@@ -842,11 +850,37 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
         </div>
       )}
 
-      {/* Empty State */}
+      {/* Empty State — Recent Products Grid */}
       {!loading && !result && !selectedProduct && (
-        <div className="text-center py-16 text-stone-400">
-          <div className="text-4xl mb-3">✨</div>
-          <p className="text-sm">Select a product to generate marketing content</p>
+        <div>
+          <p className="text-xs text-stone-400 font-medium mb-3 px-1">สินค้าล่าสุด — กดเพื่อเลือก</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {recentProducts.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => selectProduct(p)}
+                className="bg-white rounded-2xl border border-stone-200 overflow-hidden text-left hover:border-orange-300 hover:shadow-md transition-all group"
+              >
+                <div className="relative w-full aspect-square bg-stone-100 overflow-hidden">
+                  {p.images[0] ? (
+                    <Image src={p.images[0]} alt="" fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-3xl text-stone-300">🐾</div>
+                  )}
+                </div>
+                <div className="p-3">
+                  <p className="text-xs font-medium text-stone-800 line-clamp-2 leading-snug mb-1">{p.name_th || p.name}</p>
+                  <p className="text-xs text-orange-500 font-semibold">฿{p.price.toLocaleString()}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+          {recentProducts.length === 0 && (
+            <div className="text-center py-12 text-stone-400">
+              <div className="text-4xl mb-3">✨</div>
+              <p className="text-sm">พิมพ์ชื่อสินค้าเพื่อค้นหา</p>
+            </div>
+          )}
         </div>
       )}
     </div>

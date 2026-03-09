@@ -34,11 +34,18 @@ export async function GET(request: NextRequest) {
     orderBy: { createdAt: "desc" },
   });
 
+  // Build filename prefix from shop name + datetime
+  const shopName = products[0]?.shop?.name ?? (shopId !== "all" ? shopId : "all");
+  const safeShop = shopName.replace(/[^a-zA-Z0-9ก-๙\-_]/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const datetime = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+
   let csv = "";
   let filename = "products.csv";
 
   if (platform === "shopee") {
-    filename = "products-shopee.csv";
+    filename = `${safeShop}_shopee_${datetime}.csv`;
     csv = toCSV(
       ["ชื่อสินค้า", "ชื่อสินค้า (ไทย)", "คำอธิบาย", "ราคา", "ราคาก่อนลด", "จำนวนสต็อก", "รูปภาพหลัก", "รูปภาพเพิ่มเติม", "หมวดหมู่", "วันจัดส่ง (วัน)"],
       products.map((p) => [
@@ -55,7 +62,7 @@ export async function GET(request: NextRequest) {
       ])
     );
   } else if (platform === "tiktok") {
-    filename = "products-tiktok.csv";
+    filename = `${safeShop}_tiktok_${datetime}.csv`;
     csv = toCSV(
       ["Product Name", "Product Name (TH)", "Description", "Price", "Stock", "Main Image", "Additional Images", "Category"],
       products.map((p) => [
@@ -70,7 +77,7 @@ export async function GET(request: NextRequest) {
       ])
     );
   } else if (platform === "facebook") {
-    filename = "products-facebook-catalog.csv";
+    filename = `${safeShop}_facebook_${datetime}.csv`;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
     csv = toCSV(
       ["id", "title", "description", "price", "image_link", "additional_image_link", "brand", "availability", "condition", "link"],

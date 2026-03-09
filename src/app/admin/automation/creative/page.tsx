@@ -218,6 +218,7 @@ interface Product {
   petType?: { name: string } | null;
   tags?: { id: string; name: string }[];
   variants?: ProductVariant[];
+  _count?: { marketingPacks: number };
 }
 
 interface CreativeResult {
@@ -252,6 +253,9 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
   const [editedImagePrompts, setEditedImagePrompts] = useState<{ angle: string; prompt: string }[]>([]);
   const [editedVideoPrompts, setEditedVideoPrompts] = useState<{ angle: string; concept: string }[]>([]);
   const [recentProducts, setRecentProducts] = useState<Product[]>([]);
+  const [searchPage, setSearchPage] = useState(1);
+  const [searchTotal, setSearchTotal] = useState(0);
+  const SEARCH_LIMIT = 12;
 
   useEffect(() => {
     fetch("/api/admin/products?limit=12&sort=newest")
@@ -260,13 +264,18 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
       .catch(() => {});
   }, []);
 
-  const searchProducts = useCallback(async (q: string) => {
-    if (!q.trim()) { setProducts([]); return; }
+  const searchProducts = useCallback(async (q: string, page = 1) => {
+    if (!q.trim()) { setProducts([]); setSearchTotal(0); return; }
     setSearching(true);
     try {
-      const res = await fetch(`/api/admin/products?search=${encodeURIComponent(q)}&nameOnly=true&limit=20`);
+      const offset = (page - 1) * SEARCH_LIMIT;
+      const res = await fetch(`/api/admin/products?search=${encodeURIComponent(q)}&nameOnly=true&limit=${SEARCH_LIMIT}&offset=${offset}`);
       const data = await res.json();
-      if (data.success) setProducts(data.data ?? data.products ?? []);
+      if (data.success) {
+        setProducts(data.data ?? data.products ?? []);
+        setSearchTotal(data.total ?? 0);
+        setSearchPage(page);
+      }
     } catch { /* ignore */ }
     setSearching(false);
   }, []);
@@ -276,7 +285,7 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
   const handleSearchChange = (val: string) => {
     setSearch(val);
     if (timer) clearTimeout(timer);
-    setTimer(setTimeout(() => searchProducts(val), 300));
+    setTimer(setTimeout(() => searchProducts(val, 1), 300));
   };
 
   const selectProduct = (p: Product) => {
@@ -369,36 +378,10 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
                 }
                 handleSearchChange(e.target.value);
               }}
-              placeholder="Search products..."
+              placeholder="ค้นหาด้วยชื่อสินค้า (ไทย/อังกฤษ)"
               className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
             />
 
-            {/* Search Dropdown */}
-            {products.length > 0 && !selectedProduct && (
-              <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-stone-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
-                {products.map((p) => {
-                  const shortDesc = p.shortDescription_th || p.shortDescription;
-                  return (
-                    <button key={p.id} onClick={() => selectProduct(p)}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 text-left transition-colors">
-                      {p.images?.[0] && (
-                        <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-stone-100">
-                          <Image src={p.images[0]} alt="" fill className="object-cover" unoptimized />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm text-stone-800 truncate">{p.name_th || p.name}</p>
-                        <p className="text-[10px] text-stone-400">{p.category?.name} · ฿{p.price?.toLocaleString()}</p>
-                        {shortDesc && (
-                          <p className="text-[10px] text-stone-400 truncate mt-0.5">{shortDesc}</p>
-                        )}
-                        <span className="text-[9px] text-stone-300">ID: {p.id.slice(0, 8)}</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
 
             {searching && (
               <div className="absolute right-3 top-3.5">
@@ -850,12 +833,19 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
         </div>
       )}
 
-      {/* Empty State — Recent Products Grid */}
+      {/* Product Grid — recent or search results */}
       {!loading && !result && !selectedProduct && (
         <div>
-          <p className="text-xs text-stone-400 font-medium mb-3 px-1">สินค้าล่าสุด — กดเพื่อเลือก</p>
+          {searching && (
+            <p className="text-xs text-stone-400 mb-3 px-1">กำลังค้นหา...</p>
+          )}
+          {!searching && (
+            <p className="text-xs text-stone-400 font-medium mb-3 px-1">
+              {search.trim() ? `ผลการค้นหา "${search}" — กดเพื่อเลือก` : "สินค้าล่าสุด — กดเพื่อเลือก"}
+            </p>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {recentProducts.map((p) => (
+            {(search.trim() ? products : recentProducts).map((p) => (
               <button
                 key={p.id}
                 onClick={() => selectProduct(p)}
@@ -867,18 +857,47 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-3xl text-stone-300">🐾</div>
                   )}
+                  {p._count && p._count.marketingPacks > 0 && (
+                    <div className="absolute top-2 right-2 bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                      🎯 {p._count.marketingPacks}
+                    </div>
+                  )}
                 </div>
                 <div className="p-3">
                   <p className="text-xs font-medium text-stone-800 line-clamp-2 leading-snug mb-1">{p.name_th || p.name}</p>
-                  <p className="text-xs text-orange-500 font-semibold">฿{p.price.toLocaleString()}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-orange-500 font-semibold">฿{p.price.toLocaleString()}</p>
+                    {p._count?.marketingPacks === 0 && (
+                      <span className="text-[10px] text-stone-300">ยังไม่มี pack</span>
+                    )}
+                  </div>
                 </div>
               </button>
             ))}
           </div>
-          {recentProducts.length === 0 && (
+          {!searching && search.trim() && products.length === 0 && (
             <div className="text-center py-12 text-stone-400">
-              <div className="text-4xl mb-3">✨</div>
-              <p className="text-sm">พิมพ์ชื่อสินค้าเพื่อค้นหา</p>
+              <p className="text-sm">ไม่พบสินค้า "{search}"</p>
+            </div>
+          )}
+          {/* Pagination for search results */}
+          {search.trim() && searchTotal > SEARCH_LIMIT && (
+            <div className="flex items-center justify-center gap-2 mt-4">
+              <button
+                onClick={() => searchProducts(search, searchPage - 1)}
+                disabled={searchPage <= 1}
+                className="px-3 py-1.5 text-xs rounded-lg border border-stone-200 disabled:opacity-30 hover:bg-stone-50 transition-colors"
+              >
+                ← ก่อนหน้า
+              </button>
+              <span className="text-xs text-stone-400">หน้า {searchPage} / {Math.ceil(searchTotal / SEARCH_LIMIT)}</span>
+              <button
+                onClick={() => searchProducts(search, searchPage + 1)}
+                disabled={searchPage >= Math.ceil(searchTotal / SEARCH_LIMIT)}
+                className="px-3 py-1.5 text-xs rounded-lg border border-stone-200 disabled:opacity-30 hover:bg-stone-50 transition-colors"
+              >
+                ถัดไป →
+              </button>
             </div>
           )}
         </div>

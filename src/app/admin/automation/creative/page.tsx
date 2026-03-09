@@ -807,6 +807,17 @@ const [editedHooks, setEditedHooks] = useState<string[]>([]);
                   editedImagePrompts.length > 0 ? `## Image Ad Prompts\n${editedImagePrompts.map((p) => `### ${p.angle}\n${p.prompt}`).join("\n\n")}` : "",
                   ``,
                   editedVideoPrompts.length > 0 ? `## Short Video Ad Concepts\n${editedVideoPrompts.map((p) => `### ${p.angle}\n${p.concept}`).join("\n\n")}` : "",
+                  ``,
+                  `---`,
+                  ``,
+                  `## Platform Ready`,
+                  `### Shopee\n${[lang === "th" ? (selectedProduct?.name_th || selectedProduct?.name || result.productName) : (selectedProduct?.name || result.productName), "", ...editedHooks.slice(0, 3).map((h) => `✅ ${h}`), "", editedCaptions.facebook || editedAdAngles[0]?.body || "", "", "📦 จัดส่งรวดเร็ว | ✅ สินค้าคุณภาพ | 💬 ติดต่อได้เลย"].join("\n").trim()}`,
+                  ``,
+                  `### TikTok Shop\n${[editedHooks[0] ? `${editedHooks[0]} ⬅ ดูต่อเลย!` : "", "", editedCaptions.instagram, "", "#tiktokshop #สัตว์เลี้ยง #petshop #ของดี"].join("\n").trim()}`,
+                  ``,
+                  `### Facebook\n${[editedCaptions.facebook, "", "👇 กดสั่งซื้อ หรือทักมาถามได้เลย!"].join("\n").trim()}`,
+                  ``,
+                  `### LINE\n${[editedCaptions.line, "", "📞 ทักมาสั่งได้เลยนะคะ/ครับ 😊"].join("\n").trim()}`,
                 ].filter((l) => l !== undefined).join("\n");
                 copy(all);
               }}

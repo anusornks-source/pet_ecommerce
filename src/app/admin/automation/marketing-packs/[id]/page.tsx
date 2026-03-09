@@ -243,7 +243,7 @@ function CopyBtn({ text }: { text: string }) {
   );
 }
 
-function RawToggle({ label, raw }: { label: string; raw: string | null }) {
+function RawToggle({ raw }: { label: string; raw: string | null }) {
   const [open, setOpen] = useState(false);
   if (!raw) return null;
   return (
@@ -397,6 +397,31 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
                 ``,
                 `## Thumbnail Text`,
                 editedThumbnailTexts.map((t, i) => `${i + 1}. ${t}`).join("\n"),
+                ``,
+                `---`,
+                ``,
+                `## Platform Ready`,
+                `### Shopee\n${[
+                  pack.lang === "th" ? (pack.product?.name_th || pack.product?.name || pack.productName) : (pack.product?.name || pack.productName),
+                  "",
+                  ...editedHooks.slice(0, 3).map((h) => `✅ ${h}`),
+                  "",
+                  editedCaptionFacebook || editedAdAngles[0]?.body || "",
+                  "",
+                  "📦 จัดส่งรวดเร็ว | ✅ สินค้าคุณภาพ | 💬 ติดต่อได้เลย",
+                ].join("\n").trim()}`,
+                ``,
+                `### TikTok Shop\n${[
+                  editedHooks[0] ? `${editedHooks[0]} ⬅ ดูต่อเลย!` : "",
+                  "",
+                  editedCaptionInstagram,
+                  "",
+                  "#tiktokshop #สัตว์เลี้ยง #petshop #ของดี",
+                ].join("\n").trim()}`,
+                ``,
+                `### Facebook\n${[editedCaptionFacebook, "", "👇 กดสั่งซื้อ หรือทักมาถามได้เลย!"].join("\n").trim()}`,
+                ``,
+                `### LINE\n${[editedCaptionLine, "", "📞 ทักมาสั่งได้เลยนะคะ/ครับ 😊"].join("\n").trim()}`,
               ].filter((l) => l !== undefined).join("\n");
               copy(all);
             }}

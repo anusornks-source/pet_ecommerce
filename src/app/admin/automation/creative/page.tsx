@@ -850,6 +850,16 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
               className="text-sm text-stone-400 hover:text-orange-500 transition-colors">
               Regenerate all
             </button>
+          {/* Platform Ready */}
+          <PlatformReadySection
+            productName={result.productName}
+            hooks={editedHooks}
+            captionFacebook={editedCaptions.facebook}
+            captionInstagram={editedCaptions.instagram}
+            captionLine={editedCaptions.line}
+            adAngles={editedAdAngles}
+          />
+
           </div>
         </div>
       )}
@@ -923,6 +933,55 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function PlatformReadySection({
+  productName, hooks, captionFacebook, captionInstagram, captionLine, adAngles,
+}: {
+  productName: string;
+  hooks: string[];
+  captionFacebook: string;
+  captionInstagram: string;
+  captionLine: string;
+  adAngles: { angle: string; headline: string; body: string }[];
+}) {
+  const platforms = [
+    { key: "shopee", label: "Shopee", icon: "🛒", content: [productName, "", ...hooks.slice(0, 3).map((h) => `✅ ${h}`), "", captionFacebook || adAngles[0]?.body || "", "", "📦 จัดส่งรวดเร็ว | ✅ สินค้าคุณภาพ | 💬 ติดต่อได้เลย"].join("\n").trim() },
+    { key: "tiktok", label: "TikTok Shop", icon: "🎵", content: [hooks[0] ? `${hooks[0]} ⬅ ดูต่อเลย!` : "", "", captionInstagram, "", "#tiktokshop #สัตว์เลี้ยง #petshop #ของดี"].join("\n").trim() },
+    { key: "facebook", label: "Facebook", icon: "📘", content: [captionFacebook, "", "👇 กดสั่งซื้อ หรือทักมาถามได้เลย!"].join("\n").trim() },
+    { key: "line", label: "LINE", icon: "💬", content: [captionLine, "", "📞 ทักมาสั่งได้เลยนะคะ/ครับ 😊"].join("\n").trim() },
+  ];
+  return (
+    <div className="bg-white rounded-2xl border border-stone-200 p-5">
+      <div className="mb-4">
+        <h2 className="font-bold text-stone-800 text-sm">Platform Ready</h2>
+        <p className="text-[11px] text-stone-400 mt-0.5">Content ที่ format สำหรับแต่ละแพลตฟอร์ม — แก้ไขได้ก่อน copy</p>
+      </div>
+      <div className="space-y-4">{platforms.map((p) => <PlatformCard key={p.key} label={p.label} icon={p.icon} initialContent={p.content} />)}</div>
+    </div>
+  );
+}
+
+function PlatformCard({ label, icon, initialContent }: { label: string; icon: string; initialContent: string }) {
+  const [content, setContent] = useState(initialContent);
+  const [copied, setCopied] = useState(false);
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const resize = useCallback(() => { const el = ref.current; if (!el) return; el.style.height = "auto"; el.style.height = Math.max(el.scrollHeight, 72) + "px"; }, []);
+  useEffect(() => { resize(); }, [content, resize]);
+  return (
+    <div className="bg-stone-50 rounded-xl p-4">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2"><span className="text-base">{icon}</span><span className="text-xs font-semibold text-stone-700">{label}</span></div>
+        <button onClick={() => { navigator.clipboard.writeText(content).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }); }}
+          className={`text-[11px] px-2.5 py-1 rounded-lg transition-colors ${copied ? "bg-green-100 text-green-600" : "text-stone-400 hover:text-orange-500 hover:bg-orange-50"}`}>
+          {copied ? "Copied!" : "Copy"}
+        </button>
+      </div>
+      <textarea ref={ref} value={content} onChange={(e) => { setContent(e.target.value); resize(); }}
+        className="w-full text-sm text-stone-700 leading-relaxed font-sans bg-white border border-stone-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-orange-300"
+        style={{ resize: "none", overflow: "hidden", minHeight: 72 }} rows={1} />
     </div>
   );
 }

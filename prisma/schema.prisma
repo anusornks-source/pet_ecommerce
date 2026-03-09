@@ -108,6 +108,15 @@ model ShopSettings {
   primaryColor          String    @default("#f97316")
   secondaryColor        String    @default("#f59e0b")
   bgColor               String    @default("#ffffff")
+  phone                 String?
+  lineId                String?
+  facebookUrl           String?
+  instagramUrl          String?
+  tiktokUrl             String?
+  announcementText      String?
+  announcementEnabled   Boolean   @default(false)
+  shippingFee           Float     @default(0)
+  freeShippingMin       Float     @default(0)
   updatedAt             DateTime  @updatedAt
 
   shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)

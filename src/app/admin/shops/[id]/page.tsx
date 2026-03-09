@@ -32,7 +32,20 @@ interface ShopDetail {
   coverUrl: string | null;
   usePetType: boolean;
   active: boolean;
-  settings?: { primaryColor?: string | null; secondaryColor?: string | null } | null;
+  settings?: {
+    primaryColor?: string | null;
+    secondaryColor?: string | null;
+    bgColor?: string | null;
+    phone?: string | null;
+    lineId?: string | null;
+    facebookUrl?: string | null;
+    instagramUrl?: string | null;
+    tiktokUrl?: string | null;
+    announcementText?: string | null;
+    announcementEnabled?: boolean;
+    shippingFee?: number | null;
+    freeShippingMin?: number | null;
+  } | null;
 }
 
 export default function EditShopPage({ params }: { params: Promise<{ id: string }> }) {
@@ -40,7 +53,14 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
   const router = useRouter();
   const [shop, setShop] = useState<ShopDetail | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [form, setForm] = useState({ name: "", name_th: "", slug: "", description: "", description_th: "", logoUrl: "", coverUrl: "", usePetType: true, primaryColor: "#f97316", secondaryColor: "#f59e0b" });
+  const [form, setForm] = useState({
+    name: "", name_th: "", slug: "", description: "", description_th: "",
+    logoUrl: "", coverUrl: "", usePetType: true,
+    primaryColor: "#f97316", secondaryColor: "#f59e0b", bgColor: "#ffffff",
+    phone: "", lineId: "", facebookUrl: "", instagramUrl: "", tiktokUrl: "",
+    announcementText: "", announcementEnabled: false,
+    shippingFee: 0, freeShippingMin: 0,
+  });
   const [saving, setSaving] = useState(false);
   const [savingCats, setSavingCats] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -75,6 +95,16 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
             usePetType: s.usePetType,
             primaryColor: s.settings?.primaryColor ?? "#f97316",
             secondaryColor: s.settings?.secondaryColor ?? "#f59e0b",
+            bgColor: s.settings?.bgColor ?? "#ffffff",
+            phone: s.settings?.phone ?? "",
+            lineId: s.settings?.lineId ?? "",
+            facebookUrl: s.settings?.facebookUrl ?? "",
+            instagramUrl: s.settings?.instagramUrl ?? "",
+            tiktokUrl: s.settings?.tiktokUrl ?? "",
+            announcementText: s.settings?.announcementText ?? "",
+            announcementEnabled: s.settings?.announcementEnabled ?? false,
+            shippingFee: s.settings?.shippingFee ?? 0,
+            freeShippingMin: s.settings?.freeShippingMin ?? 0,
           });
         }
       });
@@ -308,6 +338,94 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
             </div>
           );
         })()}
+      </div>
+
+      {/* Contact & Social */}
+      <div className="bg-white rounded-2xl border border-stone-100 p-6">
+        <h2 className="font-semibold text-stone-800 mb-4">Contact & Social</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium text-stone-600 block mb-1">📞 เบอร์โทร</label>
+            <input className="input w-full" placeholder="e.g. 02-123-4567" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-stone-600 block mb-1">💬 LINE ID</label>
+            <input className="input w-full" placeholder="e.g. @petshop" value={form.lineId} onChange={(e) => setForm({ ...form, lineId: e.target.value })} />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-stone-600 block mb-1">📘 Facebook URL</label>
+            <input className="input w-full" placeholder="https://facebook.com/..." value={form.facebookUrl} onChange={(e) => setForm({ ...form, facebookUrl: e.target.value })} />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-stone-600 block mb-1">📸 Instagram URL</label>
+            <input className="input w-full" placeholder="https://instagram.com/..." value={form.instagramUrl} onChange={(e) => setForm({ ...form, instagramUrl: e.target.value })} />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-stone-600 block mb-1">🎵 TikTok URL</label>
+            <input className="input w-full" placeholder="https://tiktok.com/@..." value={form.tiktokUrl} onChange={(e) => setForm({ ...form, tiktokUrl: e.target.value })} />
+          </div>
+        </div>
+        <button onClick={handleSave} disabled={saving} className="btn-primary px-4 py-2 text-sm mt-4">
+          {saving ? "Saving..." : "Save Changes"}
+        </button>
+      </div>
+
+      {/* Announcement Bar */}
+      <div className="bg-white rounded-2xl border border-stone-100 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-stone-800">Announcement Bar</h2>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <span className="text-sm text-stone-500">เปิดใช้งาน</span>
+            <div className="relative">
+              <input type="checkbox" checked={form.announcementEnabled} onChange={(e) => setForm({ ...form, announcementEnabled: e.target.checked })} className="sr-only" />
+              <div className={`w-10 h-6 rounded-full transition-colors ${form.announcementEnabled ? "bg-orange-500" : "bg-stone-200"}`} />
+              <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.announcementEnabled ? "translate-x-4" : ""}`} />
+            </div>
+          </label>
+        </div>
+        <textarea
+          className="input w-full resize-none"
+          rows={2}
+          placeholder="ข้อความแถบประกาศ เช่น 🎉 ส่งฟรีเมื่อซื้อครบ 500 บาท วันนี้เท่านั้น!"
+          value={form.announcementText}
+          onChange={(e) => setForm({ ...form, announcementText: e.target.value })}
+        />
+        {form.announcementEnabled && form.announcementText && (
+          <div className="mt-3 rounded-xl px-4 py-2.5 text-white text-sm text-center font-medium" style={{ backgroundColor: form.primaryColor }}>
+            {form.announcementText}
+          </div>
+        )}
+        <button onClick={handleSave} disabled={saving} className="btn-primary px-4 py-2 text-sm mt-4">
+          {saving ? "Saving..." : "Save Changes"}
+        </button>
+      </div>
+
+      {/* Shipping Settings */}
+      <div className="bg-white rounded-2xl border border-stone-100 p-6">
+        <h2 className="font-semibold text-stone-800 mb-1">Shipping</h2>
+        <p className="text-sm text-stone-400 mb-4">ตั้งค่าค่าจัดส่งสำหรับร้านนี้</p>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium text-stone-600 block mb-1">ค่าจัดส่ง (฿)</label>
+            <p className="text-xs text-stone-400 mb-1.5">ตั้งเป็น 0 = ส่งฟรีทุกออเดอร์</p>
+            <input type="number" min="0" step="1" className="input w-full" value={form.shippingFee} onChange={(e) => setForm({ ...form, shippingFee: Number(e.target.value) })} />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-stone-600 block mb-1">ฟรีเมื่อซื้อครบ (฿)</label>
+            <p className="text-xs text-stone-400 mb-1.5">ตั้งเป็น 0 = ไม่มีเงื่อนไขฟรี</p>
+            <input type="number" min="0" step="1" className="input w-full" value={form.freeShippingMin} onChange={(e) => setForm({ ...form, freeShippingMin: Number(e.target.value) })} />
+          </div>
+        </div>
+        <div className="mt-3 text-sm text-stone-500 bg-stone-50 rounded-xl px-4 py-2.5">
+          {form.shippingFee === 0
+            ? "✅ ส่งฟรีทุกออเดอร์"
+            : form.freeShippingMin > 0
+            ? `🚚 ค่าจัดส่ง ฿${form.shippingFee} · ฟรีเมื่อซื้อครบ ฿${form.freeShippingMin}`
+            : `🚚 ค่าจัดส่ง ฿${form.shippingFee}`}
+        </div>
+        <button onClick={handleSave} disabled={saving} className="btn-primary px-4 py-2 text-sm mt-4">
+          {saving ? "Saving..." : "Save Changes"}
+        </button>
       </div>
 
       {/* Content quick links */}

@@ -36,7 +36,13 @@ export async function PUT(
   const auth = await requireShopOwner(request, id, "OWNER");
   if (isNextResponse(auth)) return auth;
   const body = await request.json();
-  const { name, name_th, slug, description, description_th, logoUrl, coverUrl, usePetType, active, primaryColor, secondaryColor } = body;
+  const {
+    name, name_th, slug, description, description_th, logoUrl, coverUrl, usePetType, active,
+    primaryColor, secondaryColor, bgColor,
+    phone, lineId, facebookUrl, instagramUrl, tiktokUrl,
+    announcementText, announcementEnabled,
+    shippingFee, freeShippingMin,
+  } = body;
 
   const shop = await prisma.shop.update({
     where: { id },
@@ -53,18 +59,26 @@ export async function PUT(
     },
   });
 
-  if (primaryColor !== undefined || secondaryColor !== undefined) {
+  const settingsData = {
+    ...(primaryColor !== undefined && { primaryColor }),
+    ...(secondaryColor !== undefined && { secondaryColor }),
+    ...(bgColor !== undefined && { bgColor }),
+    ...(phone !== undefined && { phone: phone?.trim() || null }),
+    ...(lineId !== undefined && { lineId: lineId?.trim() || null }),
+    ...(facebookUrl !== undefined && { facebookUrl: facebookUrl?.trim() || null }),
+    ...(instagramUrl !== undefined && { instagramUrl: instagramUrl?.trim() || null }),
+    ...(tiktokUrl !== undefined && { tiktokUrl: tiktokUrl?.trim() || null }),
+    ...(announcementText !== undefined && { announcementText: announcementText?.trim() || null }),
+    ...(announcementEnabled !== undefined && { announcementEnabled: !!announcementEnabled }),
+    ...(shippingFee !== undefined && { shippingFee: Number(shippingFee) }),
+    ...(freeShippingMin !== undefined && { freeShippingMin: Number(freeShippingMin) }),
+  };
+
+  if (Object.keys(settingsData).length > 0) {
     await prisma.shopSettings.upsert({
       where: { shopId: id },
-      create: {
-        shopId: id,
-        ...(primaryColor && { primaryColor }),
-        ...(secondaryColor && { secondaryColor }),
-      },
-      update: {
-        ...(primaryColor && { primaryColor }),
-        ...(secondaryColor && { secondaryColor }),
-      },
+      create: { shopId: id, ...settingsData },
+      update: settingsData,
     });
   }
 

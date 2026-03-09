@@ -30,12 +30,23 @@ export default async function ShopPage({
 
   const shop = await prisma.shop.findUnique({
     where: { slug: shopSlug, active: true },
-    include: { settings: { select: { primaryColor: true, secondaryColor: true } } },
+    include: {
+      settings: {
+        select: {
+          primaryColor: true, secondaryColor: true, bgColor: true,
+          phone: true, lineId: true, facebookUrl: true, instagramUrl: true, tiktokUrl: true,
+          announcementText: true, announcementEnabled: true,
+          shippingFee: true, freeShippingMin: true,
+        },
+      },
+    },
   });
   if (!shop) notFound();
 
   const primary = shop.settings?.primaryColor ?? "#f97316";
   const secondary = shop.settings?.secondaryColor ?? "#f59e0b";
+  const announcement = shop.settings?.announcementEnabled && shop.settings?.announcementText
+    ? shop.settings.announcementText : null;
 
   const cookieStore = await cookies();
   const lang: Lang = cookieStore.get("lang")?.value === "en" ? "en" : "th";
@@ -94,6 +105,11 @@ export default async function ShopPage({
         .shop-register-btn { color: ${primary}; }
         .shop-register-btn:hover { background-color: ${primary}18; }
       `}</style>
+      {announcement && (
+        <div className="py-2.5 px-4 text-center text-sm font-medium text-white" style={{ backgroundColor: primary }}>
+          {announcement}
+        </div>
+      )}
       <HeroSlider banners={banners} />
 
       {/* Pet Types */}

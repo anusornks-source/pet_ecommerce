@@ -431,6 +431,7 @@ export default function AdminProductsPage() {
                   เผยแพร่
                 </th>
                 <th className="text-center px-4 py-3 text-stone-500 font-medium">Marketing</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-50">
@@ -629,19 +630,21 @@ export default function AdminProductsPage() {
                       />
                     </button>
                   </td>
+                  <td className="px-4 py-3 text-center">
+                    <Link
+                      href={`/admin/automation/marketing-packs?productId=${product.id}`}
+                      className={`inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
+                        product._count.marketingPacks > 0
+                          ? "border-orange-200 bg-orange-50 text-orange-600 hover:bg-orange-100"
+                          : "border-stone-200 text-stone-400 hover:bg-stone-50"
+                      }`}
+                      title="Marketing Packs"
+                    >
+                      🎯 {product._count.marketingPacks > 0 ? `${product._count.marketingPacks} +` : "+"}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
-                      <Link
-                        href={`/admin/automation/marketing-packs?productId=${product.id}`}
-                        className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
-                          product._count.marketingPacks > 0
-                            ? "border-orange-200 bg-orange-50 text-orange-600 hover:bg-orange-100"
-                            : "border-stone-200 text-stone-400 hover:bg-stone-50"
-                        }`}
-                        title="Marketing Packs"
-                      >
-                        🎯 {product._count.marketingPacks > 0 ? `${product._count.marketingPacks} +` : "+"}
-                      </Link>
                       <Link
                         href={`/admin/products/${product.id}`}
                         className="text-xs px-3 py-1.5 rounded-lg border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"

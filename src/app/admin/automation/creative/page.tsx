@@ -244,8 +244,7 @@ export default function CreativeStudioPage() {
 const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [activeImg, setActiveImg] = useState<string | null>(null);
-  const [captionTab, setCaptionTab] = useState<"facebook" | "instagram" | "line">("facebook");
-  const [editedHooks, setEditedHooks] = useState<string[]>([]);
+const [editedHooks, setEditedHooks] = useState<string[]>([]);
   const [editedCaptions, setEditedCaptions] = useState<{ facebook: string; instagram: string; line: string }>({ facebook: "", instagram: "", line: "" });
   const [editedAdAngles, setEditedAdAngles] = useState<{ angle: string; headline: string; body: string }[]>([]);
   const [editedUgcScript, setEditedUgcScript] = useState("");
@@ -850,9 +849,11 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
               className="text-sm text-stone-400 hover:text-orange-500 transition-colors">
               Regenerate all
             </button>
+          </div>
+
           {/* Platform Ready */}
           <PlatformReadySection
-            productName={result.productName}
+            productName={lang === "th" ? (selectedProduct?.name_th || selectedProduct?.name || result.productName) : (selectedProduct?.name || result.productName)}
             hooks={editedHooks}
             captionFacebook={editedCaptions.facebook}
             captionInstagram={editedCaptions.instagram}
@@ -860,7 +861,6 @@ const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
             adAngles={editedAdAngles}
           />
 
-          </div>
         </div>
       )}
 

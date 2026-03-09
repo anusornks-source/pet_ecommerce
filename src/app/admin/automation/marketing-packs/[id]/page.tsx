@@ -708,7 +708,7 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
 
       {/* 8. Platform Ready */}
       <PlatformReadySection
-        productName={pack.productName}
+        productName={pack.lang === "th" ? (pack.product?.name_th || pack.product?.name || pack.productName) : (pack.product?.name || pack.productName)}
         hooks={editedHooks}
         captionFacebook={editedCaptionFacebook}
         captionInstagram={editedCaptionInstagram}

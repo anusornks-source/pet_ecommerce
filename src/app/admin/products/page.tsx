@@ -640,7 +640,7 @@ export default function AdminProductsPage() {
                         }`}
                         title="Marketing Packs"
                       >
-                        🎯 {product._count.marketingPacks > 0 ? product._count.marketingPacks : "+"}
+                        🎯 {product._count.marketingPacks > 0 ? `${product._count.marketingPacks} +` : "+"}
                       </Link>
                       <Link
                         href={`/admin/products/${product.id}`}

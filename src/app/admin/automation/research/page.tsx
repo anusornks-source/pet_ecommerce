@@ -820,6 +820,10 @@ export default function ProductResearchPage() {
                 }} className="text-[11px] text-stone-400 hover:text-stone-600 border border-stone-200 px-2.5 py-1.5 rounded-lg transition-colors">
                   Copy All
                 </button>
+                <button onClick={() => { setSuggestions([]); setSuggestError(""); setSuggestRaw(""); setShowSuggestLog(false); }}
+                  className="text-[11px] text-stone-300 hover:text-red-400 border border-stone-200 hover:border-red-200 px-2.5 py-1.5 rounded-lg transition-colors">
+                  Clear
+                </button>
               </>
             )}
             <div className="relative">

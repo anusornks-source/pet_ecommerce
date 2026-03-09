@@ -63,15 +63,30 @@ export async function POST(request: NextRequest) {
     const petContext = petNames ? `\nPet types sold: ${petNames}` : "";
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const painPointContext = Array.isArray(painPoints) && painPoints.length > 0
-      ? `\n\nPain Points discovered (use as context to generate targeted niches):\n${painPoints.map((pp: any) => `- ${pp.painPoint_th || pp.painPoint} → keyword: ${pp.nicheKeyword}`).join("\n")}\n\nGenerate niches that specifically address these pain points.`
-      : "";
+    const hasPainPoints = Array.isArray(painPoints) && painPoints.length > 0;
 
-    const prompt = `You are an ecommerce product strategist. Analyze this shop's data and suggest profitable niche keywords for product research on CJ Dropshipping.
+    const prompt = hasPainPoints
+      ? `You are an ecommerce product strategist for CJ Dropshipping.
+
+Based ONLY on these customer pain points, suggest 12 specific niche keywords for product sourcing.
+Focus EXCLUSIVELY on solving these pain points — do not add unrelated niches.
+
+Pain Points:
+${painPoints.map((pp: any) => `- ${pp.painPoint_th || pp.painPoint} (keyword: ${pp.nicheKeyword})`).join("\n")}
+
+For each pain point, suggest 1-3 related product niches that directly solve it.
+Each suggestion should be a short, specific search phrase (2-4 words) suitable for CJ Dropshipping (English keywords).
+Also provide a Thai translation of both the niche and reason.
+
+Classify each as: gap (missing product), trending (hot now), seasonal (upcoming), or upsell (complement).
+
+Return ONLY a JSON array:
+[{"niche": "keyword phrase in English", "niche_th": "คำแปลภาษาไทย", "type": "gap|trending|seasonal|upsell", "reason": "short reason why in English", "reason_th": "เหตุผลสั้นๆ ภาษาไทย"}]`
+      : `You are an ecommerce product strategist. Analyze this shop's data and suggest profitable niche keywords for product research on CJ Dropshipping.
 
 Shop categories: ${catNames || "none yet"}${petContext}
 Recent products:
-${productSample || "No products yet"}${painPointContext}
+${productSample || "No products yet"}
 
 Generate 12 niche keyword suggestions. Mix these types:
 - Gaps: niches the shop is missing but should have

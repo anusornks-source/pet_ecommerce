@@ -753,6 +753,16 @@ const [editedHooks, setEditedHooks] = useState<string[]>([]);
             </div>
           )}
 
+          {/* Platform Ready */}
+          <PlatformReadySection
+            productName={lang === "th" ? (selectedProduct?.name_th || selectedProduct?.name || result.productName) : (selectedProduct?.name || result.productName)}
+            hooks={editedHooks}
+            captionFacebook={editedCaptions.facebook}
+            captionInstagram={editedCaptions.instagram}
+            captionLine={editedCaptions.line}
+            adAngles={editedAdAngles}
+          />
+
           {/* Copy All + Regenerate */}
           <div className="flex items-center justify-center gap-4 pb-4">
             <button
@@ -850,16 +860,6 @@ const [editedHooks, setEditedHooks] = useState<string[]>([]);
               Regenerate all
             </button>
           </div>
-
-          {/* Platform Ready */}
-          <PlatformReadySection
-            productName={lang === "th" ? (selectedProduct?.name_th || selectedProduct?.name || result.productName) : (selectedProduct?.name || result.productName)}
-            hooks={editedHooks}
-            captionFacebook={editedCaptions.facebook}
-            captionInstagram={editedCaptions.instagram}
-            captionLine={editedCaptions.line}
-            adAngles={editedAdAngles}
-          />
 
         </div>
       )}

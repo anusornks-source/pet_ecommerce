@@ -119,6 +119,8 @@ export default function ProductResearchPage() {
   const [showBankPicker, setShowBankPicker] = useState(false);
   const [bankAllItems, setBankAllItems] = useState<PainPointItem[]>([]);
   const [bankSelected, setBankSelected] = useState<Set<string>>(new Set());
+  const [bankPickerPage, setBankPickerPage] = useState(1);
+  const [bankPickerSearch, setBankPickerSearch] = useState("");
   const [selectedPainForNiche, setSelectedPainForNiche] = useState<Set<string>>(new Set());
   const trendSectionRef = useRef<HTMLDivElement>(null);
 
@@ -274,8 +276,8 @@ export default function ProductResearchPage() {
       const data = await res.json();
       if (data.success && data.data.length > 0) {
         setBankAllItems(data.data);
-        // Pre-select all
-        setBankSelected(new Set(data.data.map((p: PainPointItem) => p.nicheKeyword)));
+        setBankSelected(new Set());
+        setBankPickerPage(1);
         setShowBankPicker(true);
       } else {
         toast("ยังไม่มี Pain Point ใน Bank");
@@ -440,23 +442,43 @@ export default function ProductResearchPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowBankPicker(false)} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[80vh] flex flex-col mx-4">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
-              <div>
-                <h3 className="font-bold text-stone-800 text-sm">เลือก Pain Points เป็น context</h3>
-                <p className="text-[11px] text-stone-400 mt-0.5">เลือก pain points ที่จะใช้ generate niches</p>
+            {(() => {
+              const BANK_PER_PAGE = 8;
+              const q = bankPickerSearch.toLowerCase();
+              const filtered = q
+                ? bankAllItems.filter((p) =>
+                    p.painPoint.toLowerCase().includes(q) ||
+                    (p.painPoint_th ?? "").toLowerCase().includes(q) ||
+                    p.nicheKeyword.toLowerCase().includes(q) ||
+                    p.category.toLowerCase().includes(q) ||
+                    p.productOpportunity.toLowerCase().includes(q)
+                  )
+                : bankAllItems;
+              const totalPages = Math.ceil(filtered.length / BANK_PER_PAGE);
+              const page = Math.min(bankPickerPage, totalPages || 1);
+              const paged = filtered.slice((page - 1) * BANK_PER_PAGE, page * BANK_PER_PAGE);
+              return (<>
+            <div className="px-5 py-4 border-b border-stone-100 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-stone-800 text-sm">เลือก Pain Points เป็น context</h3>
+                  <p className="text-[11px] text-stone-400 mt-0.5">เลือก pain points ที่จะใช้ generate niches</p>
+                </div>
+                <button onClick={() => setShowBankPicker(false)} className="text-stone-400 hover:text-stone-600 text-xl leading-none">×</button>
               </div>
-              <button onClick={() => setShowBankPicker(false)} className="text-stone-400 hover:text-stone-600 text-xl leading-none">×</button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-5 py-3 space-y-1.5">
-              {/* Select all / none */}
-              <div className="flex items-center gap-3 pb-2 border-b border-stone-100 mb-2">
-                <button onClick={() => setBankSelected(new Set(bankAllItems.map((p) => p.nicheKeyword)))}
-                  className="text-[11px] text-violet-500 hover:text-violet-700">เลือกทั้งหมด</button>
+              <input value={bankPickerSearch} onChange={(e) => { setBankPickerSearch(e.target.value); setBankPickerPage(1); }}
+                placeholder="ค้นหา pain point, keyword..."
+                className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+              <div className="flex items-center gap-3">
+                <button onClick={() => setBankSelected(new Set(filtered.map((p) => p.nicheKeyword)))}
+                  className="text-[11px] text-violet-500 hover:text-violet-700">เลือกทั้งหมด ({filtered.length})</button>
                 <button onClick={() => setBankSelected(new Set())}
                   className="text-[11px] text-stone-400 hover:text-stone-600">ไม่เลือก</button>
-                <span className="text-[11px] text-stone-400 ml-auto">{bankSelected.size}/{bankAllItems.length}</span>
+                <span className="text-[11px] text-stone-400 ml-auto">{bankSelected.size} selected</span>
               </div>
-              {bankAllItems.map((pp) => (
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 py-3 space-y-1.5">
+              {paged.map((pp) => (
                 <label key={pp.nicheKeyword}
                   className={`flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors ${
                     bankSelected.has(pp.nicheKeyword) ? "bg-violet-50 border border-violet-200" : "bg-stone-50 border border-transparent hover:bg-stone-100"
@@ -471,6 +493,9 @@ export default function ProductResearchPage() {
                     className="mt-0.5 accent-violet-500" />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-stone-700 font-medium leading-snug">{pp.painPoint_th || pp.painPoint}</p>
+                    {pp.painPoint && pp.painPoint_th && (
+                      <p className="text-[11px] text-stone-500 leading-snug mt-0.5">{pp.painPoint}</p>
+                    )}
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-[10px] font-mono bg-white border border-stone-200 px-1.5 py-0.5 rounded text-stone-500">{pp.nicheKeyword}</span>
                       <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
@@ -482,7 +507,24 @@ export default function ProductResearchPage() {
                   </div>
                 </label>
               ))}
+              {filtered.length === 0 && (
+                <p className="text-xs text-stone-400 text-center py-4">ไม่พบ pain point ที่ตรง</p>
+              )}
             </div>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 px-5 py-2 border-t border-stone-50">
+                <button onClick={() => setBankPickerPage((p) => Math.max(1, p - 1))} disabled={page <= 1}
+                  className="px-2.5 py-1 text-xs rounded-lg border border-stone-200 disabled:opacity-30 hover:bg-stone-50 transition-colors">
+                  ←
+                </button>
+                <span className="text-xs text-stone-400">{page} / {totalPages}</span>
+                <button onClick={() => setBankPickerPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
+                  className="px-2.5 py-1 text-xs rounded-lg border border-stone-200 disabled:opacity-30 hover:bg-stone-50 transition-colors">
+                  →
+                </button>
+              </div>
+            )}
             <div className="px-5 py-4 border-t border-stone-100 flex items-center gap-3">
               <button onClick={handleConfirmBankSelection}
                 disabled={bankSelected.size === 0}
@@ -494,6 +536,7 @@ export default function ProductResearchPage() {
                 ยกเลิก
               </button>
             </div>
+              </>); })()}
           </div>
         </div>
       )}

@@ -1,10 +1,59 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useShopAdmin } from "@/context/ShopAdminContext";
 import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
+
+function ExportDropdown({ shopFilter, filterActive }: { shopFilter: string; filterActive: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const buildUrl = (platform: string) => {
+    const p = new URLSearchParams({ platform });
+    if (shopFilter) p.set("shopId", shopFilter);
+    if (filterActive) p.set("active", filterActive);
+    return `/api/admin/products/export?${p}`;
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+      >
+        ⬇ Export
+        <span className="text-stone-400 text-xs">▾</span>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 bg-white border border-stone-200 rounded-xl shadow-lg z-20 min-w-48 overflow-hidden">
+          {[
+            { label: "🛍️ Shopee CSV", platform: "shopee" },
+            { label: "🎵 TikTok Shop CSV", platform: "tiktok" },
+            { label: "📘 Facebook Catalog CSV", platform: "facebook" },
+          ].map(({ label, platform }) => (
+            <a
+              key={platform}
+              href={buildUrl(platform)}
+              download
+              onClick={() => setOpen(false)}
+              className="block px-4 py-2.5 text-sm text-stone-700 hover:bg-orange-50 hover:text-orange-700 transition-colors"
+            >
+              {label}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Tag {
   id: string;
@@ -299,12 +348,15 @@ export default function AdminProductsPage() {
             ) : null}
           </div>
         </div>
-        <Link
-          href="/admin/products/new"
-          className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
-        >
-          + เพิ่มสินค้า
-        </Link>
+        <div className="flex items-center gap-2">
+          <ExportDropdown shopFilter={shopFilter || activeShop?.id || ""} filterActive={filterActive} />
+          <Link
+            href="/admin/products/new"
+            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+          >
+            + เพิ่มสินค้า
+          </Link>
+        </div>
       </div>
 
       {/* Search + Filters */}

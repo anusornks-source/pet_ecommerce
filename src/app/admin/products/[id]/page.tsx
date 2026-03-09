@@ -193,6 +193,14 @@ export default function EditProductPage({
           >
             {duplicating ? "กำลังคัดลอก..." : "📋 คัดลอกสินค้า"}
           </button>
+          <a
+            href={`/api/admin/products/${id}/share-card`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+          >
+            🖼️ Share Card
+          </a>
           {product.variants.some((v) => v.cjVid) && (
             <button
               onClick={handleSyncStock}

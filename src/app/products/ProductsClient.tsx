@@ -124,7 +124,7 @@ export default function ProductsClient({
     else params.delete(key);
     params.delete("page");
     setPage(1);
-    router.push(`${basePath}?${params.toString()}`);
+    router.push(`${basePath}?${params.toString()}`, { scroll: false });
   };
 
   const clearFilters = () => {
@@ -133,9 +133,9 @@ export default function ProductsClient({
     if (shopSlug) {
       const params = new URLSearchParams();
       params.set("shopSlug", shopSlug);
-      router.push(`${basePath}?${params.toString()}`);
+      router.push(`${basePath}?${params.toString()}`, { scroll: false });
     } else {
-      router.push(basePath);
+      router.push(basePath, { scroll: false });
     }
   };
 
@@ -147,7 +147,7 @@ export default function ProductsClient({
     else params.delete("maxPrice");
     params.delete("page");
     setPage(1);
-    router.push(`/products?${params}`);
+    router.push(`/products?${params}`, { scroll: false });
   };
 
   const hasFilters = category || petType || search || featured || minPrice || maxPrice || sort !== "newest";

@@ -36,10 +36,9 @@ async function resolveNavBrand(pathname: string) {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSettings();
   return {
-    title: `${settings.storeName} - ร้านสัตว์เลี้ยงออนไลน์`,
-    description: "ช้อปสัตว์เลี้ยง อาหาร และของเล่น คุณภาพสูง ราคาถูก จัดส่งทั่วประเทศ",
+    title: "CartNova - Multi-shop Cart Platform",
+    description: "CartNova is a multi-shop ecommerce hub where customers can discover shops and products in one central cart.",
   };
 }
 
@@ -56,8 +55,10 @@ export default async function RootLayout({
   const headersList = await headers();
   const pathname = headersList.get("x-pathname") ?? "";
   const shopBrand = await resolveNavBrand(pathname);
-  const navName = shopBrand?.name ?? settings.storeName;
-  const navLogo = shopBrand?.logoUrl ?? settings.logoUrl ?? undefined;
+  const navName = shopBrand?.name ?? "CartNova";
+  // For CartNova hub ("/") อย่าใช้โลโก้จาก SiteSettings เพื่อไม่ให้ไปติดโลโก้ร้านเก่า
+  const isHome = pathname === "/" || pathname === "";
+  const navLogo = shopBrand?.logoUrl ?? (isHome ? undefined : settings.logoUrl ?? undefined);
   const shopId = shopBrand?.id ?? undefined;
   const shopSlug = shopBrand?.slug ?? undefined;
   const shopName = shopBrand?.name ?? undefined;

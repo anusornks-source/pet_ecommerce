@@ -16,7 +16,7 @@ interface NavbarProps {
   shopSlug?: string;
 }
 
-export default function Navbar({ storeName = "PetShop", logoUrl, shopId, shopSlug }: NavbarProps) {
+export default function Navbar({ storeName = "CartNova", logoUrl, shopId, shopSlug }: NavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
@@ -49,7 +49,7 @@ export default function Navbar({ storeName = "PetShop", logoUrl, shopId, shopSlu
               <Image src={logoUrl} alt={storeName} fill className="object-contain" sizes="32px" />
             </div>
           ) : (
-            <span className="text-2xl">🐾</span>
+            <span className="text-2xl">{storeName === "CartNova" ? "🛒" : "🐾"}</span>
           )}
           <span>{storeName}</span>
         </Link>

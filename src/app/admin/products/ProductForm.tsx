@@ -6,9 +6,20 @@ import Image from "next/image";
 import toast from "react-hot-toast";
 import { useShopAdmin } from "@/context/ShopAdminContext";
 
+interface CategoryGroupLite {
+  id: string;
+  name: string;
+  name_th?: string | null;
+  icon?: string | null;
+}
+
 interface Category {
   id: string;
   name: string;
+  name_th?: string | null;
+  icon?: string | null;
+  groupId?: string | null;
+  group?: CategoryGroupLite | null;
 }
 
 interface PetType {
@@ -146,7 +157,10 @@ export default function ProductForm({ productId, productShopId, initialData }: P
     fetch(`/api/admin/shops/${effectiveShopId}/categories`)
       .then((r) => r.json())
       .then((d) => {
-        if (d.success) setCategories(d.data.filter((c: { enabled: boolean }) => c.enabled));
+        if (d.success) {
+          const enabled = (d.data as Category[]).filter((c: any) => (c as any).enabled);
+          setCategories(enabled);
+        }
       });
 
     if (effectiveShop?.usePetType) {
@@ -267,8 +281,129 @@ export default function ProductForm({ productId, productShopId, initialData }: P
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Image Upload — moved to top above product names */}
+      <div>
+        <label className="block text-sm font-medium text-stone-700 mb-1.5">รูปภาพสินค้า</label>
+
+        {/* Drop zone */}
+        <div
+          onDrop={handleDrop}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onClick={() => fileInputRef.current?.click()}
+          className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+            dragOver ? "border-orange-400 bg-orange-50" : "border-stone-200 hover:border-orange-300 hover:bg-stone-50"
+          }`}
+        >
+          <input
+            ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
+            onChange={(e) => e.target.files && handleFiles(e.target.files)}
+          />
+          {uploading ? (
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-orange-500">กำลังอัปโหลด...</p>
+            </div>
+          ) : (
+            <>
+              <p className="text-2xl mb-1">🖼️</p>
+              <p className="text-sm font-medium text-stone-600">คลิกหรือลากไฟล์มาวางที่นี่</p>
+              <p className="text-xs text-stone-400 mt-0.5">JPG, PNG, WebP — ไม่เกิน 5MB ต่อไฟล์</p>
+            </>
+          )}
+        </div>
+
+        {/* Previews with remove button */}
+        {imageList.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {imageList.map((url, i) => {
+              const isValid = (() => { try { new URL(url); return true; } catch { return false; } })();
+              return (
+                <div key={i} className="relative group">
+                  <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-stone-100 border border-stone-200">
+                    {isValid ? (
+                      <Image src={url} alt="" fill className="object-cover" sizes="80px" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-stone-400 text-center px-1">
+                        URL ไม่ถูกต้อง
+                      </div>
+                    )}
+                  </div>
+                  <button type="button" onClick={() => removeImage(i)}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >✕</button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Manual URL fallback */}
+        <div className="mt-2">
+          <p className="text-xs text-stone-400 mb-1">หรือใส่ URL โดยตรง (คั่นด้วยคอมมา)</p>
+          <textarea rows={2} value={form.images}
+            onChange={(e) => setForm((f) => ({ ...f, images: e.target.value }))}
+            placeholder="https://example.com/img1.jpg, https://example.com/img2.jpg"
+            className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none"
+          />
+        </div>
+      </div>
+
+      {/* Product names */}
       <div className="grid grid-cols-2 gap-4">
-        {field("ชื่อสินค้า (EN)", "name", { required: true, placeholder: "e.g. Genuine Leather Dog Leash" })}
+        {/* ชื่อสินค้า EN — with AI helper */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-sm font-medium text-stone-700">ชื่อสินค้า (EN)</label>
+            <button
+              type="button"
+              disabled={!!generatingName || !form.name_th}
+              onClick={async () => {
+                if (!form.name_th) {
+                  toast.error("กรุณากรอกชื่อสินค้า (TH) ก่อน");
+                  return;
+                }
+                setGeneratingName("en");
+                try {
+                  const res = await fetch("/api/admin/ai/suggest-field", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      field: "name_en",
+                      name_th: form.name_th,
+                    }),
+                  });
+                  const data = await res.json();
+                  if (data.success && data.value) {
+                    setForm((f) => ({ ...f, name: data.value }));
+                  } else {
+                    toast.error(data.error || "AI generation failed");
+                  }
+                } catch {
+                  toast.error("Error");
+                } finally {
+                  setGeneratingName(false);
+                }
+              }}
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 transition-colors disabled:opacity-50 shrink-0"
+            >
+              {generatingName === "en" ? (
+                <>
+                  <span className="inline-block w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" /> EN...
+                </>
+              ) : (
+                <>✨ AI EN</>
+              )}
+            </button>
+          </div>
+          <input
+            required
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            placeholder="e.g. Genuine Leather Dog Leash"
+            className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+          />
+        </div>
         {/* ชื่อสินค้า TH — with AI translate button */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
@@ -541,11 +676,39 @@ export default function ProductForm({ productId, productShopId, initialData }: P
             className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
           >
             <option value="">เลือกหมวดหมู่</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
+            {(() => {
+              if (categories.length === 0) return null;
+              const groupsMap = new Map<string | null, { group: CategoryGroupLite | null; cats: Category[] }>();
+              categories.forEach((c) => {
+                const key = c.group?.id ?? null;
+                const existing = groupsMap.get(key) ?? { group: c.group ?? null, cats: [] };
+                existing.cats.push(c);
+                groupsMap.set(key, existing);
+              });
+              const grouped = Array.from(groupsMap.values());
+              return grouped.map(({ group, cats }) =>
+                group ? (
+                  <optgroup
+                    key={group.id}
+                    label={`${group.icon ?? "🗂️"} ${group.name_th ?? group.name}`}
+                  >
+                    {cats.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.icon} {c.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : (
+                  <optgroup key="__ungrouped" label="อื่น ๆ / ไม่มีกลุ่ม">
+                    {cats.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.icon} {c.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )
+              );
+            })()}
           </select>
         </div>
         {effectiveShop?.usePetType !== false && (
@@ -567,74 +730,6 @@ export default function ProductForm({ productId, productShopId, initialData }: P
             </select>
           </div>
         )}
-      </div>
-
-      {/* Image Upload */}
-      <div>
-        <label className="block text-sm font-medium text-stone-700 mb-1.5">รูปภาพสินค้า</label>
-
-        {/* Drop zone */}
-        <div
-          onDrop={handleDrop}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onClick={() => fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-            dragOver ? "border-orange-400 bg-orange-50" : "border-stone-200 hover:border-orange-300 hover:bg-stone-50"
-          }`}
-        >
-          <input
-            ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
-            onChange={(e) => e.target.files && handleFiles(e.target.files)}
-          />
-          {uploading ? (
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-orange-500">กำลังอัปโหลด...</p>
-            </div>
-          ) : (
-            <>
-              <p className="text-2xl mb-1">🖼️</p>
-              <p className="text-sm font-medium text-stone-600">คลิกหรือลากไฟล์มาวางที่นี่</p>
-              <p className="text-xs text-stone-400 mt-0.5">JPG, PNG, WebP — ไม่เกิน 5MB ต่อไฟล์</p>
-            </>
-          )}
-        </div>
-
-        {/* Previews with remove button */}
-        {imageList.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {imageList.map((url, i) => {
-              const isValid = (() => { try { new URL(url); return true; } catch { return false; } })();
-              return (
-                <div key={i} className="relative group">
-                  <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-stone-100 border border-stone-200">
-                    {isValid ? (
-                      <Image src={url} alt="" fill className="object-cover" sizes="80px" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-stone-400 text-center px-1">
-                        URL ไม่ถูกต้อง
-                      </div>
-                    )}
-                  </div>
-                  <button type="button" onClick={() => removeImage(i)}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  >✕</button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Manual URL fallback */}
-        <div className="mt-2">
-          <p className="text-xs text-stone-400 mb-1">หรือใส่ URL โดยตรง (คั่นด้วยคอมมา)</p>
-          <textarea rows={2} value={form.images}
-            onChange={(e) => setForm((f) => ({ ...f, images: e.target.value }))}
-            placeholder="https://example.com/img1.jpg, https://example.com/img2.jpg"
-            className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none"
-          />
-        </div>
       </div>
 
       {/* Variants */}

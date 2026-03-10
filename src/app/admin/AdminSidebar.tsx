@@ -75,6 +75,7 @@ const navEntries: NavEntry[] = [
     icon: "⚙️",
     minRole: "OWNER",
     items: [
+      { href: "/admin/site-settings", label: "Site Settings (CartNova)", icon: "🌐", adminOnly: true },
       { href: "/admin/settings", label: "ตั้งค่าร้าน", icon: "⚙️" },
       { href: "/admin/system-integration", label: "System Integration", icon: "🔌", adminOnly: true },
       { href: "/admin/api-logs", label: "API & Webhook Logs", icon: "🗂️", adminOnly: true },

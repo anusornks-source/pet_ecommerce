@@ -12,7 +12,7 @@ interface FooterProps {
 }
 
 export default function Footer({
-  storeName = "PetShop",
+  storeName = "CartNova",
   logoUrl,
   phone,
   lineId,
@@ -31,16 +31,24 @@ export default function Footer({
         <div>
           <div className="flex items-center gap-2 text-white font-bold text-xl mb-3">
             {logoUrl ? (
-              <div className="relative w-8 h-8 shrink-0">
-                <Image src={logoUrl} alt={storeName} fill className="object-contain brightness-0 invert" sizes="32px" />
+              <div className="relative w-8 h-8 shrink-0 rounded-md overflow-hidden bg-white">
+                <Image
+                  src={logoUrl}
+                  alt={storeName}
+                  fill
+                  className="object-contain"
+                  sizes="32px"
+                />
               </div>
             ) : (
-              <span className="text-2xl">🐾</span>
+              <span className="text-2xl">{storeName === "CartNova" ? "🛒" : "🐾"}</span>
             )}
             <span>{storeName}</span>
           </div>
           <p className="text-sm leading-relaxed">
-            ร้านสัตว์เลี้ยงออนไลน์ที่คุณไว้วางใจได้ เราคัดสรรสัตว์เลี้ยง อาหาร และของเล่น คุณภาพสูงสำหรับน้องรัก
+            {storeName === "CartNova"
+              ? "แพลตฟอร์มกลางที่รวมหลายร้านไว้ในที่เดียว ให้คุณช้อปจากหลายร้านผ่านตะกร้าเดียว"
+              : "ร้านสัตว์เลี้ยงออนไลน์ที่คุณไว้วางใจได้ เราคัดสรรสัตว์เลี้ยง อาหาร และของเล่น คุณภาพสูงสำหรับน้องรัก"}
           </p>
           {hasSocial && (
             <div className="flex items-center gap-3 mt-4">

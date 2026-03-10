@@ -1,0 +1,13 @@
+---
+description: Prisma and database rules
+globs: ["prisma/**", "**/*.prisma", "lib/db/**", "src/lib/db/**"]
+alwaysApply: true
+---
+
+Database rules:
+- Prefer normalized schema unless denormalization clearly improves performance.
+- Always consider indexes for lookup fields.
+- Use descriptive relation names.
+- When modifying schema, explain impact on existing data.
+- Suggest migration command when schema changes.
+- Avoid destructive changes unless explicitly requested.

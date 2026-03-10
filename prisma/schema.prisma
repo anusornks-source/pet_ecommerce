@@ -31,6 +31,8 @@ model User {
   nicheKeywords      NicheKeyword[]
   nicheKeywordFocuses NicheKeywordFocus[]
   painPoints         PainPoint[]
+  passwordResetTokens      PasswordResetToken[]
+  emailVerificationTokens  EmailVerificationToken[]
 
   @@unique([provider, oauthId])
   @@map("users")
@@ -489,6 +491,8 @@ model SiteSettings {
   storeName       String   @default("PetShop")
   logoUrl         String?
   heroImageUrl    String?
+  homeHeroTitle      String?
+  homeHeroSubtitle   String?
   adminEmail      String?
   promptpayId     String?
   bankName        String?
@@ -632,6 +636,34 @@ model ProcessedStripeEvent {
   createdAt DateTime @default(now())
 
   @@map("processed_stripe_events")
+}
+
+// ─── Auth Tokens ─────────────────────────────────────────────────
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
 }
 
 model Shelf {

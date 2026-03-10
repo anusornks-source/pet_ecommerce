@@ -23,9 +23,10 @@ import toast from "react-hot-toast";
 
 interface Props {
   product: Product;
+  showShopLabel?: boolean;
 }
 
-export default function ProductCard({ product }: Props) {
+export default function ProductCard({ product, showShopLabel = false }: Props) {
   const router = useRouter();
   const { user } = useAuth();
   const { addToCart, loading } = useCart();
@@ -129,6 +130,14 @@ export default function ProductCard({ product }: Props) {
           <h3 className="font-semibold text-stone-800 mt-1 line-clamp-2 group-hover:text-orange-500 transition-colors">
             {pick(product.name_th, product.name)}
           </h3>
+          {showShopLabel && product.shop && (
+            <p className="mt-1 text-xs text-stone-400">
+              {lang === "th" ? "จากร้าน" : "from"}{" "}
+              <span className="font-medium text-stone-600">
+                {pick(product.shop.name_th, product.shop.name)}
+              </span>
+            </p>
+          )}
           {(product.shortDescription || product.shortDescription_th) && (
             <p className="text-sm text-stone-500 mt-1 line-clamp-3">
               {pick(product.shortDescription_th, product.shortDescription)}

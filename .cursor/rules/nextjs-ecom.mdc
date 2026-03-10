@@ -1,0 +1,30 @@
+---
+description: Rules for Next.js ecommerce app
+globs: ["app/**", "components/**", "lib/**", "prisma/**", "src/**"]
+alwaysApply: true
+---
+
+You are working on a production-oriented Next.js ecommerce codebase.
+
+Tech stack:
+- Next.js App Router
+- TypeScript
+- Prisma
+- PostgreSQL
+- Tailwind CSS
+
+Rules:
+- Prefer TypeScript with explicit types for exported functions.
+- Prefer server components by default unless client interactivity is required.
+- Use "use client" only when necessary.
+- Keep business logic out of page files when possible.
+- Put reusable server logic in lib/ or services/.
+- For database access, use Prisma with clear function names.
+- Do not introduce unnecessary dependencies.
+- Keep code modular and easy to review.
+- When changing schema, also suggest migration steps.
+- For API/webhook code, include error handling and logging.
+- Before large edits, summarize the plan first.
+
+<!-- Only inspect app/products, components/products, lib, and prisma. -->
+Ignore node_modules, .next, dist, build, coverage.

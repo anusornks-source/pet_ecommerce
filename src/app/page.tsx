@@ -1,191 +1,175 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import ProductCard from "@/components/ProductCard";
-import HeroSlider from "@/components/HeroSlider";
-import type { Product } from "@/types";
-import { pickLang, type Lang } from "@/lib/translations";
+import { getSettings } from "@/lib/settings";
+import ProductsClient from "./products/ProductsClient";
+import type { Lang } from "@/lib/translations";
+import { pickLang } from "@/lib/translations";
 
 export const dynamic = "force-dynamic";
 
-async function getFeaturedProducts() {
-  const products = await prisma.product.findMany({
-    where: { featured: true, active: true },
-    include: { category: true, petType: true, tags: true, variants: true },
-    orderBy: { createdAt: "desc" },
-  });
-  return products as unknown as Product[];
-}
-
-async function getCategories() {
-  return prisma.category.findMany({
-    include: { _count: { select: { products: true } } },
-  });
-}
-
-async function getPetTypes() {
-  return prisma.petType.findMany({ orderBy: { order: "asc" } });
-}
-
-async function getActiveBanners() {
-  return prisma.heroBanner.findMany({
-    where: { active: true },
-    orderBy: { order: "asc" },
-  });
-}
-
-async function getActiveShelves() {
-  const shelves = await prisma.shelf.findMany({
-    where: { active: true },
-    orderBy: { order: "asc" },
-    include: {
-      items: {
-        orderBy: { order: "asc" },
-        where: { product: { active: true } },
-        include: { product: { include: { category: true, petType: true, tags: true, variants: true } } },
-      },
-    },
-  });
-  return shelves.filter((s) => s.items.length > 0);
-}
-
 export default async function HomePage() {
-  const [featuredProducts, categories, petTypes, activeShelves, activeBanners] = await Promise.all([
-    getFeaturedProducts(),
-    getCategories(),
-    getPetTypes(),
-    getActiveShelves(),
-    getActiveBanners(),
-  ]);
   const cookieStore = await cookies();
   const lang: Lang = cookieStore.get("lang")?.value === "en" ? "en" : "th";
-  const p = (th: string | null | undefined, en: string | null | undefined) => pickLang(th, en, lang);
+  const shops = await prisma.shop.findMany({
+    where: { active: true },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      name: true,
+      name_th: true,
+      slug: true,
+      logoUrl: true,
+      description: true,
+      description_th: true,
+      usePetType: true,
+    },
+  });
 
-  const PET_COLORS = [
-    { bg: "bg-amber-50", border: "border-amber-200" },
-    { bg: "bg-orange-50", border: "border-orange-200" },
-    { bg: "bg-sky-50", border: "border-sky-200" },
-    { bg: "bg-teal-50", border: "border-teal-200" },
-    { bg: "bg-violet-50", border: "border-violet-200" },
-    { bg: "bg-pink-50", border: "border-pink-200" },
-    { bg: "bg-green-50", border: "border-green-200" },
-    { bg: "bg-yellow-50", border: "border-yellow-200" },
-  ];
+  const p = (th: string | null | undefined, en: string | null | undefined) =>
+    pickLang(th, en, lang);
+
+  const settings = await getSettings();
+
+  const platformName = "CartNova";
+  const heroTitle =
+    settings.homeHeroTitle ||
+    (lang === "th" ? "CartNova — ตะกร้ากลางสำหรับหลายร้าน" : "CartNova — Multi-shop Cart Platform");
+  const heroSubtitle =
+    settings.homeHeroSubtitle ||
+    (lang === "th"
+      ? "แพลตฟอร์มตะกร้ากลางที่รวมหลายร้านไว้ในที่เดียว เลือกร้านที่ใช่ แล้วช้อปสินค้าจากทุกมุม"
+      : "A central cart platform connecting multiple shops in one place.");
 
   return (
-    <div>
-      <HeroSlider banners={activeBanners} />
-
-      {/* Pet Types */}
-      {petTypes.length > 0 && (
-        <section className="max-w-6xl mx-auto px-4 py-12">
-          <h2 className="text-2xl font-bold text-stone-800 mb-6">{p("เลือกตามประเภทสัตว์เลี้ยง", "Shop by Pet Type")}</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {petTypes.map((pt, i) => {
-              const color = PET_COLORS[i % PET_COLORS.length];
-              return (
-                <Link
-                  key={pt.slug}
-                  href={`/products?petType=${pt.slug}`}
-                  className={`${color.bg} ${color.border} border-2 rounded-2xl p-6 flex flex-col items-center gap-3 hover:scale-105 transition-transform cursor-pointer`}
-                >
-                  <span className="text-5xl">{pt.icon}</span>
-                  <span className="font-semibold text-stone-700">{p(pt.name_th, pt.name)}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Categories */}
-      <section className="bg-stone-50 py-12">
-        <div className="max-w-6xl mx-auto px-4">
-          <h2 className="text-2xl font-bold text-stone-800 mb-6">{p("หมวดหมู่สินค้า", "Product Categories")}</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-            {categories.map((cat) => (
+    <div className="bg-stone-50 min-h-screen">
+      {/* Hero / CartNova brand */}
+      <section className="bg-stone-900 text-white">
+        <div className="max-w-6xl mx-auto px-4 py-14 md:py-20 flex flex-col md:flex-row items-center gap-10">
+          <div className="flex-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-stone-800 border border-stone-700 text-xs text-stone-300 mb-4">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span>{lang === "th" ? "แพลตฟอร์มรวมร้านค้า" : "Multi-shop ecommerce hub"}</span>
+            </div>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight text-white">
+              {heroTitle}
+            </h1>
+            <p className="mt-3 text-sm md:text-base text-stone-300 max-w-xl">
+              {heroSubtitle}
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
               <Link
-                key={cat.id}
-                href={`/products?category=${cat.slug}`}
-                className="bg-white rounded-2xl p-4 text-center hover:bg-orange-50 hover:border-orange-200 border-2 border-transparent transition-all group"
+                href="#shops"
+                className="px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-400 text-sm font-semibold text-white shadow-sm transition-colors"
               >
-                <div className="text-3xl mb-2">{cat.icon}</div>
-                <p className="text-sm font-medium text-stone-700 group-hover:text-orange-500">{p((cat as {name_th?: string | null}).name_th, cat.name)}</p>
-                <p className="text-xs text-stone-400 mt-0.5">
-                  {(cat as { _count?: { products: number } })._count?.products || 0} {p("รายการ", "items")}
-                </p>
+                {lang === "th" ? "เลือกร้านค้า" : "Browse shops"}
               </Link>
-            ))}
+              <Link
+                href="#all-products"
+                className="px-5 py-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-sm font-semibold text-stone-100 border border-stone-700 transition-colors"
+              >
+                {lang === "th" ? "ดูสินค้าทั้งหมด" : "View all products"}
+              </Link>
+            </div>
+          </div>
+          <div className="flex-1 w-full">
+            <div className="relative mx-auto max-w-md rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-orange-500 to-amber-400">
+              {settings.heroImageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={settings.heroImageUrl}
+                  alt="CartNova hero"
+                  className="absolute inset-0 w-full h-full object-cover opacity-80"
+                />
+              )}
+              <div className="relative p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/30 flex items-center justify-center text-2xl">
+                    🛒
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-orange-100">
+                      {lang === "th" ? "ตะกร้ากลาง" : "Cart hub"}
+                    </p>
+                    <p className="text-sm font-semibold text-white">
+                      {lang === "th" ? "ช้อปจากหลายร้านในคราวเดียว" : "Shop from multiple stores at once"}
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-3 text-xs text-orange-50">
+                  <p>• {lang === "th" ? "รวมสินค้าและโปรโมชั่นจากหลายร้าน" : "Aggregate products and promos across shops"}</p>
+                  <p>• {lang === "th" ? "ตะกร้าเดียว จ่ายครั้งเดียว" : "Single cart, single checkout"}</p>
+                  <p>• {lang === "th" ? "ออกแบบมาเพื่อเจ้าของร้านหลาย niche" : "Designed for multi-niche sellers"}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Dynamic Product Shelves */}
-      {activeShelves.map((shelf) => (
-        <section
-          key={shelf.id}
-          className="py-12"
-          style={{ background: `linear-gradient(135deg, ${shelf.color}ee, ${shelf.color}88)` }}
-        >
-          <div className="max-w-6xl mx-auto px-4">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                {shelf.description && (
-                  <span className="inline-flex items-center bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full mb-2">
-                    {shelf.description}
-                  </span>
-                )}
-                <h2 className="text-2xl font-bold text-white">{shelf.name}</h2>
-              </div>
-              <Link
-                href={`/products?shelf=${shelf.slug}`}
-                className="text-white/80 hover:text-white text-sm font-medium transition-colors"
-              >
-                {p("ดูทั้งหมด", "View All")} →
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {shelf.items.map(({ product }) => (
-                <ProductCard key={product.id} product={product as unknown as Product} />
-              ))}
-            </div>
+      {/* Section 1: All Shops */}
+      <section id="shops" className="max-w-6xl mx-auto px-4 py-10 md:py-14">
+        <div className="flex items-baseline justify-between mb-6">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-bold text-stone-900">
+              {lang === "th" ? "เลือกร้านที่คุณอยากช้อป" : "Choose a shop to explore"}
+            </h2>
+            <p className="text-sm text-stone-500 mt-1">
+              {lang === "th"
+                ? `ตอนนี้มี ${shops.length} ร้านบนแพลตฟอร์ม CartNova`
+                : `${shops.length} shops currently live on CartNova`}
+            </p>
           </div>
-        </section>
-      ))}
-
-      {/* Featured Products */}
-      <section className="max-w-6xl mx-auto px-4 py-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-stone-800">{p("สินค้าแนะนำ ⭐", "Featured Products ⭐")}</h2>
-          <Link href="/products?featured=true" className="text-orange-500 hover:text-orange-600 text-sm font-medium">
-            {p("ดูทั้งหมด", "View All")} →
-          </Link>
         </div>
-        {featuredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+        {shops.length === 0 ? (
+          <div className="text-sm text-stone-400 py-10 text-center">
+            {lang === "th" ? "ยังไม่มีร้านที่เปิดให้ช้อป" : "No shops are available yet."}
           </div>
         ) : (
-          <div className="text-center py-12 text-stone-400">{p("ยังไม่มีสินค้าแนะนำ", "No featured products yet")}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {shops.map((shop) => (
+              <Link
+                key={shop.id}
+                href={`/${shop.slug}`}
+                className="group bg-white rounded-2xl border border-stone-100 hover:border-orange-300 hover:shadow-md transition-all p-5 flex gap-4"
+              >
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-stone-100 flex items-center justify-center overflow-hidden shrink-0 border border-stone-200">
+                  {shop.logoUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={shop.logoUrl} alt={shop.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl">🏬</span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-semibold text-stone-900 group-hover:text-orange-600 truncate">
+                    {p(shop.name_th, shop.name)}
+                  </h3>
+                  <p className="text-xs text-stone-500 mt-1 line-clamp-3">
+                    {shop.description_th || shop.description || (lang === "th" ? "ร้านค้าบนแพลตฟอร์ม CartNova" : "Shop on CartNova")}
+                  </p>
+                  <p className="mt-3 text-xs font-medium text-orange-600">
+                    {lang === "th" ? "เข้าร้าน →" : "Enter shop →"}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
         )}
       </section>
 
-      {/* Promo Banner */}
-      <section className="max-w-6xl mx-auto px-4 pb-12">
-        <div className="bg-gradient-to-r from-orange-500 to-amber-500 rounded-3xl p-8 md:p-12 text-white flex flex-col md:flex-row items-center justify-between gap-6">
-          <div>
-            <h3 className="text-2xl md:text-3xl font-bold mb-2">สมัครสมาชิกวันนี้</h3>
-            <p className="text-orange-100">รับส่วนลดพิเศษสำหรับสมาชิกใหม่ และข่าวสารโปรโมชั่น</p>
-          </div>
-          <Link
-            href="/register"
-            className="bg-white text-orange-500 font-bold px-8 py-3 rounded-xl hover:bg-orange-50 transition-colors whitespace-nowrap"
-          >
-            สมัครฟรี →
-          </Link>
-        </div>
+      {/* Section 2: All Products */}
+      <section id="all-products" className="border-t border-stone-200 bg-white/60">
+        <ProductsClient
+          basePath="/"
+          enableShopFilter={false}
+          showPetFilter={false}
+          title={
+            lang === "th"
+              ? "สินค้าทั้งหมดบน CartNova"
+              : "All products on CartNova"
+          }
+        />
       </section>
     </div>
   );

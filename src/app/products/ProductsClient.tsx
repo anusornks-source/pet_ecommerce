@@ -6,7 +6,27 @@ import ProductCard from "@/components/ProductCard";
 import { useLocale } from "@/context/LocaleContext";
 import type { Product, Category, PetType } from "@/types";
 
-export default function ProductsClient() {
+interface ShopSummary {
+  id: string;
+  name: string;
+  name_th?: string | null;
+  slug: string;
+  logoUrl?: string | null;
+}
+
+interface ProductsClientProps {
+  basePath?: string;
+  enableShopFilter?: boolean;
+  title?: string;
+  showPetFilter?: boolean;
+}
+
+export default function ProductsClient({
+  basePath = "/products",
+  enableShopFilter = false,
+  title,
+  showPetFilter = true,
+}: ProductsClientProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { lang, t, pick } = useLocale();
@@ -18,6 +38,7 @@ export default function ProductsClient() {
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [shops, setShops] = useState<ShopSummary[]>([]);
 
   const shopSlug = searchParams.get("shopSlug") || "";
   const category = searchParams.get("category") || "";
@@ -59,6 +80,12 @@ export default function ProductsClient() {
       .then((r) => r.json())
       .then((d) => d.success && setCategories(d.data));
 
+    if (!showPetFilter) {
+      setShopUsePetType(false);
+      setPetTypeList([]);
+      return;
+    }
+
     if (shopSlug) {
       fetch(`/api/shops?slug=${shopSlug}`)
         .then((r) => r.json())
@@ -75,7 +102,17 @@ export default function ProductsClient() {
       setShopUsePetType(true);
       fetch("/api/pet-types").then((r) => r.json()).then((d) => d.success && setPetTypeList(d.data));
     }
-  }, [shopSlug]);
+  }, [shopSlug, showPetFilter]);
+
+  // Load all shops for CartNova hub filter when enabled
+  useEffect(() => {
+    if (!enableShopFilter) return;
+    fetch("/api/shops")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setShops(d.data);
+      });
+  }, [enableShopFilter]);
 
   useEffect(() => {
     fetchProducts();
@@ -87,13 +124,19 @@ export default function ProductsClient() {
     else params.delete(key);
     params.delete("page");
     setPage(1);
-    router.push(`/products?${params}`);
+    router.push(`${basePath}?${params.toString()}`);
   };
 
   const clearFilters = () => {
     setPage(1);
     setPriceRange(["", ""]);
-    router.push(shopSlug ? `/products?shopSlug=${shopSlug}` : "/products");
+    if (shopSlug) {
+      const params = new URLSearchParams();
+      params.set("shopSlug", shopSlug);
+      router.push(`${basePath}?${params.toString()}`);
+    } else {
+      router.push(basePath);
+    }
   };
 
   const applyPriceFilter = () => {
@@ -108,12 +151,13 @@ export default function ProductsClient() {
   };
 
   const hasFilters = category || petType || search || featured || minPrice || maxPrice || sort !== "newest";
+  const headingTitle = title ?? t("allProducts", "product");
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-stone-800">{t("allProducts", "product")}</h1>
+        <h1 className="text-3xl font-bold text-stone-800">{headingTitle}</h1>
         <p className="text-stone-500 mt-1">
           {loading ? t("loading") : `${total} ${lang === "th" ? "รายการ" : "items"}`}
         </p>
@@ -148,6 +192,43 @@ export default function ProductsClient() {
               />
             </div>
 
+            {/* Shop filter (CartNova hub) */}
+            {enableShopFilter && shops.length > 0 && (
+              <div className="mb-5">
+                <label className="text-sm font-medium text-stone-600 block mb-2">
+                  {lang === "th" ? "ร้านค้า" : "Shop"}
+                </label>
+                <div className="space-y-1 max-h-64 overflow-y-auto">
+                  <button
+                    onClick={() => setFilter("shopSlug", "")}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                      !shopSlug ? "bg-orange-500 text-white" : "text-stone-600 hover:bg-orange-50"
+                    }`}
+                  >
+                    {lang === "th" ? "ทั้งหมดบน CartNova" : "All shops on CartNova"}
+                  </button>
+                  {shops.map((shop) => (
+                    <button
+                      key={shop.id}
+                      onClick={() => setFilter("shopSlug", shop.slug)}
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                        shopSlug === shop.slug ? "bg-orange-500 text-white" : "text-stone-600 hover:bg-orange-50"
+                      }`}
+                    >
+                      {shop.logoUrl && (
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-md overflow-hidden bg-stone-100 border border-stone-200">
+                          <span className="text-[10px]">🛍️</span>
+                        </span>
+                      )}
+                      <span className="truncate">
+                        {pick(shop.name_th ?? null, shop.name)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Category */}
             <div className="mb-5">
               <label className="text-sm font-medium text-stone-600 block mb-2">{lang === "th" ? "หมวดหมู่" : "Category"}</label>
@@ -174,7 +255,7 @@ export default function ProductsClient() {
               </div>
             </div>
 
-            {/* Price Range */}
+          {/* Price Range */}
             <div className="mb-5">
               <label className="text-sm font-medium text-stone-600 block mb-2">{lang === "th" ? "ช่วงราคา (บาท)" : "Price Range (฿)"}</label>
               <div className="flex items-center gap-2">
@@ -214,7 +295,7 @@ export default function ProductsClient() {
             </div>
 
             {/* Pet Type */}
-            {shopUsePetType && <div>
+            {showPetFilter && shopUsePetType && <div>
               <label className="text-sm font-medium text-stone-600 block mb-2">{lang === "th" ? "ประเภทสัตว์" : "Pet Type"}</label>
               <div className="space-y-1">
                 <button

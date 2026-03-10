@@ -63,6 +63,12 @@ export interface Product {
   category: Category;
   petTypeId?: string | null;
   petType?: PetType | null;
+  shop?: {
+    id: string;
+    slug: string;
+    name: string;
+    name_th?: string | null;
+  };
   featured: boolean;
   deliveryDays?: number;
   warehouseCountry?: string | null;

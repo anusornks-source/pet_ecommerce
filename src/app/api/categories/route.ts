@@ -20,6 +20,9 @@ export async function GET(request: NextRequest) {
   const categories = await prisma.category.findMany({
     where,
     include: {
+      group: {
+        select: { id: true, name: true, name_th: true, icon: true },
+      },
       _count: {
         select: {
           products: shopFilter

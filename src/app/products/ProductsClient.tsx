@@ -231,7 +231,9 @@ export default function ProductsClient({
 
             {/* Category */}
             <div className="mb-5">
-              <label className="text-sm font-medium text-stone-600 block mb-2">{lang === "th" ? "หมวดหมู่" : "Category"}</label>
+              <label className="text-sm font-medium text-stone-600 block mb-2">
+                {lang === "th" ? "หมวดหมู่" : "Category"}
+              </label>
               <div className="space-y-1">
                 <button
                   onClick={() => setFilter("category", "")}
@@ -241,17 +243,68 @@ export default function ProductsClient({
                 >
                   {lang === "th" ? "ทั้งหมด" : "All"}
                 </button>
-                {categories.map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setFilter("category", cat.slug)}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                      category === cat.slug ? "bg-orange-500 text-white" : "text-stone-600 hover:bg-orange-50"
-                    }`}
-                  >
-                    {cat.icon} {pick(cat.name_th, cat.name)}
-                  </button>
-                ))}
+
+                {/* Grouped categories by CategoryGroup */}
+                {(() => {
+                  if (!categories || categories.length === 0) return null;
+
+                  type GroupBucket = {
+                    groupId: string | null;
+                    groupName: string;
+                    groupIcon?: string | null;
+                    items: typeof categories;
+                  };
+
+                  const bucketsMap = new Map<string, GroupBucket>();
+
+                  for (const cat of categories) {
+                    const key = cat.group?.id ?? cat.groupId ?? "ungrouped";
+                    const isUngrouped = key === "ungrouped";
+
+                    const groupName = isUngrouped
+                      ? lang === "th"
+                        ? "หมวดอื่น ๆ"
+                        : "Other categories"
+                      : pick(cat.group?.name_th ?? null, cat.group?.name ?? "");
+
+                    const groupIcon = isUngrouped ? "📂" : cat.group?.icon ?? "🗂️";
+
+                    if (!bucketsMap.has(key)) {
+                      bucketsMap.set(key, {
+                        groupId: isUngrouped ? null : key,
+                        groupName,
+                        groupIcon,
+                        items: [],
+                      });
+                    }
+
+                    bucketsMap.get(key)!.items.push(cat);
+                  }
+
+                  const buckets = Array.from(bucketsMap.values());
+
+                  return buckets.map((bucket) => (
+                    <div key={bucket.groupId ?? "ungrouped"} className="pt-2 border-t border-stone-100 first:pt-0 first:border-none">
+                      <div className="mb-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-stone-400">
+                        <span>{bucket.groupIcon}</span>
+                        <span className="truncate">{bucket.groupName}</span>
+                      </div>
+                      {bucket.items.map((cat) => (
+                        <button
+                          key={cat.id}
+                          onClick={() => setFilter("category", cat.slug)}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                            category === cat.slug
+                              ? "bg-orange-500 text-white"
+                              : "text-stone-600 hover:bg-orange-50"
+                          }`}
+                        >
+                          {cat.icon} {pick(cat.name_th, cat.name)}
+                        </button>
+                      ))}
+                    </div>
+                  ));
+                })()}
               </div>
             </div>
 

@@ -97,63 +97,6 @@ export default function AdminSettingsPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Branding */}
-        <div className="bg-white rounded-2xl border border-stone-100 p-6 space-y-5">
-          <h2 className="text-base font-semibold text-stone-700">🏪 ข้อมูลร้าน</h2>
-
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1.5">ชื่อร้าน *</label>
-            <input
-              required
-              value={form.storeName}
-              onChange={(e) => setForm((f) => ({ ...f, storeName: e.target.value }))}
-              placeholder="PetShop"
-              className={inputCls}
-            />
-          </div>
-
-          {/* Logo */}
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1.5">โลโก้ร้าน</label>
-            <div className="flex gap-3 items-start">
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="flex-1 border-2 border-dashed border-stone-200 rounded-xl p-4 text-center cursor-pointer hover:border-orange-300 hover:bg-stone-50 transition-colors"
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
-                />
-                {uploading === "logo" ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-sm text-orange-500">กำลังอัปโหลด...</span>
-                  </div>
-                ) : (
-                  <p className="text-sm text-stone-500">🖼️ คลิกเพื่ออัปโหลด logo</p>
-                )}
-              </div>
-              <div className="relative w-16 h-16 rounded-xl border-2 border-stone-200 bg-stone-50 flex items-center justify-center shrink-0 overflow-hidden">
-                {form.logoUrl && isValidUrl(form.logoUrl) ? (
-                  <Image src={form.logoUrl} alt="Logo" fill className="object-contain p-1" sizes="64px" />
-                ) : (
-                  <span className="text-2xl">🐾</span>
-                )}
-              </div>
-            </div>
-            <input
-              value={form.logoUrl}
-              onChange={(e) => setForm((f) => ({ ...f, logoUrl: e.target.value }))}
-              placeholder="หรือวาง URL โลโก้โดยตรง"
-              className={`${inputCls} mt-2`}
-            />
-          </div>
-
-        </div>
-
         {/* Email */}
         <div className="bg-white rounded-2xl border border-stone-100 p-6 space-y-5">
           <h2 className="text-base font-semibold text-stone-700">📧 การแจ้งเตือนอีเมล</h2>

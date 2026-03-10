@@ -15,6 +15,13 @@ export interface Category {
   name_th?: string | null;
   slug: string;
   icon?: string | null;
+  groupId?: string | null;
+  group?: {
+    id: string;
+    name: string;
+    name_th?: string | null;
+    icon?: string | null;
+  } | null;
 }
 
 export interface PetType {

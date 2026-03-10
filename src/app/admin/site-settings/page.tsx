@@ -155,7 +155,7 @@ export default function SiteSettingsPage() {
           </div>
 
           <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 text-xs text-stone-500">
-            ส่วนนี้มีผลกับหน้า Home (`/`) ของ CartNova เท่านั้น — ไม่กระทบหน้าร้านย่อย (`/{shopSlug}`).
+            ส่วนนี้มีผลกับหน้า Home (/) ของ CartNova เท่านั้น — ไม่กระทบหน้าร้านย่อย (/shopSlug).
           </div>
         </div>
 

@@ -5,6 +5,9 @@ const DEFAULT_SETTINGS = {
   id: "default",
   storeName: "CartNova",
   logoUrl: null as string | null,
+  heroImageUrl: null as string | null,
+  homeHeroTitle: null as string | null,
+  homeHeroSubtitle: null as string | null,
   adminEmail: null as string | null,
   updatedAt: new Date(),
 };

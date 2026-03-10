@@ -65,6 +65,7 @@ model Shop {
   cjApiLogs      CjApiLog[]
   stores         Store[]
   painPoints     PainPoint[]
+  trendCandidates TrendCandidate[]
 
   @@map("shops")
 }
@@ -220,6 +221,7 @@ model Product {
   shelfItems     ShelfItem[]
   tags           Tag[]                  @relation("ProductTags")
   marketingPacks ProductMarketingPack[]
+  trendCandidate TrendCandidate?
 
   @@index([shopId])
   @@index([shopId, active])
@@ -701,6 +703,59 @@ model ApiLog {
   createdAt  DateTime @default(now())
 
   @@map("api_logs")
+}
+
+enum PlatformSource {
+  TIKTOK
+  SHOPEE
+  FACEBOOK
+  INSTAGRAM
+  LINE
+  LAZADA
+  MANUAL
+}
+
+model TrendCandidate {
+  id              String         @id @default(cuid())
+  shopId          String?
+  platformSource  PlatformSource @default(TIKTOK)
+  productName     String
+  productImage    String?
+  category        String?
+  sourceUrl       String?
+  salesVolume     String?
+  trendScore      Float?
+  marketFit       Float?
+  marginPotential Float?
+  competition     Float?
+  overallScore    Float?
+  aiAnalysis      String?  @db.Text
+  status          String   @default("pending")
+
+  name_th             String?
+  description         String?  @db.Text
+  description_th      String?  @db.Text
+  suggestedCategory   String?
+  suggestedPetType    String?
+  suggestedPrice      Float?
+  nicheKeyword        String?
+
+  productId       String?  @unique
+  scrapedAt       DateTime?
+  scoredAt        DateTime?
+  approvedAt      DateTime?
+  enrichedAt      DateTime?
+  importedAt      DateTime?
+  createdAt       DateTime @default(now())
+
+  shop    Shop?    @relation(fields: [shopId], references: [id])
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@index([shopId])
+  @@index([status])
+  @@index([platformSource])
+  @@index([overallScore])
+  @@map("trend_candidates")
 }
 
 model PainPoint {

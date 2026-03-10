@@ -13,7 +13,7 @@ export async function scrapeTikTokTopProducts(
   period: string = "7",
   limit: number = 20,
   lang: string = "en"
-): Promise<{ products: TikTokTopProduct[]; error?: string }> {
+): Promise<{ products: TikTokTopProduct[]; error?: string; _debug?: { htmlSnippet: string } }> {
   let browser;
   try {
     browser = await puppeteer.launch({

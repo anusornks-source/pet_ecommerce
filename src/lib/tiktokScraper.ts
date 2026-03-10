@@ -11,7 +11,8 @@ export interface TikTokTopProduct {
 export async function scrapeTikTokTopProducts(
   region: string = "TH",
   period: string = "7",
-  limit: number = 20
+  limit: number = 20,
+  lang: string = "en"
 ): Promise<{ products: TikTokTopProduct[]; error?: string }> {
   let browser;
   try {
@@ -31,16 +32,17 @@ export async function scrapeTikTokTopProducts(
     );
     await page.setViewport({ width: 1440, height: 900 });
 
-    const url = `https://ads.tiktok.com/business/creativecenter/inspiration/topproducts/pc/en?period=${period}&region=${region}`;
-    await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
+    const url = `https://ads.tiktok.com/business/creativecenter/inspiration/topproducts/pc/${lang}?period=${period}&region=${region}`;
+    await page.goto(url, { waitUntil: "networkidle0", timeout: 45000 });
 
-    // Wait for content to load
-    await page.waitForSelector("table, [class*='product'], [class*='card']", {
-      timeout: 15000,
-    }).catch(() => null);
+    // Wait longer for SPA to render content
+    await new Promise((r) => setTimeout(r, 5000));
 
-    // Give extra time for dynamic content
-    await new Promise((r) => setTimeout(r, 3000));
+    // Try scrolling to trigger lazy loading
+    await page.evaluate(() => window.scrollTo(0, 500));
+    await new Promise((r) => setTimeout(r, 2000));
+    await page.evaluate(() => window.scrollTo(0, 1000));
+    await new Promise((r) => setTimeout(r, 2000));
 
     // Extract products from the page
     const products = await page.evaluate((lim: number) => {
@@ -108,13 +110,28 @@ export async function scrapeTikTokTopProducts(
       return results.slice(0, lim);
     }, limit);
 
-    // Get page HTML for debugging if no products found
+    // Debug: if no products found, dump page info
     if (products.length === 0) {
       const pageTitle = await page.title();
-      const bodyText = await page.evaluate(() => document.body?.innerText?.slice(0, 500) || "");
+      const pageUrl = page.url();
+      const bodyText = await page.evaluate(() => document.body?.innerText?.slice(0, 1000) || "");
+      const htmlSnippet = await page.evaluate(() => {
+        // Look for any elements that might contain products
+        const main = document.querySelector("main, [id='app'], [class*='content'], [class*='main']");
+        return main?.innerHTML?.slice(0, 2000) || document.body?.innerHTML?.slice(0, 2000) || "";
+      });
+      // Count elements for debugging
+      const counts = await page.evaluate(() => ({
+        tables: document.querySelectorAll("table").length,
+        imgs: document.querySelectorAll("img").length,
+        divs: document.querySelectorAll("div").length,
+        links: document.querySelectorAll("a").length,
+      }));
+
       return {
         products: [],
-        error: `No products found. Page title: "${pageTitle}". Body preview: ${bodyText.slice(0, 200)}`,
+        error: `No products found. URL: ${pageUrl}\nTitle: "${pageTitle}"\nElements: ${JSON.stringify(counts)}\nBody: ${bodyText.slice(0, 300)}`,
+        _debug: { htmlSnippet: htmlSnippet.slice(0, 3000) },
       };
     }
 

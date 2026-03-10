@@ -63,6 +63,10 @@ export default function TrendPipelinePage() {
   const [scoring, setScoring] = useState(false);
   const [enriching, setEnriching] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [scrapeLog, setScrapeLog] = useState("");
+  const [showLog, setShowLog] = useState(false);
+  const [scrapeRegion, setScrapeRegion] = useState("TH");
+  const [scrapeLang, setScrapeLang] = useState("en");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -80,19 +84,25 @@ export default function TrendPipelinePage() {
 
   const handleScrape = async () => {
     setScraping(true);
+    setScrapeLog("");
     try {
       const res = await fetch("/api/admin/automation/trend-pipeline/scrape", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shopId: activeShop?.id, region: "TH", limit: 20 }),
+        body: JSON.stringify({ shopId: activeShop?.id, region: scrapeRegion, lang: scrapeLang, limit: 20 }),
       });
       const data = await res.json();
+      setScrapeLog(JSON.stringify(data, null, 2));
       if (data.success) {
         toast.success(`Scraped ${data.scraped} products (${data.skipped} skipped)`);
-        if (data.error) toast(data.error, { icon: "⚠️" });
+        if (data.error) {
+          toast(data.error.slice(0, 100), { icon: "⚠️" });
+          setShowLog(true);
+        }
         fetchData();
       } else {
         toast.error(data.error || "Scrape failed");
+        setShowLog(true);
       }
     } catch { toast.error("Scrape failed"); }
     finally { setScraping(false); }
@@ -173,15 +183,47 @@ export default function TrendPipelinePage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-stone-800">Trend Pipeline</h1>
-          <p className="text-sm text-stone-500 mt-1">Scrape → Score → Approve → Enrich → Import</p>
+          <p className="text-sm text-stone-500 mt-1">
+            Scrape → Score → Approve → Enrich → Import
+            <a href={`https://ads.tiktok.com/business/creativecenter/inspiration/topproducts/pc/${scrapeLang}?region=${scrapeRegion}`} target="_blank" rel="noopener noreferrer"
+              className="ml-2 text-pink-400 hover:text-pink-600 text-xs">TikTok Creative Center ↗</a>
+          </p>
         </div>
         <div className="flex items-center gap-2">
+          <select value={scrapeRegion} onChange={(e) => setScrapeRegion(e.target.value)}
+            className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 text-stone-600">
+            <option value="TH">TH</option>
+            <option value="US">US</option>
+            <option value="GB">UK</option>
+            <option value="ID">ID</option>
+            <option value="VN">VN</option>
+            <option value="MY">MY</option>
+            <option value="PH">PH</option>
+          </select>
+          <select value={scrapeLang} onChange={(e) => setScrapeLang(e.target.value)}
+            className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 text-stone-600">
+            <option value="en">EN</option>
+            <option value="th">TH</option>
+          </select>
+          {scrapeLog && (
+            <button onClick={() => setShowLog((v) => !v)}
+              className="text-[10px] text-stone-400 hover:text-blue-500 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors">
+              {showLog ? "Hide Log" : "Log"}
+            </button>
+          )}
           <button onClick={handleScrape} disabled={scraping}
             className="bg-pink-500 hover:bg-pink-600 disabled:bg-stone-300 text-white text-sm px-4 py-2 rounded-xl font-medium transition-colors">
             {scraping ? "Scraping..." : "Scrape TikTok"}
           </button>
         </div>
       </div>
+
+      {/* Scrape Log */}
+      {showLog && scrapeLog && (
+        <pre className="text-[11px] text-stone-500 font-mono bg-stone-50 border border-stone-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap max-h-64 overflow-y-auto mb-4">
+          {scrapeLog}
+        </pre>
+      )}
 
       {/* Action bar */}
       <div className="flex items-center gap-2 mb-4 bg-stone-50 rounded-xl px-4 py-2.5">

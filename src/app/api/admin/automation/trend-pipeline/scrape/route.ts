@@ -8,16 +8,19 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
-  const { shopId, region = "TH", period = "7", limit = 20, platformSource = "TIKTOK" } = await request.json();
+  const { shopId, region = "TH", period = "7", limit = 20, platformSource = "TIKTOK", lang = "en" } = await request.json();
 
   try {
     let products: { productName: string; productImage: string | null; category: string | null; sourceUrl: string | null; salesVolume: string | null }[] = [];
     let scrapeError: string | undefined;
 
+    let _debug: unknown = null;
     if (platformSource === "TIKTOK") {
-      const result = await scrapeTikTokTopProducts(region, period, limit);
+      const result = await scrapeTikTokTopProducts(region, period, limit, lang);
       products = result.products;
       scrapeError = result.error;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      _debug = (result as any)._debug ?? null;
     }
     // Future: add SHOPEE, FACEBOOK, etc. scrapers here
 
@@ -28,6 +31,7 @@ export async function POST(request: NextRequest) {
         scraped: 0,
         skipped: 0,
         error: scrapeError || "No products found",
+        _debug,
       });
     }
 

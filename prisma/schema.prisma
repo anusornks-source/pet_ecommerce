@@ -65,9 +65,10 @@ model Shop {
   orders         Order[]
   tags           Tag[]
   cjApiLogs      CjApiLog[]
-  stores         Store[]
-  painPoints     PainPoint[]
-  trendCandidates TrendCandidate[]
+  stores           Store[]
+  painPoints       PainPoint[]
+  trendCandidates  TrendCandidate[]
+  marketingAssets  MarketingAsset[]
 
   @@map("shops")
 }
@@ -222,8 +223,9 @@ model Product {
   variants   ProductVariant[]
   shelfItems     ShelfItem[]
   tags           Tag[]                  @relation("ProductTags")
-  marketingPacks ProductMarketingPack[]
-  trendCandidate TrendCandidate?
+  marketingPacks   ProductMarketingPack[]
+  trendCandidate   TrendCandidate?
+  marketingAssets  MarketingAsset[]
 
   @@index([shopId])
   @@index([shopId, active])
@@ -286,8 +288,36 @@ model ProductMarketingPack {
   rawVideoPrompts String? @db.Text
   createdAt      DateTime @default(now())
 
+  marketingAssets MarketingAsset[]
+
   @@index([productId])
   @@map("product_marketing_packs")
+}
+
+model MarketingAsset {
+  id              String   @id @default(cuid())
+  url             String
+  type            String   // IMAGE | VIDEO | PDF
+  filename        String?
+  contentType     String?
+  sizeBytes       Int?
+  width           Int?
+  height          Int?
+  shopId          String?
+  productId       String?
+  marketingPackId String?
+  prompt          String?  @db.Text
+  angle           String?
+  createdAt       DateTime @default(now())
+
+  shop           Shop?                 @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product        Product?              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  marketingPack  ProductMarketingPack? @relation(fields: [marketingPackId], references: [id], onDelete: SetNull)
+
+  @@index([shopId])
+  @@index([productId])
+  @@index([marketingPackId])
+  @@map("marketing_assets")
 }
 
 // ─── Customer ─────────────────────────────────────────────────

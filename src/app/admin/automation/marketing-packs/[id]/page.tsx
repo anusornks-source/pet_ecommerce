@@ -2,7 +2,9 @@
 
 import { useState, useEffect, use, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import toast from "react-hot-toast";
+import MarketingAssetsSection from "@/components/admin/MarketingAssetsSection";
 
 function AutoTextarea({ value, onChange, className, minHeight = 72 }: { value: string; onChange: (v: string) => void; className?: string; minHeight?: number }) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -59,10 +61,25 @@ function VideoConceptCard({ item, onConceptChange }: { item: { angle: string; co
   );
 }
 
-function ImagePromptCard({ item, productImages, onPromptChange }: { item: { angle: string; prompt: string }; productImages?: string[]; onPromptChange?: (prompt: string) => void }) {
+function ImagePromptCard({
+  item,
+  productImages,
+  productId,
+  marketingPackId,
+  onPromptChange,
+  onSaveSuccess,
+}: {
+  item: { angle: string; prompt: string };
+  productImages?: string[];
+  productId?: string;
+  marketingPackId?: string;
+  onPromptChange?: (prompt: string) => void;
+  onSaveSuccess?: () => void;
+}) {
   const [copied, setCopied] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [selectedAr, setSelectedAr] = useState<string>("1:1");
   const [error, setError] = useState<string | null>(null);
   const [selectedRefImages, setSelectedRefImages] = useState<string[]>([]);
@@ -94,6 +111,35 @@ function ImagePromptCard({ item, productImages, onPromptChange }: { item: { angl
       setError(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const saveToMarketingAsset = async () => {
+    if (!generatedUrl || !productId) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/marketing-assets/save-from-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: generatedUrl,
+          productId,
+          marketingPackId: marketingPackId || undefined,
+          prompt: editedPrompt,
+          angle: item.angle,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("บันทึกไป Marketing Asset แล้ว");
+        onSaveSuccess?.();
+      } else {
+        toast.error(data.error ?? "บันทึกไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("เกิดข้อผิดพลาด");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -164,10 +210,22 @@ function ImagePromptCard({ item, productImages, onPromptChange }: { item: { angl
       {generatedUrl && (
         <div className="mt-3 relative">
           <img src={generatedUrl} alt={item.angle} className="w-full rounded-xl object-cover" />
-          <a href={generatedUrl} download target="_blank" rel="noopener noreferrer"
-            className="absolute top-2 right-2 text-[10px] bg-black/60 hover:bg-black/80 text-white px-2.5 py-1 rounded-lg transition-colors">
-            Download
-          </a>
+          <div className="absolute top-2 right-2 flex flex-col gap-1.5 items-end">
+            <a href={generatedUrl} download target="_blank" rel="noopener noreferrer"
+              className="text-[10px] bg-black/60 hover:bg-black/80 text-white px-2.5 py-1 rounded-lg transition-colors">
+              Download
+            </a>
+            {productId && (
+              <button
+                type="button"
+                onClick={saveToMarketingAsset}
+                disabled={saving}
+                className="text-[10px] bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white px-2.5 py-1 rounded-lg transition-colors"
+              >
+                {saving ? "กำลังบันทึก..." : "Save to Marketing Asset"}
+              </button>
+            )}
+          </div>
           <button type="button" onClick={generateImage}
             className="absolute top-2 left-2 text-[10px] bg-black/60 hover:bg-black/80 text-white px-2.5 py-1 rounded-lg transition-colors">
             Regenerate
@@ -281,6 +339,7 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
   const [editedThumbnailTexts, setEditedThumbnailTexts] = useState<string[]>([]);
   const [editedImagePrompts, setEditedImagePrompts] = useState<{ angle: string; prompt: string }[]>([]);
   const [editedVideoPrompts, setEditedVideoPrompts] = useState<{ angle: string; concept: string }[]>([]);
+  const [packAssetsRefreshKey, setPackAssetsRefreshKey] = useState(0);
 
   useEffect(() => {
     fetch(`/api/admin/automation/marketing-packs/${id}`)
@@ -720,12 +779,33 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
           </div>
           <div className="space-y-3">
             {pack.imageAdPrompts.map((item, i) => (
-              <ImagePromptCard key={i} item={item} productImages={pack.product?.images ?? []}
-                onPromptChange={(prompt) => setEditedImagePrompts((prev) => prev.map((p, idx) => idx === i ? { ...p, prompt } : p))} />
+              <ImagePromptCard
+                key={i}
+                item={item}
+                productImages={pack.product?.images ?? []}
+                productId={pack.productId}
+                marketingPackId={pack.id}
+                onPromptChange={(prompt) => setEditedImagePrompts((prev) => prev.map((p, idx) => idx === i ? { ...p, prompt } : p))}
+                onSaveSuccess={() => setPackAssetsRefreshKey((k) => k + 1)}
+              />
             ))}
           </div>
         </div>
       )}
+
+      {/* 6b. Assets from this Pack */}
+      <div className="bg-white rounded-2xl border border-stone-200 p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-stone-800 text-sm">Assets จาก Pack นี้</h2>
+          <Link
+            href={`/admin/products/${pack.productId}/view`}
+            className="text-[11px] text-teal-600 hover:text-teal-700"
+          >
+            ดูทั้งหมดใน Product →
+          </Link>
+        </div>
+        <MarketingAssetsSection marketingPackId={pack.id} hideUpload refreshKey={packAssetsRefreshKey} />
+      </div>
 
       {/* 7. Short Video Ad Concepts */}
       {pack.videoAdPrompts && pack.videoAdPrompts.length > 0 && (

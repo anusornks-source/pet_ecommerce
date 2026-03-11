@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface CategoryGroup {
   id: string;
@@ -152,14 +153,22 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
           &larr;
         </button>
         <h1 className="text-2xl font-bold text-stone-800">Edit Shop: {shop.name}</h1>
-        <a
-          href={`/${shop.slug}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ml-auto flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-800 border border-stone-200 rounded-xl px-3 py-1.5 transition-colors"
-        >
-          View Shop ↗
-        </a>
+        <div className="ml-auto flex items-center gap-2">
+          <Link
+            href={`/admin/shops/${id}/view`}
+            className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-800 border border-stone-200 rounded-xl px-3 py-1.5 transition-colors"
+          >
+            View Details →
+          </Link>
+          <a
+            href={`/${shop.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-800 border border-stone-200 rounded-xl px-3 py-1.5 transition-colors"
+          >
+            View Shop ↗
+          </a>
+        </div>
       </div>
 
       {/* Shop Details */}
@@ -434,12 +443,12 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
         <p className="text-sm text-stone-400 mb-4">คลิกเพื่อไปจัดการคอนเทนต์ของร้านนี้ — ระบบจะกรองให้อัตโนมัติตามร้านที่เลือก</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[
-            { icon: "🖼️", label: "Hero Banner", sub: "สไลด์หน้าแรก", href: "/admin/banners" },
-            { icon: "🛍️", label: "สินค้า", sub: "จัดการสินค้า", href: "/admin/products" },
-            { icon: "📚", label: "บทความ", sub: "บทความ / บล็อก", href: "/admin/articles" },
+            { icon: "🖼️", label: "Hero Banner", sub: "สไลด์หน้าแรก", href: `/admin/banners?shopId=${id}` },
+            { icon: "🛍️", label: "สินค้า", sub: "จัดการสินค้า", href: `/admin/products?shopId=${id}` },
+            { icon: "📚", label: "บทความ", sub: "บทความ / บล็อก", href: `/admin/articles?shopId=${id}` },
             { icon: "📦", label: "Shelves", sub: "ชั้นวางสินค้า", href: `/admin/shelves?shopId=${id}` },
-            { icon: "🏪", label: "สาขา", sub: "แผนที่สาขา", href: "/admin/stores" },
-            { icon: "🎟️", label: "คูปอง", sub: "โค้ดส่วนลด", href: "/admin/coupons" },
+            { icon: "🏪", label: "สาขา", sub: "แผนที่สาขา", href: `/admin/stores?shopId=${id}` },
+            { icon: "🎟️", label: "คูปอง", sub: "โค้ดส่วนลด", href: `/admin/coupons?shopId=${id}` },
           ].map((item) => (
             <a
               key={item.href}

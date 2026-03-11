@@ -142,81 +142,44 @@ export default function ShopsPage() {
       {filteredShops.length === 0 && (
         <div className="text-center py-16 text-stone-400 text-sm">ไม่พบร้านที่ตรงกับเงื่อนไข</div>
       )}
-      <div className="grid gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {filteredShops.map((shop) => (
-          <div key={shop.id} className="bg-white rounded-2xl border border-stone-100 p-5 flex items-center gap-4">
-            <a href={`/${shop.slug}`} target="_blank" rel="noopener noreferrer"
-              className="w-32 h-32 rounded-2xl bg-stone-100 flex items-center justify-center shrink-0 overflow-hidden hover:opacity-80 transition-opacity">
-              {shop.logoUrl ? (
-                <img src={shop.logoUrl} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-4xl font-bold text-stone-400">{shop.name[0]?.toUpperCase()}</span>
-              )}
-            </a>
-            <div className="w-56 shrink-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Link href={`/admin/shops/${shop.id}`} className="font-semibold text-orange-600 hover:text-orange-800 hover:underline transition-colors">{shop.name}</Link>
-                {shop.name_th && shop.name_th !== shop.name && <span className="text-sm text-stone-400">({shop.name_th})</span>}
-                <span className={`text-xs px-2 py-0.5 rounded-full ${shop.active ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
-                  {shop.active ? "Active" : "Inactive"}
-                </span>
-                {shop.usePetType && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-600">🐾 Pet Type</span>
+          <div key={shop.id} className="bg-white rounded-xl border border-stone-100 overflow-hidden hover:border-stone-200 transition-colors flex flex-col">
+            <Link href={`/admin/shops/${shop.id}/view`} className="block">
+              <div className="aspect-square bg-stone-50 flex items-center justify-center overflow-hidden">
+                {shop.logoUrl ? (
+                  <img src={shop.logoUrl} alt="" className="w-full h-full object-contain p-4" />
+                ) : (
+                  <span className="text-3xl font-bold text-stone-300">{shop.name[0]?.toUpperCase()}</span>
                 )}
               </div>
-              <a href={`/${shop.slug}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:text-blue-700 hover:underline transition-colors">/{shop.slug}</a>
-              <div className="flex gap-4 mt-1 text-xs text-stone-400">
-                <span>{shop._count.products} products</span>
-                <span>{shop._count.orders} orders</span>
+            </Link>
+            <div className="p-2.5 flex-1 flex flex-col min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                <Link href={`/admin/shops/${shop.id}`} className="font-medium text-orange-600 hover:underline text-xs truncate">{shop.name}</Link>
+                <span className={`text-[9px] px-1 py-0.5 rounded shrink-0 ${shop.active ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
+                  {shop.active ? "Active" : "Inactive"}
+                </span>
               </div>
-            </div>
-            {/* Members — center column */}
-            <div className="flex-1 min-w-0">
-              {shop.members?.length > 0 ? (
-                <div className="flex flex-col gap-2.5">
-                  {shop.members.map((m) => (
-                    <div key={m.user.id} className="flex items-center gap-2">
-                      <div
-                        className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center text-white font-bold overflow-hidden shrink-0 ${
-                          m.role === "OWNER" ? "bg-orange-400" : m.role === "MANAGER" ? "bg-blue-400" : "bg-stone-400"
-                        }`}
-                        style={{ fontSize: 10 }}
-                      >
-                        {m.user.avatar ? (
-                          <img src={m.user.avatar} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          m.user.name[0]?.toUpperCase()
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-stone-700 font-medium truncate">{m.user.name}</span>
-                          <span className={`text-xs font-medium shrink-0 ${m.role === "OWNER" ? "text-orange-500" : m.role === "MANAGER" ? "text-blue-500" : "text-stone-400"}`}>
-                            {m.role}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-stone-400 truncate">{m.user.email}</span>
-                          {m.user.phone && <span className="text-xs text-stone-400 shrink-0">{m.user.phone}</span>}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <span className="text-xs text-stone-300">ยังไม่มีสมาชิก</span>
-              )}
-            </div>
-            <div className="flex gap-2 shrink-0">
-              <Link href={`/admin/shops/${shop.id}`} className="btn-outline px-3 py-1.5 text-xs">
-                Edit
-              </Link>
-              <button
-                onClick={() => handleToggleActive(shop)}
-                className="text-xs px-3 py-1.5 rounded-lg border border-stone-200 hover:bg-stone-50 text-stone-500"
-              >
-                {shop.active ? "Deactivate" : "Activate"}
-              </button>
+              <a href={`/${shop.slug}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline truncate block">/{shop.slug}</a>
+              <div className="flex gap-2 mt-1 text-[10px] text-stone-400">
+                <span>{shop._count.products} สินค้า</span>
+                <span>{shop._count.orders} ออเดอร์</span>
+              </div>
+              <div className="flex gap-1 mt-2 pt-2 border-t border-stone-100">
+                <Link href={`/admin/shops/${shop.id}/view`} className="inline-flex items-center justify-center btn-outline text-[10px] px-1.5 py-0.5 flex-1 min-w-0">
+                  View
+                </Link>
+                <Link href={`/admin/shops/${shop.id}`} className="inline-flex items-center justify-center btn-outline text-[10px] px-1.5 py-0.5 flex-1 min-w-0">
+                  Edit
+                </Link>
+                <button
+                  onClick={() => handleToggleActive(shop)}
+                  className="inline-flex items-center justify-center text-[10px] px-1.5 py-0.5 rounded border border-stone-200 hover:bg-stone-50 text-stone-600 flex-1 min-w-0"
+                >
+                  {shop.active ? "ปิด" : "เปิด"}
+                </button>
+              </div>
             </div>
           </div>
         ))}

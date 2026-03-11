@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { useShopAdmin } from "@/context/ShopAdminContext";
 import Image from "next/image";
 import Link from "next/link";
@@ -113,7 +114,9 @@ function formatDate(iso: string) {
 
 export default function AdminProductsPage() {
   const { activeShop, shops, isAdmin } = useShopAdmin();
-  const [shopFilter, setShopFilter] = useState<string>("");  // "" = use cookie, "all" = all shops, shopId = specific
+  const searchParams = useSearchParams();
+  const urlShopId = searchParams.get("shopId") || "";
+  const [shopFilter, setShopFilter] = useState<string>("");  // "" = use cookie/URL, "all" = all shops, shopId = specific
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -195,9 +198,25 @@ export default function AdminProductsPage() {
   const pageSize = 50;
   const totalPages = Math.ceil(total / pageSize);
 
+  // Initial shopFilter from URL (?shopId=) or activeShop when first load
+  useEffect(() => {
+    if (!shopFilter) {
+      if (urlShopId) {
+        setShopFilter(urlShopId);
+      } else if (activeShop?.id) {
+        setShopFilter(""); // keep "", will use cookie/activeShop
+      }
+    }
+  }, [urlShopId, activeShop?.id, shopFilter]);
+
   // Fetch categories scoped to the selected shop (or activeShop); fallback to all when "all"
   useEffect(() => {
-    const resolvedShopId = shopFilter && shopFilter !== "all" ? shopFilter : (shopFilter === "" ? activeShop?.id : null);
+    const resolvedShopId =
+      shopFilter && shopFilter !== "all"
+        ? shopFilter
+        : shopFilter === "" && (urlShopId || activeShop?.id)
+        ? (urlShopId || activeShop?.id)!
+        : null;
     const url = resolvedShopId ? `/api/admin/shops/${resolvedShopId}/categories` : "/api/admin/categories";
     setFilterCategory("");
     fetch(url)
@@ -208,7 +227,7 @@ export default function AdminProductsPage() {
           setCategories(list);
         }
       });
-  }, [shopFilter, activeShop?.id]);
+  }, [shopFilter, urlShopId, activeShop?.id]);
 
   useEffect(() => {
     fetch("/api/admin/pet-types")
@@ -228,13 +247,17 @@ export default function AdminProductsPage() {
     if (filterCategory) params.set("categoryId", filterCategory);
     if (filterPetType) params.set("petType", filterPetType);
     if (filterTag) params.set("tagId", filterTag);
-    if (shopFilter) params.set("shopId", shopFilter);
+    if (shopFilter) {
+      params.set("shopId", shopFilter);
+    } else if (urlShopId) {
+      params.set("shopId", urlShopId);
+    }
     if (sort && sort !== "newest") params.set("sort", sort);
     const res = await fetch(`/api/admin/products?${params.toString()}`);
     const data = await res.json();
     if (data.success) { setProducts(data.data); setTotal(data.total); }
     setLoading(false);
-  }, [search, filterSource, filterActive, filterCategory, filterPetType, filterTag, shopFilter, sort]);
+  }, [search, filterSource, filterActive, filterCategory, filterPetType, filterTag, shopFilter, urlShopId, sort]);
 
   const activeFilterCount = [filterSource, filterActive, filterCategory, filterPetType, filterTag].filter(Boolean).length;
 
@@ -335,7 +358,7 @@ export default function AdminProductsPage() {
                 onChange={(e) => { setShopFilter(e.target.value); setPage(1); }}
                 className="text-xs border border-stone-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-200 bg-white text-stone-600"
               >
-                <option value="">ร้าน: {activeShop?.name ?? "..."}</option>
+                <option value="">{`ร้าน: ${activeShop?.name ?? "..."}`}</option>
                 {isAdmin && <option value="all">ทั้งหมด (ทุกร้าน)</option>}
                 {shops.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
@@ -701,28 +724,34 @@ export default function AdminProductsPage() {
                   <td className="px-4 py-3 text-center">
                     <Link
                       href={`/admin/automation/marketing-packs?productId=${product.id}`}
-                      className={`inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
+                      className={`inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded border transition-colors ${
                         product._count.marketingPacks > 0
                           ? "border-orange-200 bg-orange-50 text-orange-600 hover:bg-orange-100"
                           : "border-stone-200 text-stone-400 hover:bg-stone-50"
                       }`}
                       title="Marketing Packs"
                     >
-                      🎯 {product._count.marketingPacks > 0 ? `${product._count.marketingPacks} +` : "+"}
+                      🎯 {product._count.marketingPacks > 0 ? `${product._count.marketingPacks}+` : "+"}
                     </Link>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="px-2 py-3">
+                    <div className="flex flex-col gap-0.5">
+                      <Link
+                        href={`/admin/products/${product.id}/view`}
+                        className="inline-flex items-center justify-center text-[10px] px-2 py-0.5 rounded border border-stone-200 text-stone-600 hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 transition-colors w-full"
+                      >
+                        View
+                      </Link>
                       <Link
                         href={`/admin/products/${product.id}`}
-                        className="text-xs px-3 py-1.5 rounded-lg border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
+                        className="inline-flex items-center justify-center text-[10px] px-2 py-0.5 rounded border border-stone-200 text-stone-600 hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 transition-colors w-full"
                       >
                         แก้ไข
                       </Link>
                       <button
                         onClick={() => handleDelete(product.id, product.name)}
                         disabled={deleting === product.id}
-                        className="text-xs px-3 py-1.5 rounded-lg border border-red-100 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                        className="inline-flex items-center justify-center text-[10px] px-2 py-0.5 rounded border border-red-100 text-red-500 hover:bg-red-100 hover:border-red-200 transition-colors w-full disabled:opacity-50"
                       >
                         ลบ
                       </button>

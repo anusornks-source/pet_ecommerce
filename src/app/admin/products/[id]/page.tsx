@@ -179,7 +179,15 @@ export default function EditProductPage({
       )}
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">แก้ไขสินค้า</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-stone-800">แก้ไขสินค้า</h1>
+            <Link
+              href={`/admin/products/${id}/view`}
+              className="text-sm text-stone-500 hover:text-stone-800 border border-stone-200 rounded-xl px-3 py-1.5 transition-colors"
+            >
+              ดูรายละเอียด →
+            </Link>
+          </div>
           <p className="text-stone-500 text-sm mt-1">
             {product.name}
             {productShop && <span className="ml-2 text-xs px-2 py-0.5 bg-stone-100 text-stone-500 rounded-full">{productShop.name}</span>}

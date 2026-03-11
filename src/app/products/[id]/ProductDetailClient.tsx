@@ -149,11 +149,19 @@ export default function ProductDetailClient({ id }: { id: string }) {
     if (typeof v !== "string" || !v.trim()) return false;
     try { new URL(v); return true; } catch { return false; }
   });
+  const videoSet = new Set(validVideos);
+  const mediaOrder = (product as { mediaOrder?: string[] }).mediaOrder ?? [];
   const images = validImages.length > 0 ? validImages : [placeholder];
-  const mediaItems: { type: "image" | "video"; url: string }[] = [
-    ...images.map((url) => ({ type: "image" as const, url })),
-    ...validVideos.map((url) => ({ type: "video" as const, url })),
-  ];
+  const fromMediaOrder = mediaOrder
+    .filter((url) => validImages.includes(url) || validVideos.includes(url))
+    .map((url) => ({ type: (videoSet.has(url) ? "video" : "image") as const, url }));
+  const mediaItems: { type: "image" | "video"; url: string }[] =
+    fromMediaOrder.length > 0
+      ? fromMediaOrder
+      : [
+          ...images.map((url) => ({ type: "image" as const, url })),
+          ...validVideos.map((url) => ({ type: "video" as const, url })),
+        ];
   const safeIndex = selectedMediaIndex < mediaItems.length ? selectedMediaIndex : 0;
 
   // pinnedMedia wins when user manually clicks gallery; else variant image; else gallery
@@ -197,6 +205,7 @@ export default function ProductDetailClient({ id }: { id: string }) {
                 className="object-cover transition-opacity duration-200"
                 sizes="(max-width: 768px) 100vw, 50vw"
                 priority
+                unoptimized={!displayMedia?.url || displayMedia.url.startsWith("https://placehold.co/")}
               />
             )}
             {product.featured && (
@@ -268,8 +277,9 @@ export default function ProductDetailClient({ id }: { id: string }) {
                   }`}
                 >
                   {item.type === "video" ? (
-                    <div className="w-full h-full bg-stone-200 flex items-center justify-center">
-                      <span className="text-2xl">▶</span>
+                    <div className="relative w-full h-full bg-stone-200">
+                      <video src={item.url} className="w-full h-full object-cover" muted preload="metadata" playsInline />
+                      <span className="absolute inset-0 flex items-center justify-center text-2xl text-white drop-shadow-lg">▶</span>
                     </div>
                   ) : (
                     <Image src={item.url} alt="" fill className="object-cover" sizes="80px" />

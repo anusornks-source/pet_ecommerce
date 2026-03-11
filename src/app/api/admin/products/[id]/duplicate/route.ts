@@ -34,6 +34,7 @@ export async function POST(
       stock: product.stock,
       images: product.images,
       videos: product.videos ?? [],
+      mediaOrder: product.mediaOrder ?? [],
       categoryId: product.categoryId,
       petTypeId: product.petTypeId,
       active: false,

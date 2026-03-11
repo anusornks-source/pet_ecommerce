@@ -345,10 +345,11 @@ function OrderTrackingContent({ id }: { id: string }) {
           const displayName = item.productName ?? item.product?.name ?? "";
           const displayVariant = item.variantLabel ?? (item.variant ? [item.variant.size, item.variant.color].filter(Boolean).join(" / ") : null);
           const img = item.variant?.variantImage || item.product?.images?.[0] || `https://placehold.co/80x80/fff7ed/f97316?text=${encodeURIComponent(displayName)}`;
+          const isPlaceholder = !item.variant?.variantImage && !item.product?.images?.[0];
           return (
             <div key={item.id} className="flex items-center gap-3">
               <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-orange-50">
-                <Image src={img} alt={displayName} fill className="object-cover" sizes="56px" />
+                <Image src={img} alt={displayName} fill className="object-cover" sizes="56px" unoptimized={isPlaceholder} />
               </div>
               <div className="flex-1 min-w-0">
                 <Link href={`/products/${item.productId}`} className="font-medium text-stone-700 hover:text-orange-500 text-sm truncate block">

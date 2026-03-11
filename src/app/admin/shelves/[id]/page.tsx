@@ -199,6 +199,7 @@ export default function ShelfDetailPage({ params }: { params: Promise<{ id: stri
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-5">
             {items.map((item, idx) => {
               const img = item.product.images?.[0] || `https://placehold.co/400x300/fff7ed/f97316?text=${encodeURIComponent(item.product.name)}`;
+              const isPlaceholder = !item.product.images?.[0];
               return (
                 <div
                   key={item.id}
@@ -213,7 +214,7 @@ export default function ShelfDetailPage({ params }: { params: Promise<{ id: stri
                 >
                   {/* Image */}
                   <div className="relative h-36 bg-orange-50 overflow-hidden">
-                    <Image src={img} alt={item.product.name} fill className="object-cover" sizes="200px" />
+                    <Image src={img} alt={item.product.name} fill className="object-cover" sizes="200px" unoptimized={isPlaceholder} />
                     {/* Drag handle overlay */}
                     <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-black/30 flex items-center justify-center text-white text-xs">
                       ⠿
@@ -280,10 +281,11 @@ export default function ShelfDetailPage({ params }: { params: Promise<{ id: stri
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-5">
             {available.map((product) => {
               const img = product.images?.[0] || `https://placehold.co/120x120/fff7ed/f97316?text=🐾`;
+              const isPlaceholder = !product.images?.[0];
               return (
                 <div key={product.id} className="border border-stone-100 rounded-xl overflow-hidden hover:border-orange-200 transition-colors">
                   <div className="relative aspect-square bg-stone-50">
-                    <Image src={img} alt={product.name} fill className="object-cover" sizes="160px" />
+                    <Image src={img} alt={product.name} fill className="object-cover" sizes="160px" unoptimized={isPlaceholder} />
                   </div>
                   <div className="p-2.5">
                     <p className="text-xs font-medium text-stone-700 line-clamp-2 mb-1">{product.name}</p>

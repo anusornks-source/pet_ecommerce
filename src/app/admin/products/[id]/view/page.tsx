@@ -5,6 +5,21 @@ import Link from "next/link";
 import Image from "next/image";
 import MarketingAssetsSection from "@/components/admin/MarketingAssetsSection";
 import toast from "react-hot-toast";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  rectSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface ProductVariant {
   id: string;
@@ -12,9 +27,14 @@ interface ProductVariant {
   color: string | null;
   price: number;
   stock: number;
+  cjStock?: number | null;
   sku: string | null;
-  active: boolean;
+  cjVid?: string | null;
   variantImage: string | null;
+  attributes?: { name: string; value: string }[] | null;
+  active: boolean;
+  fulfillmentMethod?: string | null;
+  createdAt?: string;
 }
 
 interface Category {
@@ -29,6 +49,44 @@ type PetType = {
   name_th: string | null;
 } | null;
 
+function SortableMediaThumb({
+  id,
+  item,
+  isSelected,
+  onSelect,
+}: {
+  id: number;
+  item: { type: "image" | "video"; url: string };
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      className={`relative w-16 h-16 rounded-lg overflow-hidden shrink-0 border-2 transition-all cursor-grab active:cursor-grabbing ${
+        isSelected ? "border-orange-500 ring-1 ring-orange-200" : "border-stone-200 hover:border-stone-300"
+      }`}
+      title="ลากเพื่อจัดลำดับ"
+    >
+      {item.type === "video" ? (
+        <div className="relative w-full h-full bg-stone-200 select-none pointer-events-none" draggable={false}>
+          <video src={item.url} className="w-full h-full object-cover" muted preload="metadata" playsInline />
+          <span className="absolute inset-0 flex items-center justify-center text-lg text-white drop-shadow-lg">▶</span>
+        </div>
+      ) : (
+        <Image src={item.url} alt="" fill className="object-cover select-none pointer-events-none" sizes="64px" draggable={false} />
+      )}
+    </div>
+  );
+}
+
 interface ProductDetail {
   id: string;
   shopId: string;
@@ -42,6 +100,7 @@ interface ProductDetail {
   stock: number;
   images: string[];
   videos: string[];
+  mediaOrder?: string[];
   active: boolean;
   featured: boolean;
   deliveryDays: number;
@@ -56,16 +115,22 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
   const { id } = use(params);
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [addingAll, setAddingAll] = useState(false);
+  const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
 
   const fetchProduct = () => {
-    fetch(`/api/admin/products/${id}`)
+    fetch(`/api/admin/products/${id}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => d.success && setProduct(d.data));
   };
 
   useEffect(() => {
+    setProduct(null); // clear ก่อน fetch เพื่อไม่แสดง product เก่า
     fetchProduct();
   }, [id]);
+
+  useEffect(() => {
+    setSelectedMediaIndex(0);
+  }, [product?.id]);
 
   const handleAddAllToMarketingAssets = async () => {
     setAddingAll(true);
@@ -84,6 +149,43 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
     }
   };
 
+  const handleMediaReorder = async (reordered: { type: "image" | "video"; url: string }[]) => {
+    const res = await fetch(`/api/admin/products/${id}/display`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mediaItems: reordered }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast.success("จัดลำดับแล้ว");
+      fetchProduct();
+    } else {
+      toast.error(data.error ?? "จัดลำดับไม่สำเร็จ");
+    }
+  };
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleMediaDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !product) return;
+    const images = product.images ?? [];
+    const videos = product.videos ?? [];
+    const videoSet = new Set(videos);
+    const mediaOrder = product.mediaOrder ?? [];
+    const items =
+      mediaOrder.length > 0
+        ? mediaOrder.map((url) => ({ type: (videoSet.has(url) ? "video" : "image") as const, url }))
+        : [
+            ...images.map((url) => ({ type: "image" as const, url })),
+            ...videos.map((url) => ({ type: "video" as const, url })),
+          ];
+    const oldIndex = Number(active.id);
+    const newIndex = Number(over.id);
+    const reordered = arrayMove(items, oldIndex, newIndex);
+    handleMediaReorder(reordered);
+  };
+
   if (!product) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -95,15 +197,29 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
     );
   }
 
-  const mainImage = product.images[0];
+  const images = product.images ?? [];
+  const videos = product.videos ?? [];
+  const videoSet = new Set(videos);
+  const mediaOrder = product.mediaOrder ?? [];
+  const mediaItems =
+    mediaOrder.length > 0
+      ? mediaOrder.map((url) => ({ type: (videoSet.has(url) ? "video" : "image") as const, url }))
+      : [
+          ...images.map((url) => ({ type: "image" as const, url })),
+          ...videos.map((url) => ({ type: "video" as const, url })),
+        ];
+  const selectedMedia = mediaItems[selectedMediaIndex] ?? mediaItems[0];
   const displayPrice = product.normalPrice ?? product.price;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+    <div key={id} className="max-w-6xl mx-auto px-4 py-8 space-y-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
+          <Link href="/admin/products" className="text-stone-400 hover:text-stone-600">
+            ← รายการสินค้า
+          </Link>
           <Link href={`/admin/products/${id}`} className="text-stone-400 hover:text-stone-600">
-            ← แก้ไขสินค้า
+            แก้ไข
           </Link>
           <h1 className="text-2xl font-bold text-stone-800">รายละเอียดสินค้า: {product.name_th ?? product.name}</h1>
         </div>
@@ -119,11 +235,32 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
       {/* Product hero */}
       <div className="bg-white rounded-2xl border border-stone-100 overflow-hidden">
         <div className="p-6 md:p-8 flex flex-col md:flex-row gap-6">
-          <div className="relative w-full md:w-64 aspect-square rounded-xl overflow-hidden bg-stone-50 shrink-0">
-            {mainImage ? (
-              <Image src={mainImage} alt={product.name} fill className="object-contain" sizes="256px" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-4xl text-stone-300">📦</div>
+          <div className="w-full md:w-96 lg:w-[420px] shrink-0 space-y-3">
+            <div className="relative aspect-square rounded-xl overflow-hidden bg-stone-50">
+              {selectedMedia?.type === "video" ? (
+                <video src={selectedMedia.url} className="w-full h-full object-contain" controls playsInline />
+              ) : selectedMedia?.url ? (
+                <Image src={selectedMedia.url} alt={product.name} fill className="object-contain" sizes="320px" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-4xl text-stone-300">📦</div>
+              )}
+            </div>
+            {mediaItems.length > 1 && (
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleMediaDragEnd}>
+                <SortableContext items={mediaItems.map((_, i) => i)} strategy={rectSortingStrategy}>
+                  <div className="flex flex-wrap gap-2">
+                    {mediaItems.map((item, i) => (
+                      <SortableMediaThumb
+                        key={i}
+                        id={i}
+                        item={item}
+                        isSelected={selectedMediaIndex === i}
+                        onSelect={() => setSelectedMediaIndex(i)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -190,21 +327,26 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
       {/* Variants */}
       {product.variants.length > 0 && (
         <div className="bg-white rounded-2xl border border-stone-100 p-5">
-          <h3 className="font-semibold text-stone-800 mb-3">ตัวเลือกสินค้า</h3>
+          <h3 className="font-semibold text-stone-800 mb-3">ตัวเลือกสินค้า ({product.variants.length} รายการ)</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-stone-100">
-                  <th className="text-left py-2 text-stone-500 font-medium w-16">รูป</th>
+                  <th className="text-left py-2 text-stone-500 font-medium w-14">รูป</th>
                   <th className="text-left py-2 text-stone-500 font-medium">Size / Color</th>
                   <th className="text-right py-2 text-stone-500 font-medium">ราคา</th>
                   <th className="text-right py-2 text-stone-500 font-medium">สต็อก</th>
                   <th className="text-left py-2 text-stone-500 font-medium">SKU</th>
+                  <th className="text-left py-2 text-stone-500 font-medium">CJ Vid</th>
+                  <th className="text-right py-2 text-stone-500 font-medium">CJ สต็อก</th>
+                  <th className="text-left py-2 text-stone-500 font-medium">จัดส่ง</th>
+                  <th className="text-center py-2 text-stone-500 font-medium w-14">สถานะ</th>
+                  <th className="text-left py-2 text-stone-500 font-medium">Attributes</th>
                 </tr>
               </thead>
               <tbody>
                 {product.variants.map((v) => (
-                  <tr key={v.id} className="border-b border-stone-50 last:border-0">
+                  <tr key={v.id} className="border-b border-stone-50 last:border-0 hover:bg-stone-50/50">
                     <td className="py-2">
                       <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-stone-100 shrink-0">
                         {v.variantImage ? (
@@ -217,9 +359,32 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
                     <td className="py-2">
                       {[v.size, v.color].filter(Boolean).join(" / ") || "—"}
                     </td>
-                    <td className="text-right py-2">฿{v.price.toLocaleString()}</td>
+                    <td className="text-right py-2 font-medium">฿{v.price.toLocaleString()}</td>
                     <td className="text-right py-2">{v.stock}</td>
-                    <td className="py-2 text-stone-500">{v.sku ?? "—"}</td>
+                    <td className="py-2 text-stone-600 font-mono text-xs">{v.sku ?? "—"}</td>
+                    <td className="py-2 text-stone-500 font-mono text-xs">{v.cjVid ?? "—"}</td>
+                    <td className="text-right py-2 text-stone-500">{v.cjStock != null ? v.cjStock : "—"}</td>
+                    <td className="py-2 text-stone-500 text-xs">
+                      {v.fulfillmentMethod === "CJ" ? "CJ" : v.fulfillmentMethod === "SUPPLIER" ? "Supplier" : "ส่งเอง"}
+                    </td>
+                    <td className="py-2 text-center">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${v.active ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
+                        {v.active ? "เปิด" : "ปิด"}
+                      </span>
+                    </td>
+                    <td className="py-2">
+                      {v.attributes && Array.isArray(v.attributes) && v.attributes.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {(v.attributes as { name: string; value: string }[]).map((a, i) => (
+                            <span key={i} className="text-[10px] bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded">
+                              {a.name}: {a.value}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-stone-400">—</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -531,19 +531,24 @@ export default function AdminProductsPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-stone-100 shrink-0">
-                        {product.images[0] ? (
-                          <Image
-                            src={product.images[0]}
-                            alt={product.name}
-                            fill
-                            className="object-cover"
-                            unoptimized
-                          />
-                        ) : (
-                          <div className="flex items-center justify-center h-full text-stone-300 text-lg">
-                            📦
-                          </div>
-                        )}
+                        {(() => {
+                          const p = product as Product & { mediaOrder?: string[]; videos?: string[] };
+                          const videos = new Set(p.videos ?? []);
+                          const firstImage = (p.mediaOrder ?? product.images ?? []).find((u) => !videos.has(u)) ?? product.images[0];
+                          return firstImage ? (
+                            <Image
+                              src={firstImage}
+                              alt={product.name}
+                              fill
+                              className="object-cover"
+                              unoptimized
+                            />
+                          ) : (
+                            <div className="flex items-center justify-center h-full text-stone-300 text-lg">
+                              📦
+                            </div>
+                          );
+                        })()}
                       </div>
                       <div>
                         <span className="font-medium text-stone-800 line-clamp-1">

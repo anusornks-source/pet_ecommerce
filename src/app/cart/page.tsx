@@ -81,11 +81,12 @@ export default function CartPage() {
           <div className="lg:col-span-2 space-y-4">
             {items.map((item) => {
               const img = item.variant?.variantImage ?? item.product.images?.[0] ?? `https://placehold.co/200x200/fff7ed/f97316?text=${encodeURIComponent(item.product.name)}`;
+              const isPlaceholder = !item.variant?.variantImage && !item.product.images?.[0];
               const unitPrice = itemPrice(item);
               return (
                 <div key={item.id} className="card p-4 flex gap-4">
                   <div className="relative w-24 h-24 rounded-xl overflow-hidden shrink-0 bg-orange-50">
-                    <Image src={img} alt={item.product.name} fill className="object-cover" sizes="96px" />
+                    <Image src={img} alt={item.product.name} fill className="object-cover" sizes="96px" unoptimized={isPlaceholder} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <Link

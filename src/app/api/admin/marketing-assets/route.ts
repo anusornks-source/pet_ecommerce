@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       marketingPack: { select: { id: true, productName: true, lang: true } },
       product: { select: { id: true, name: true, name_th: true } },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
   });
 
   return NextResponse.json({ success: true, data: assets });

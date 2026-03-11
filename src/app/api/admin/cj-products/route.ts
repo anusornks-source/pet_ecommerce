@@ -5,6 +5,7 @@ import { syncProductImagesToMarketingAssets } from "@/lib/marketingAssets";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
 import { searchCJProducts, getCJProductDetail, getCJProductDetailBySku, getCJInventory } from "@/lib/cjDropshipping";
+import { generateFullDescEn, generateFullDescTh, generateNameTh } from "@/lib/aiDescriptions";
 import Anthropic from "@anthropic-ai/sdk";
 
 async function generateShortDescs(name: string, sourceDescription: string): Promise<{ en: string | null; th: string | null }> {
@@ -200,13 +201,21 @@ export async function POST(request: NextRequest) {
 
     const variantData = variants.map(({ costUSD: _c, ...rest }) => rest);
 
-    // Generate short descriptions (EN + TH) with AI in parallel (best-effort, non-blocking)
-    const { en: shortDescription, th: shortDescription_th } = await generateShortDescs(detail.productNameEn, sourceDescription);
+    // Generate name_th, short descriptions (EN + TH), and full descriptions (EN + TH) with AI
+    const [shortDescs, name_th, description, description_th] = await Promise.all([
+      generateShortDescs(detail.productNameEn, sourceDescription),
+      generateNameTh(detail.productNameEn),
+      generateFullDescEn(detail.productNameEn, sourceDescription),
+      generateFullDescTh(detail.productNameEn, sourceDescription),
+    ]);
+    const { en: shortDescription, th: shortDescription_th } = shortDescs;
 
     const product = await prisma.product.create({
       data: {
         name: detail.productNameEn,
-        description: sourceDescription,
+        name_th,
+        description: description ?? sourceDescription,
+        description_th,
         shortDescription,
         shortDescription_th,
         sourceDescription,

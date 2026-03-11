@@ -59,16 +59,46 @@ function VideoConceptCard({ item, onConceptChange }: { item: { angle: string; co
   );
 }
 
-function ImagePromptCard({ item, productImages, onPromptChange }: { item: { angle: string; prompt: string }; productImages?: string[]; onPromptChange?: (prompt: string) => void }) {
+function ImagePromptCard({ item, productImages, productId, onPromptChange, onSaveSuccess }: {
+  item: { angle: string; prompt: string };
+  productImages?: string[];
+  productId?: string;
+  onPromptChange?: (prompt: string) => void;
+  onSaveSuccess?: () => void;
+}) {
   const [copied, setCopied] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [selectedAr, setSelectedAr] = useState<string>("1:1");
   const [error, setError] = useState<string | null>(null);
   const [selectedRefImages, setSelectedRefImages] = useState<string[]>([]);
   const toggleRefImage = (img: string) =>
     setSelectedRefImages((prev) => prev.includes(img) ? prev.filter((x) => x !== img) : [...prev, img]);
   const [editedPrompt, setEditedPrompt] = useState(item.prompt);
+
+  const saveToMarketingAsset = async () => {
+    if (!generatedUrl || !productId) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/marketing-assets/save-from-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: generatedUrl, productId, prompt: editedPrompt, angle: item.angle }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("บันทึกไป Marketing Asset แล้ว");
+        onSaveSuccess?.();
+      } else {
+        toast.error(data.error ?? "บันทึกไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("เกิดข้อผิดพลาด");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const copyWithAr = (text: string, key: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -174,10 +204,22 @@ function ImagePromptCard({ item, productImages, onPromptChange }: { item: { angl
       {generatedUrl && (
         <div className="mt-3 relative">
           <img src={generatedUrl} alt={item.angle} className="w-full rounded-xl object-cover" />
-          <a href={generatedUrl} download target="_blank" rel="noopener noreferrer"
-            className="absolute top-2 right-2 text-[10px] bg-black/60 hover:bg-black/80 text-white px-2.5 py-1 rounded-lg transition-colors">
-            Download
-          </a>
+          <div className="absolute top-2 right-2 flex flex-col gap-1.5 items-end">
+            <a href={generatedUrl} download target="_blank" rel="noopener noreferrer"
+              className="text-[10px] bg-black/60 hover:bg-black/80 text-white px-2.5 py-1 rounded-lg transition-colors">
+              Download
+            </a>
+            {productId && (
+              <button
+                type="button"
+                onClick={saveToMarketingAsset}
+                disabled={saving}
+                className="text-[10px] bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white px-2.5 py-1 rounded-lg transition-colors"
+              >
+                {saving ? "กำลังบันทึก..." : "Save to Marketing Asset"}
+              </button>
+            )}
+          </div>
           <button type="button" onClick={generateImage}
             className="absolute top-2 left-2 text-[10px] bg-black/60 hover:bg-black/80 text-white px-2.5 py-1 rounded-lg transition-colors">
             Regenerate
@@ -718,8 +760,13 @@ const [editedHooks, setEditedHooks] = useState<string[]>([]);
               </div>
               <div className="space-y-3">
                 {result.imageAdPrompts.map((item, i) => (
-                  <ImagePromptCard key={i} item={item} productImages={selectedProduct?.images ?? []}
-                    onPromptChange={(prompt) => setEditedImagePrompts((prev) => prev.map((p, idx) => idx === i ? { ...p, prompt } : p))} />
+                  <ImagePromptCard
+                    key={i}
+                    item={item}
+                    productImages={selectedProduct?.images ?? []}
+                    productId={selectedProduct?.id}
+                    onPromptChange={(prompt) => setEditedImagePrompts((prev) => prev.map((p, idx) => idx === i ? { ...p, prompt } : p))}
+                  />
                 ))}
               </div>
               <p className="text-[11px] text-stone-400 mt-3 bg-stone-50 rounded-xl px-4 py-2.5">

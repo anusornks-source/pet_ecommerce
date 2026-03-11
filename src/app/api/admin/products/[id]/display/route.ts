@@ -17,7 +17,11 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { images, videos } = body as { images?: string[]; videos?: string[] };
+  const { images, videos, mediaItems } = body as {
+    images?: string[];
+    videos?: string[];
+    mediaItems?: { type: "image" | "video"; url: string }[];
+  };
 
   const existing = await prisma.product.findFirst({
     where: isAdmin ? { id } : { id, shopId },
@@ -26,14 +30,20 @@ export async function PATCH(
     return NextResponse.json({ success: false, error: "ไม่พบสินค้า" }, { status: 404 });
   }
 
-  const data: { images?: string[]; videos?: string[] } = {};
-  if (images !== undefined) data.images = Array.isArray(images) ? images : [];
-  if (videos !== undefined) data.videos = Array.isArray(videos) ? videos : [];
+  const data: { images?: string[]; videos?: string[]; mediaOrder?: string[] } = {};
+  if (mediaItems !== undefined && Array.isArray(mediaItems)) {
+    data.mediaOrder = mediaItems.map((m) => m.url);
+    data.images = mediaItems.filter((m) => m.type === "image").map((m) => m.url);
+    data.videos = mediaItems.filter((m) => m.type === "video").map((m) => m.url);
+  } else {
+    if (images !== undefined) data.images = Array.isArray(images) ? images : [];
+    if (videos !== undefined) data.videos = Array.isArray(videos) ? videos : [];
+  }
 
   const product = await prisma.product.update({
     where: { id },
     data,
-    select: { id: true, images: true, videos: true },
+    select: { id: true, images: true, videos: true, mediaOrder: true },
   });
 
   return NextResponse.json({ success: true, data: product });

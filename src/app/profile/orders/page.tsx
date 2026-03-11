@@ -120,10 +120,11 @@ export default function OrderHistoryPage() {
                 <div className="border-t border-stone-100 p-5 space-y-3">
                   {order.items.map((item) => {
                     const img = item.product?.images?.[0] || `https://placehold.co/80x80/fff7ed/f97316?text=${item.product?.name || ""}`;
+                    const isPlaceholder = !item.product?.images?.[0];
                     return (
                       <div key={item.id} className="flex items-center gap-3">
                         <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-orange-50">
-                          <Image src={img} alt={item.product?.name || ""} fill className="object-cover" sizes="56px" />
+                          <Image src={img} alt={item.product?.name || ""} fill className="object-cover" sizes="56px" unoptimized={isPlaceholder} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <Link

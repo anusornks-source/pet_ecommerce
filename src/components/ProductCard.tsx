@@ -65,6 +65,7 @@ export default function ProductCard({ product, showShopLabel = false }: Props) {
     try { new URL(img); return true; } catch { return false; }
   });
   const image = firstImage || `https://placehold.co/400x300/fff7ed/f97316?text=${encodeURIComponent(product.name)}`;
+  const isPlaceholder = !firstImage;
 
   return (
     <Link href={`/products/${product.id}`}>
@@ -77,6 +78,7 @@ export default function ProductCard({ product, showShopLabel = false }: Props) {
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            unoptimized={isPlaceholder}
           />
           {/* Badges: featured + tags stacked top-left */}
           <div className="absolute top-1.5 left-1.5 flex flex-col gap-0.5">

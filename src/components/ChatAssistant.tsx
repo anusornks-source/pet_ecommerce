@@ -51,6 +51,7 @@ function ProductCard({ product }: { product: ChatProduct }) {
           fill
           className="object-cover"
           sizes="56px"
+          unoptimized={!product.image}
           onError={(e) => { (e.target as HTMLImageElement).src = placeholder; }}
         />
       </div>

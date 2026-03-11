@@ -198,6 +198,8 @@ model Product {
   stock       Int      @default(0)
   images      String[]
   videos      String[] @default([])
+  /// ลำดับแสดงผลรวม (images + videos ปนกัน) — ถ้าว่างใช้ [...images, ...videos]
+  mediaOrder  String[] @default([])
   categoryId  String
   petTypeId   String?
   shopId      String
@@ -315,6 +317,8 @@ model MarketingAsset {
   marketingPackId String?
   prompt          String?  @db.Text
   angle           String?
+  note            String?  @db.Text
+  sortOrder       Int?
   createdAt       DateTime @default(now())
 
   shop           Shop?                 @relation(fields: [shopId], references: [id], onDelete: Cascade)

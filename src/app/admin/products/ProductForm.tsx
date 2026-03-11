@@ -5,6 +5,21 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { useShopAdmin } from "@/context/ShopAdminContext";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  horizontalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface CategoryGroupLite {
   id: string;
@@ -50,6 +65,39 @@ const FULFILLMENT_LABELS: Record<string, string> = {
   CJ: "CJ Dropship",
   SUPPLIER: "Supplier",
 };
+
+function SortableImageThumb({ id, url, onRemove }: { id: number; url: string; onRemove: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  const isValid = (() => { try { new URL(url); return true; } catch { return false; } })();
+
+  return (
+    <div ref={setNodeRef} style={style} className="relative group flex flex-col items-center gap-1">
+      <div
+        {...attributes}
+        {...listeners}
+        className="relative w-20 h-20 rounded-xl overflow-hidden bg-stone-100 border border-stone-200 cursor-grab active:cursor-grabbing hover:ring-2 hover:ring-orange-300 transition-shadow"
+        title="ลากเพื่อจัดลำดับ"
+      >
+        {isValid ? (
+          <Image src={url} alt="" fill className="object-cover" sizes="80px" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-xs text-stone-400 text-center px-1">
+            URL ไม่ถูกต้อง
+          </div>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="w-6 h-6 rounded bg-red-100 hover:bg-red-200 text-red-600 text-xs flex items-center justify-center"
+        title="ลบ"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
 
 interface VariantRow {
   id?: string;
@@ -223,12 +271,15 @@ export default function ProductForm({ productId, productShopId, initialData }: P
     setForm((f) => ({ ...f, images: imageList.filter((_, i) => i !== idx).join(", ") }));
   };
 
-  const moveImage = (idx: number, dir: "up" | "down") => {
-    const next = [...imageList];
-    const target = dir === "up" ? idx - 1 : idx + 1;
-    if (target < 0 || target >= next.length) return;
-    [next[idx], next[target]] = [next[target], next[idx]];
-    setForm((f) => ({ ...f, images: next.join(", ") }));
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleImageDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = Number(active.id);
+    const newIndex = Number(over.id);
+    const reordered = arrayMove(imageList, oldIndex, newIndex);
+    setForm((f) => ({ ...f, images: reordered.join(", ") }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -321,52 +372,22 @@ export default function ProductForm({ productId, productShopId, initialData }: P
           )}
         </div>
 
-        {/* Previews with remove + reorder */}
+        {/* Previews with drag reorder + remove */}
         {imageList.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {imageList.map((url, i) => {
-              const isValid = (() => { try { new URL(url); return true; } catch { return false; } })();
-              return (
-                <div key={i} className="relative group flex flex-col items-center gap-1">
-                  <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-stone-100 border border-stone-200">
-                    {isValid ? (
-                      <Image src={url} alt="" fill className="object-cover" sizes="80px" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-stone-400 text-center px-1">
-                        URL ไม่ถูกต้อง
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-0.5">
-                    <button
-                      type="button"
-                      onClick={() => moveImage(i, "up")}
-                      disabled={i === 0}
-                      className="w-6 h-6 rounded bg-stone-100 hover:bg-stone-200 disabled:opacity-40 disabled:cursor-not-allowed text-[10px] flex items-center justify-center"
-                      title="เลื่อนขึ้น"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moveImage(i, "down")}
-                      disabled={i === imageList.length - 1}
-                      className="w-6 h-6 rounded bg-stone-100 hover:bg-stone-200 disabled:opacity-40 disabled:cursor-not-allowed text-[10px] flex items-center justify-center"
-                      title="เลื่อนลง"
-                    >
-                      ↓
-                    </button>
-                    <button type="button" onClick={() => removeImage(i)}
-                      className="w-6 h-6 rounded bg-red-100 hover:bg-red-200 text-red-600 text-xs flex items-center justify-center"
-                      title="ลบ"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleImageDragEnd}>
+            <SortableContext items={imageList.map((_, i) => i)} strategy={horizontalListSortingStrategy}>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {imageList.map((url, i) => (
+                  <SortableImageThumb
+                    key={i}
+                    id={i}
+                    url={url}
+                    onRemove={() => removeImage(i)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
 
         {/* Manual URL fallback */}

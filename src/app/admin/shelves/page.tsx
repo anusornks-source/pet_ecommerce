@@ -454,10 +454,11 @@ export default function AdminShelvesPage() {
                         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-thin">
                           {shelfItems[shelf.id].map((item, idx) => {
                             const img = item.product.images?.[0] || `https://placehold.co/200x150/fff7ed/f97316?text=${encodeURIComponent(item.product.name)}`;
+                            const isPlaceholder = !item.product.images?.[0];
                             return (
                               <div key={item.id} className="shrink-0 w-36 rounded-xl border border-stone-100 overflow-hidden hover:shadow-sm transition-shadow bg-white">
                                 <div className="relative h-24 bg-orange-50">
-                                  <Image src={img} alt={item.product.name} fill className="object-cover" sizes="144px" />
+                                  <Image src={img} alt={item.product.name} fill className="object-cover" sizes="144px" unoptimized={isPlaceholder} />
                                   <div
                                     className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white shadow"
                                     style={{ backgroundColor: shelf.color }}

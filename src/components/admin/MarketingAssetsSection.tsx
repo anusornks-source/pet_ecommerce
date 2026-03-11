@@ -1,10 +1,25 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { formatSize } from "@/lib/utils";
 import toast from "react-hot-toast";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  rectSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface MarketingAsset {
   id: string;
@@ -19,6 +34,7 @@ interface MarketingAsset {
   marketingPackId: string | null;
   prompt: string | null;
   angle: string | null;
+  note: string | null;
   marketingPack?: { id: string; productName: string; lang: string } | null;
   product?: { id: string; name: string; name_th: string | null } | null;
 }
@@ -35,6 +51,243 @@ function formatLabel(ct: string | null): string {
     "application/pdf": "PDF",
   };
   return m[ct] ?? ct.split("/").pop() ?? ct;
+}
+
+function extractFilenameFromUrl(url: string): string | null {
+  try {
+    const path = new URL(url).pathname;
+    const name = path.split("/").pop();
+    return name && name.length > 0 ? decodeURIComponent(name) : null;
+  } catch {
+    return null;
+  }
+}
+
+function getExtensionFromUrl(url: string): string {
+  try {
+    const path = new URL(url).pathname;
+    const ext = path.split(".").pop()?.toLowerCase();
+    const m: Record<string, string> = {
+      jpg: "JPEG", jpeg: "JPEG", png: "PNG", webp: "WebP", gif: "GIF",
+      mp4: "MP4", webm: "WebM",
+    };
+    return ext && m[ext] ? m[ext] : ext ?? "—";
+  } catch {
+    return "—";
+  }
+}
+
+function useDebouncedCallback<T extends (...args: unknown[]) => void>(fn: T, delay: number) {
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fnRef = useRef(fn);
+  fnRef.current = fn;
+  return useCallback(
+    (...args: Parameters<T>) => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => fnRef.current(...args), delay);
+    },
+    [delay]
+  );
+}
+
+function SortableAssetCard({
+  asset,
+  productId,
+  marketingPackId,
+  productImages,
+  productVideos,
+  isProductImage,
+  isProductVideo,
+  onAddToProductImages,
+  onRemoveFromProductImages,
+  onAddToProductVideos,
+  onRemoveFromProductVideos,
+  onDelete,
+  deletingId,
+  onNoteSave,
+}: {
+  asset: MarketingAsset;
+  productId?: string;
+  marketingPackId?: string;
+  productImages: string[];
+  productVideos: string[];
+  isProductImage: (url: string) => boolean;
+  isProductVideo: (url: string) => boolean;
+  onAddToProductImages: (url: string) => void;
+  onRemoveFromProductImages: (url: string) => void;
+  onAddToProductVideos: (url: string) => void;
+  onRemoveFromProductVideos: (url: string) => void;
+  onDelete: (id: string) => void;
+  deletingId: string | null;
+  onNoteSave: (id: string, note: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: asset.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  const [localNote, setLocalNote] = useState(asset.note ?? "");
+  const debouncedSave = useDebouncedCallback((id: string, note: string) => onNoteSave(id, note), 500);
+
+  useEffect(() => {
+    setLocalNote(asset.note ?? "");
+  }, [asset.note]);
+
+  const handleNoteChange = (value: string) => {
+    setLocalNote(value);
+    debouncedSave(asset.id, value);
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="group relative rounded-xl border border-stone-100 overflow-hidden bg-stone-50"
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className="aspect-square relative bg-stone-100 cursor-grab active:cursor-grabbing touch-none"
+        title="ลากเพื่อจัดลำดับ"
+      >
+        {asset.type === "IMAGE" ? (
+          <Image src={asset.url} alt={asset.filename ?? ""} fill className="object-cover" sizes="200px" draggable={false} />
+        ) : asset.type === "VIDEO" ? (
+          <video src={asset.url} className="w-full h-full object-cover" muted draggable={false} />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-4xl">📄</div>
+        )}
+      </div>
+      <div className="p-3 space-y-1">
+        {productId && (asset.type === "IMAGE" || asset.type === "VIDEO") && (
+          <div className="flex flex-wrap gap-1 mb-1">
+            {asset.type === "IMAGE" ? (
+              isProductImage(asset.url) ? (
+                <>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-medium">รูปสินค้า</span>
+                  <button
+                    type="button"
+                    onClick={() => onRemoveFromProductImages(asset.url)}
+                    className="text-[9px] px-1.5 py-0.5 rounded bg-stone-100 hover:bg-stone-200 text-stone-600"
+                    title="เอาออกจากรูปสินค้าที่แสดงในหน้ารายละเอียด"
+                  >
+                    เอาออกจากรูปสินค้า
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onAddToProductImages(asset.url)}
+                  className="text-[9px] px-1.5 py-0.5 rounded bg-orange-100 hover:bg-orange-200 text-orange-700"
+                >
+                  + เป็นรูปสินค้า
+                </button>
+              )
+            ) : asset.type === "VIDEO" ? (
+              isProductVideo(asset.url) ? (
+                <>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">วิดีโอสินค้า</span>
+                  <button
+                    type="button"
+                    onClick={() => onRemoveFromProductVideos(asset.url)}
+                    className="text-[9px] px-1.5 py-0.5 rounded bg-stone-100 hover:bg-stone-200 text-stone-600"
+                    title="เอาออกจากวิดีโอสินค้าที่แสดงในหน้ารายละเอียด"
+                  >
+                    เอาออกจากวิดีโอสินค้า
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onAddToProductVideos(asset.url)}
+                  className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 hover:bg-blue-200 text-blue-700"
+                >
+                  + เป็นวิดีโอสินค้า
+                </button>
+              )
+            ) : null}
+          </div>
+        )}
+        {asset.product && !productId && (
+          <Link
+            href={`/admin/products/${asset.product.id}/view`}
+            className="block text-[10px] text-blue-600 hover:text-blue-700 truncate"
+            title={`${asset.product.name} (${asset.product.id})`}
+          >
+            📦 {asset.product.name_th ?? asset.product.name}
+          </Link>
+        )}
+        <div className="flex items-center justify-between gap-1 text-xs">
+          <span className="font-medium text-stone-600 truncate">
+            {formatLabel(asset.contentType) !== "—"
+              ? formatLabel(asset.contentType)
+              : (asset.type === "IMAGE" || asset.type === "VIDEO")
+                ? getExtensionFromUrl(asset.url)
+                : "—"}
+          </span>
+          {asset.sizeBytes != null && (
+            <span className="text-stone-400 shrink-0">{formatSize(asset.sizeBytes)}</span>
+          )}
+        </div>
+        {asset.type === "IMAGE" && asset.width != null && asset.height != null && (
+          <p className="text-[10px] text-stone-400">{asset.width} × {asset.height}</p>
+        )}
+        {((asset.filename ?? extractFilenameFromUrl(asset.url)) && (asset.contentType == null || asset.sizeBytes == null)) && (
+          <p className="text-[10px] text-stone-400 truncate" title={asset.filename ?? extractFilenameFromUrl(asset.url) ?? undefined}>
+            {asset.filename ?? extractFilenameFromUrl(asset.url)}
+          </p>
+        )}
+        {asset.productId && !productId && (
+          <Link
+            href={`/admin/products/${asset.productId}/view`}
+            className="block text-[9px] text-stone-400 font-mono truncate hover:text-blue-600"
+            title={asset.productId}
+          >
+            pid:{asset.productId.slice(0, 8)}
+          </Link>
+        )}
+        {(asset.marketingPackId || asset.marketingPack) && !marketingPackId && (
+          <Link
+            href={`/admin/automation/marketing-packs/${asset.marketingPackId ?? asset.marketingPack!.id}`}
+            className="block text-[9px] text-stone-400 font-mono truncate hover:text-blue-600"
+            title={asset.marketingPackId ?? asset.marketingPack!.id}
+          >
+            mpid:{(asset.marketingPackId ?? asset.marketingPack!.id).slice(0, 8)}
+          </Link>
+        )}
+        {(asset.angle || asset.prompt) && (
+          <p className="text-[10px] text-purple-600 truncate" title={asset.prompt ?? undefined}>
+            {asset.angle ?? (asset.prompt?.slice(0, 30) + "...")}
+          </p>
+        )}
+        <div className="flex flex-col gap-0.5">
+          <label className="text-[10px] text-stone-500 font-medium">Note</label>
+          <input
+            type="text"
+            value={localNote}
+            onChange={(e) => handleNoteChange(e.target.value)}
+            placeholder="เพิ่ม Note..."
+            className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 placeholder:text-stone-300 focus:outline-none focus:ring-1 focus:ring-orange-200 bg-white"
+          />
+        </div>
+      </div>
+      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <a
+          href={asset.url}
+          download={asset.filename ?? "asset"}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-black/60 hover:bg-black/80 text-white text-[10px]"
+        >
+          ⬇
+        </a>
+        <button
+          onClick={() => onDelete(asset.id)}
+          disabled={deletingId === asset.id}
+          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/80 hover:bg-red-500 text-white text-[10px] disabled:opacity-50"
+        >
+          {deletingId === asset.id ? "..." : "✕"}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 interface Props {
@@ -59,6 +312,7 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
   const [assets, setAssets] = useState<MarketingAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [enriching, setEnriching] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -102,6 +356,29 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
     }
   };
 
+  const handleEnrichMetadata = async () => {
+    if (!productId) return;
+    setEnriching(true);
+    try {
+      const res = await fetch(`/api/admin/marketing-assets/enrich?productId=${productId}`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        const { updated, failed } = data.data;
+        if (updated > 0) toast.success(`อัปเดต metadata แล้ว ${updated} รายการ`);
+        if (failed > 0) toast.error(`ดึง metadata ไม่ได้ ${failed} รายการ (URL อาจถูกบล็อกโดย CDN)`);
+        loadAssets();
+      } else {
+        toast.error(data.error ?? "อัปเดตไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("เกิดข้อผิดพลาด");
+    } finally {
+      setEnriching(false);
+    }
+  };
+
+  const needsEnrich = productId && assets.some((a) => a.contentType == null || a.sizeBytes == null);
+
   const handleDelete = async (id: string) => {
     if (!confirm("ลบไฟล์นี้? ไฟล์จะถูกลบจาก storage อย่างถาวร")) return;
     setDeletingId(id);
@@ -111,6 +388,7 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
       if (data.success) {
         toast.success("ลบแล้ว");
         setAssets((prev) => prev.filter((a) => a.id !== id));
+        onDisplayChange?.(); // refresh product ถ้าลบ asset ที่เป็นรูปสินค้า
       } else {
         toast.error(data.error ?? "ลบไม่สำเร็จ");
       }
@@ -192,6 +470,48 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
     }
   };
 
+  const handleReorder = useCallback(
+    async (orderedIds: string[]) => {
+      const res = await fetch("/api/admin/marketing-assets/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: orderedIds }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("จัดลำดับแล้ว");
+      } else {
+        toast.error(data.error ?? "จัดลำดับไม่สำเร็จ");
+      }
+    },
+    []
+  );
+
+  const handleNoteChange = useCallback(async (id: string, note: string) => {
+    const res = await fetch(`/api/admin/marketing-assets/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      toast.error(data.error ?? "บันทึก Note ไม่สำเร็จ");
+    }
+  }, []);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = assets.findIndex((a) => a.id === active.id);
+    const newIndex = assets.findIndex((a) => a.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(assets, oldIndex, newIndex);
+    setAssets(reordered);
+    handleReorder(reordered.map((a) => a.id));
+  };
+
   return (
     <div id="marketing-assets" className="bg-white rounded-2xl border border-stone-100 p-6 scroll-mt-4">
       <div className="flex items-center justify-between mb-4">
@@ -202,23 +522,38 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
           Marketing Assets
           {count != null && <span className="ml-2 text-stone-500 font-normal">({count} ชิ้น)</span>}
         </a>
-        {!hideUpload && (
+        {(!hideUpload || needsEnrich) && (
           <div className="flex items-center gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,video/*,.pdf"
-              className="hidden"
-              onChange={handleUpload}
-              disabled={uploading}
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="btn-primary text-sm py-2 px-4"
-            >
-              {uploading ? "กำลังอัปโหลด..." : "+ อัปโหลด"}
-            </button>
+            {needsEnrich && (
+              <button
+                type="button"
+                onClick={handleEnrichMetadata}
+                disabled={enriching}
+                className="btn-outline text-sm py-2 px-4"
+                title="ดึงรายละเอียด (ขนาด, รูปแบบ) จาก URL"
+              >
+                {enriching ? "กำลังอัปเดต..." : "อัปเดต metadata"}
+              </button>
+            )}
+            {!hideUpload && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,video/*,.pdf"
+                  className="hidden"
+                  onChange={handleUpload}
+                  disabled={uploading}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="btn-primary text-sm py-2 px-4"
+                >
+                  {uploading ? "กำลังอัปโหลด..." : "+ อัปโหลด"}
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -234,133 +569,31 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
           {hideUpload ? "ยังไม่มีรูปจาก Generate — กด Save to Marketing Asset ใน Image Ad Prompts" : "ยังไม่มีไฟล์ — กดอัปโหลดเพื่อเพิ่มรูป/วิดีโอ/PDF"}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {assets.map((asset) => (
-            <div
-              key={asset.id}
-              className="group relative rounded-xl border border-stone-100 overflow-hidden bg-stone-50"
-            >
-              <div className="aspect-square relative bg-stone-100">
-                {asset.type === "IMAGE" ? (
-                  <Image src={asset.url} alt={asset.filename ?? ""} fill className="object-cover" sizes="200px" />
-                ) : asset.type === "VIDEO" ? (
-                  <video src={asset.url} className="w-full h-full object-cover" muted />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-4xl">📄</div>
-                )}
-              </div>
-              <div className="p-3 space-y-1">
-                {productId && (asset.type === "IMAGE" || asset.type === "VIDEO") && (
-                  <div className="flex flex-wrap gap-1 mb-1">
-                    {asset.type === "IMAGE" && (
-                      isProductImage(asset.url) ? (
-                        <>
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-medium">Product Image</span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveFromProductImages(asset.url)}
-                            className="text-[9px] px-1.5 py-0.5 rounded bg-stone-100 hover:bg-stone-200 text-stone-600"
-                          >
-                            เอาออก
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleAddToProductImages(asset.url)}
-                          className="text-[9px] px-1.5 py-0.5 rounded bg-orange-100 hover:bg-orange-200 text-orange-700"
-                        >
-                          + เป็นรูปสินค้า
-                        </button>
-                      )
-                    )}
-                    {asset.type === "VIDEO" && (
-                      isProductVideo(asset.url) ? (
-                        <>
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">Product Video</span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveFromProductVideos(asset.url)}
-                            className="text-[9px] px-1.5 py-0.5 rounded bg-stone-100 hover:bg-stone-200 text-stone-600"
-                          >
-                            เอาออก
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleAddToProductVideos(asset.url)}
-                          className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 hover:bg-blue-200 text-blue-700"
-                        >
-                          + เป็นวิดีโอสินค้า
-                        </button>
-                      )
-                    )}
-                  </div>
-                )}
-                {asset.product && !productId && (
-                  <Link
-                    href={`/admin/products/${asset.product.id}/view`}
-                    className="block text-[10px] text-blue-600 hover:text-blue-700 truncate"
-                    title={`${asset.product.name} (${asset.product.id})`}
-                  >
-                    📦 {asset.product.name_th ?? asset.product.name}
-                  </Link>
-                )}
-                <div className="flex items-center justify-between gap-1 text-xs">
-                  <span className="font-medium text-stone-600 truncate">{formatLabel(asset.contentType)}</span>
-                  {asset.sizeBytes != null && (
-                    <span className="text-stone-400 shrink-0">{formatSize(asset.sizeBytes)}</span>
-                  )}
-                </div>
-                {asset.type === "IMAGE" && asset.width != null && asset.height != null && (
-                  <p className="text-[10px] text-stone-400">{asset.width} × {asset.height}</p>
-                )}
-                {asset.productId && !productId && (
-                  <Link
-                    href={`/admin/products/${asset.productId}/view`}
-                    className="block text-[9px] text-stone-400 font-mono truncate hover:text-blue-600"
-                    title={asset.productId}
-                  >
-                    pid:{asset.productId.slice(0, 8)}
-                  </Link>
-                )}
-                {(asset.marketingPackId || asset.marketingPack) && !marketingPackId && (
-                  <Link
-                    href={`/admin/automation/marketing-packs/${asset.marketingPackId ?? asset.marketingPack!.id}`}
-                    className="block text-[9px] text-stone-400 font-mono truncate hover:text-blue-600"
-                    title={asset.marketingPackId ?? asset.marketingPack!.id}
-                  >
-                    mpid:{(asset.marketingPackId ?? asset.marketingPack!.id).slice(0, 8)}
-                  </Link>
-                )}
-                {(asset.angle || asset.prompt) && (
-                  <p className="text-[10px] text-purple-600 truncate" title={asset.prompt ?? undefined}>
-                    {asset.angle ?? (asset.prompt?.slice(0, 30) + "...")}
-                  </p>
-                )}
-              </div>
-              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <a
-                  href={asset.url}
-                  download={asset.filename ?? "asset"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-black/60 hover:bg-black/80 text-white text-[10px]"
-                >
-                  ⬇
-                </a>
-                <button
-                  onClick={() => handleDelete(asset.id)}
-                  disabled={deletingId === asset.id}
-                  className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/80 hover:bg-red-500 text-white text-[10px] disabled:opacity-50"
-                >
-                  {deletingId === asset.id ? "..." : "✕"}
-                </button>
-              </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={assets.map((a) => a.id)} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {assets.map((asset) => (
+                <SortableAssetCard
+                  key={asset.id}
+                  asset={asset}
+                  productId={productId}
+                  marketingPackId={marketingPackId}
+                  productImages={productImages}
+                  productVideos={productVideos}
+                  isProductImage={isProductImage}
+                  isProductVideo={isProductVideo}
+                  onAddToProductImages={handleAddToProductImages}
+                  onRemoveFromProductImages={handleRemoveFromProductImages}
+                  onAddToProductVideos={handleAddToProductVideos}
+                  onRemoveFromProductVideos={handleRemoveFromProductVideos}
+                  onDelete={handleDelete}
+                  deletingId={deletingId}
+                  onNoteSave={handleNoteChange}
+                />
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
     </div>
   );

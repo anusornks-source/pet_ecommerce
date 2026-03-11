@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 import { syncProductImagesToMarketingAssets } from "@/lib/marketingAssets";
+import { generateFullDescEn, generateFullDescTh, generateNameTh } from "@/lib/aiDescriptions";
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -25,12 +26,19 @@ export async function POST(request: NextRequest) {
   try {
     // Create Product from enriched candidate data
     const productImages = candidate.productImage ? [candidate.productImage] : [];
+    const sourceDesc = candidate.description || candidate.productName;
+    const [description, description_th, name_th] = await Promise.all([
+      generateFullDescEn(candidate.productName, sourceDesc),
+      candidate.description_th ?? generateFullDescTh(candidate.productName, sourceDesc),
+      candidate.name_th ?? generateNameTh(candidate.productName),
+    ]);
+
     const product = await prisma.product.create({
       data: {
         name: candidate.productName,
-        name_th: candidate.name_th,
-        description: candidate.description || candidate.productName,
-        description_th: candidate.description_th,
+        name_th: name_th ?? null,
+        description: description ?? sourceDesc,
+        description_th: description_th ?? null,
         price: price ?? candidate.suggestedPrice ?? 0,
         stock: 0,
         images: productImages,

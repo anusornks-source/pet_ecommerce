@@ -9,6 +9,7 @@ interface Shop {
   name_th: string | null;
   slug: string;
   logoUrl: string | null;
+  coverUrl: string | null;
   active: boolean;
   usePetType: boolean;
   _count: { products: number; orders: number; members: number };
@@ -142,47 +143,64 @@ export default function ShopsPage() {
       {filteredShops.length === 0 && (
         <div className="text-center py-16 text-stone-400 text-sm">ไม่พบร้านที่ตรงกับเงื่อนไข</div>
       )}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-        {filteredShops.map((shop) => (
-          <div key={shop.id} className="bg-white rounded-xl border border-stone-100 overflow-hidden hover:border-stone-200 transition-colors flex flex-col">
-            <Link href={`/admin/shops/${shop.id}/view`} className="block">
-              <div className="aspect-square bg-stone-50 flex items-center justify-center overflow-hidden">
-                {shop.logoUrl ? (
-                  <img src={shop.logoUrl} alt="" className="w-full h-full object-contain p-4" />
-                ) : (
-                  <span className="text-3xl font-bold text-stone-300">{shop.name[0]?.toUpperCase()}</span>
-                )}
-              </div>
-            </Link>
-            <div className="p-2.5 flex-1 flex flex-col min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                <Link href={`/admin/shops/${shop.id}`} className="font-medium text-orange-600 hover:underline text-xs truncate">{shop.name}</Link>
-                <span className={`text-[9px] px-1 py-0.5 rounded shrink-0 ${shop.active ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"}`}>
-                  {shop.active ? "Active" : "Inactive"}
-                </span>
-              </div>
-              <a href={`/${shop.slug}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline truncate block">/{shop.slug}</a>
-              <div className="flex gap-2 mt-1 text-[10px] text-stone-400">
-                <span>{shop._count.products} สินค้า</span>
-                <span>{shop._count.orders} ออเดอร์</span>
-              </div>
-              <div className="flex gap-1 mt-2 pt-2 border-t border-stone-100">
-                <Link href={`/admin/shops/${shop.id}/view`} className="inline-flex items-center justify-center btn-outline text-[10px] px-1.5 py-0.5 flex-1 min-w-0">
-                  View
-                </Link>
-                <Link href={`/admin/shops/${shop.id}`} className="inline-flex items-center justify-center btn-outline text-[10px] px-1.5 py-0.5 flex-1 min-w-0">
-                  Edit
-                </Link>
-                <button
-                  onClick={() => handleToggleActive(shop)}
-                  className="inline-flex items-center justify-center text-[10px] px-1.5 py-0.5 rounded border border-stone-200 hover:bg-stone-50 text-stone-600 flex-1 min-w-0"
-                >
-                  {shop.active ? "ปิด" : "เปิด"}
-                </button>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        {filteredShops.map((shop) => {
+          const imageUrl = shop.coverUrl || shop.logoUrl;
+          const isCover = !!shop.coverUrl;
+          return (
+            <div key={shop.id} className="bg-white rounded-2xl border border-stone-100 overflow-hidden shadow-sm hover:shadow-md hover:border-orange-100 transition-all duration-200 flex flex-col group">
+              <Link href={`/admin/shops/${shop.id}/view`} className="block">
+                <div className="aspect-[4/3] relative overflow-hidden bg-gradient-to-br from-orange-50 via-amber-50 to-stone-100">
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={shop.name}
+                      className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${isCover ? "" : "p-6 object-contain"}`}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-16 h-16 rounded-2xl bg-white/80 shadow-sm flex items-center justify-center text-2xl font-bold text-orange-400 font-mono">
+                        {shop.name[0]?.toUpperCase()}
+                      </div>
+                      <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgb(120 113 108 / 0.15) 1px, transparent 0)", backgroundSize: "20px 20px" }} />
+                    </div>
+                  )}
+                    </div>
+              </Link>
+              <div className="p-3 flex-1 flex flex-col min-w-0">
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                  <Link href={`/admin/shops/${shop.id}`} className="font-semibold text-stone-800 hover:text-orange-600 transition-colors text-sm truncate">
+                    {shop.name}
+                  </Link>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0 font-medium ${shop.active ? "bg-emerald-100 text-emerald-700" : "bg-stone-100 text-stone-500"}`}>
+                    {shop.active ? "Active" : "Inactive"}
+                  </span>
+                </div>
+                <a href={`/${shop.slug}`} target="_blank" rel="noopener noreferrer" className="text-xs text-stone-500 hover:text-orange-600 truncate block mt-0.5">
+                  /{shop.slug}
+                </a>
+                <div className="flex gap-3 mt-2 text-xs text-stone-400">
+                  <span>{shop._count.products} สินค้า</span>
+                  <span>{shop._count.orders} ออเดอร์</span>
+                </div>
+                <div className="flex gap-1.5 mt-3 pt-3 border-t border-stone-100">
+                  <Link href={`/admin/shops/${shop.id}/view`} className="inline-flex items-center justify-center btn-primary text-xs px-2 py-1.5 flex-1 min-w-0 rounded-lg">
+                    View
+                  </Link>
+                  <Link href={`/admin/shops/${shop.id}`} className="inline-flex items-center justify-center btn-outline text-xs px-2 py-1.5 flex-1 min-w-0 rounded-lg">
+                    Edit
+                  </Link>
+                  <button
+                    onClick={() => handleToggleActive(shop)}
+                    className="inline-flex items-center justify-center text-xs px-2 py-1.5 rounded-lg border border-stone-200 hover:bg-stone-50 text-stone-600 flex-1 min-w-0 transition-colors"
+                  >
+                    {shop.active ? "ปิด" : "เปิด"}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

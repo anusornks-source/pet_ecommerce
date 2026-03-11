@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
+import { syncProductImagesToMarketingAssets } from "@/lib/marketingAssets";
 
 export async function POST(
   request: NextRequest,
@@ -32,6 +33,7 @@ export async function POST(
       normalPrice: product.normalPrice,
       stock: product.stock,
       images: product.images,
+      videos: product.videos ?? [],
       categoryId: product.categoryId,
       petTypeId: product.petTypeId,
       active: false,
@@ -59,6 +61,12 @@ export async function POST(
       },
     },
   });
+
+  const variantImages = product.variants.map((v) => v.variantImage).filter(Boolean) as string[];
+  const allUrls = [...product.images, ...variantImages];
+  if (allUrls.length > 0) {
+    await syncProductImagesToMarketingAssets(newProduct.id, shopId, allUrls);
+  }
 
   return NextResponse.json({ success: true, data: { id: newProduct.id } });
 }

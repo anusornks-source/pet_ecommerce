@@ -70,6 +70,7 @@ export default function EditProductPage({
   const [syncing, setSyncing] = useState(false);
   const [togglingCJ, setTogglingCJ] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  const [addingAll, setAddingAll] = useState(false);
   const [packs, setPacks] = useState<PackSummary[]>([]);
   const [packsLoading, setPacksLoading] = useState(true);
 
@@ -109,6 +110,24 @@ export default function EditProductPage({
       toast.error("ไม่สามารถ sync ได้");
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleAddAllToMarketingAssets = async () => {
+    if (!product) return;
+    setAddingAll(true);
+    try {
+      const res = await fetch(`/api/admin/products/${id}/add-images-to-marketing-assets`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.data.created > 0 ? `เพิ่ม ${data.data.created} รูปใน marketing assets แล้ว` : "รูปทั้งหมดอยู่ใน marketing assets แล้ว");
+      } else {
+        toast.error(data.error ?? "เกิดข้อผิดพลาด");
+      }
+    } catch {
+      toast.error("ไม่สามารถเพิ่มได้");
+    } finally {
+      setAddingAll(false);
     }
   };
 
@@ -179,7 +198,7 @@ export default function EditProductPage({
       )}
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold text-stone-800">แก้ไขสินค้า</h1>
             <Link
               href={`/admin/products/${id}/view`}
@@ -187,6 +206,13 @@ export default function EditProductPage({
             >
               ดูรายละเอียด →
             </Link>
+            <button
+              onClick={handleAddAllToMarketingAssets}
+              disabled={addingAll || (product.images.length === 0 && product.variants.every((v) => !v.variantImage))}
+              className="text-sm text-orange-600 hover:text-orange-700 border border-orange-200 rounded-xl px-3 py-1.5 transition-colors disabled:opacity-50"
+            >
+              {addingAll ? "กำลังเพิ่ม..." : "เพิ่มรูปเข้า Marketing Assets"}
+            </button>
           </div>
           <p className="text-stone-500 text-sm mt-1">
             {product.name}

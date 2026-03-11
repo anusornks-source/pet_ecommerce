@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
+import { syncProductImagesToMarketingAssets } from "@/lib/marketingAssets";
 
 export async function GET(request: NextRequest) {
   const auth = await requireShopAdmin(request);
@@ -104,7 +105,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  type VariantInput = { size?: string; color?: string; price: string; stock: string; sku?: string };
+  type VariantInput = { size?: string; color?: string; price: string; stock: string; sku?: string; variantImage?: string };
+  const imageArr = Array.isArray(images) ? images : [];
   const product = await prisma.product.create({
     data: {
       shopId,
@@ -116,7 +118,7 @@ export async function POST(request: NextRequest) {
       shortDescription_th: shortDescription_th || null,
       price: parseFloat(price),
       stock: parseInt(stock),
-      images: Array.isArray(images) ? images : [],
+      images: imageArr,
       categoryId,
       petTypeId: petTypeId || null,
       featured: !!featured,
@@ -128,12 +130,19 @@ export async function POST(request: NextRequest) {
             price: parseFloat(v.price) || 0,
             stock: parseInt(v.stock) || 0,
             sku: v.sku || null,
+            variantImage: v.variantImage || null,
           })),
         },
       }),
     },
     include: { category: true, petType: true, variants: true },
   });
+
+  const variantImages = (variants as { variantImage?: string }[]).map((v) => v.variantImage).filter(Boolean) as string[];
+  const allImageUrls = [...imageArr, ...variantImages];
+  if (allImageUrls.length > 0) {
+    await syncProductImagesToMarketingAssets(product.id, shopId, allImageUrls);
+  }
 
   return NextResponse.json({ success: true, data: product }, { status: 201 });
 }

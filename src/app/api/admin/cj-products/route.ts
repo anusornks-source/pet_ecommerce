@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma, FulfillmentMethod } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { syncProductImagesToMarketingAssets } from "@/lib/marketingAssets";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
 import { searchCJProducts, getCJProductDetail, getCJProductDetailBySku, getCJInventory } from "@/lib/cjDropshipping";
@@ -227,6 +228,12 @@ export async function POST(request: NextRequest) {
         variants: variantData.length > 0 ? { create: variantData } : undefined,
       },
     });
+
+    const variantImageUrls = variantData.map((v) => v.variantImage).filter(Boolean) as string[];
+    const allImageUrls = [...allImages, ...variantImageUrls];
+    if (allImageUrls.length > 0) {
+      await syncProductImagesToMarketingAssets(product.id, shopId, allImageUrls);
+    }
 
     return NextResponse.json({ success: true, data: { id: product.id, name: product.name } });
   } catch (err) {

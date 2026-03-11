@@ -197,6 +197,7 @@ model Product {
   normalPrice         Float?
   stock       Int      @default(0)
   images      String[]
+  videos      String[] @default([])
   categoryId  String
   petTypeId   String?
   shopId      String
@@ -294,10 +295,16 @@ model ProductMarketingPack {
   @@map("product_marketing_packs")
 }
 
+enum MarketingAssetType {
+  IMAGE
+  VIDEO
+  PDF
+}
+
 model MarketingAsset {
-  id              String   @id @default(cuid())
+  id              String             @id @default(cuid())
   url             String
-  type            String   // IMAGE | VIDEO | PDF
+  type            MarketingAssetType
   filename        String?
   contentType     String?
   sizeBytes       Int?

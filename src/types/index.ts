@@ -66,6 +66,7 @@ export interface Product {
   normalPrice?: number | null;
   stock: number;
   images: string[];
+  videos?: string[];
   categoryId: string;
   category: Category;
   petTypeId?: string | null;

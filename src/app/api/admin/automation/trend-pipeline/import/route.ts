@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
+import { syncProductImagesToMarketingAssets } from "@/lib/marketingAssets";
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -23,6 +24,7 @@ export async function POST(request: NextRequest) {
 
   try {
     // Create Product from enriched candidate data
+    const productImages = candidate.productImage ? [candidate.productImage] : [];
     const product = await prisma.product.create({
       data: {
         name: candidate.productName,
@@ -31,7 +33,7 @@ export async function POST(request: NextRequest) {
         description_th: candidate.description_th,
         price: price ?? candidate.suggestedPrice ?? 0,
         stock: 0,
-        images: candidate.productImage ? [candidate.productImage] : [],
+        images: productImages,
         categoryId,
         petTypeId: petTypeId || null,
         shopId,
@@ -48,6 +50,10 @@ export async function POST(request: NextRequest) {
         active: false, // Start as inactive — admin can activate after review
       },
     });
+
+    if (productImages.length > 0) {
+      await syncProductImagesToMarketingAssets(product.id, shopId, productImages);
+    }
 
     // Link candidate to product
     await prisma.trendCandidate.update({

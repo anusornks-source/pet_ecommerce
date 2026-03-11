@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { MarketingAssetType } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import sharp from "sharp";
 
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
   const asset = await prisma.marketingAsset.create({
     data: {
       url: blobUrl,
-      type: "IMAGE",
+      type: MarketingAssetType.IMAGE,
       contentType,
       sizeBytes,
       width,

@@ -22,8 +22,8 @@ export default function ProductDetailClient({ id }: { id: string }) {
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState(0);
-  const [pinnedImage, setPinnedImage] = useState<string | null>(null);
+  const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
+  const [pinnedMedia, setPinnedMedia] = useState<{ type: "image" | "video"; url: string } | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
@@ -145,12 +145,22 @@ export default function ProductDetailClient({ id }: { id: string }) {
     if (typeof img !== "string" || !img.trim()) return false;
     try { new URL(img); return true; } catch { return false; }
   });
+  const validVideos = (product.videos ?? []).filter((v): v is string => {
+    if (typeof v !== "string" || !v.trim()) return false;
+    try { new URL(v); return true; } catch { return false; }
+  });
   const images = validImages.length > 0 ? validImages : [placeholder];
-  const safeIndex = selectedImage < images.length ? selectedImage : 0;
+  const mediaItems: { type: "image" | "video"; url: string }[] = [
+    ...images.map((url) => ({ type: "image" as const, url })),
+    ...validVideos.map((url) => ({ type: "video" as const, url })),
+  ];
+  const safeIndex = selectedMediaIndex < mediaItems.length ? selectedMediaIndex : 0;
 
-  // pinnedImage wins when user manually clicks gallery/thumbnails
-  // otherwise show variant image (if any), then fallback to gallery
-  const mainImage = pinnedImage ?? selectedVariant?.variantImage ?? images[safeIndex];
+  // pinnedMedia wins when user manually clicks gallery; else variant image; else gallery
+  const displayMedia =
+    pinnedMedia ??
+    (selectedVariant?.variantImage ? { type: "image" as const, url: selectedVariant.variantImage } : null) ??
+    mediaItems[safeIndex];
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -168,49 +178,69 @@ export default function ProductDetailClient({ id }: { id: string }) {
       </nav>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-        {/* Images */}
+        {/* Images + Videos */}
         <div className="space-y-3">
           <div className="relative h-80 md:h-115 rounded-3xl overflow-hidden bg-orange-50 group">
-            <Image
-              src={mainImage}
-              alt={product.name}
-              fill
-              className="object-cover transition-opacity duration-200"
-              sizes="(max-width: 768px) 100vw, 50vw"
-              priority
-            />
+            {displayMedia?.type === "video" ? (
+              <video
+                src={displayMedia.url}
+                className="w-full h-full object-cover"
+                controls
+                playsInline
+                muted={false}
+              />
+            ) : (
+              <Image
+                src={displayMedia?.url ?? placeholder}
+                alt={product.name}
+                fill
+                className="object-cover transition-opacity duration-200"
+                sizes="(max-width: 768px) 100vw, 50vw"
+                priority
+              />
+            )}
             {product.featured && (
               <span className="absolute top-4 left-4 bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-medium z-10">
                 ⭐ สินค้าแนะนำ
               </span>
             )}
             {/* Prev / Next arrows */}
-            {images.length > 1 && (
+            {mediaItems.length > 1 && (
               <>
                 <button
-                  onClick={() => { const i = (safeIndex - 1 + images.length) % images.length; setSelectedImage(i); setPinnedImage(images[i]); }}
+                  onClick={() => {
+                    const i = (safeIndex - 1 + mediaItems.length) % mediaItems.length;
+                    setSelectedMediaIndex(i);
+                    setPinnedMedia(mediaItems[i]);
+                  }}
                   className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                  aria-label="รูปก่อนหน้า"
+                  aria-label="ก่อนหน้า"
                 >
                   <svg className="w-4 h-4 text-stone-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
                 <button
-                  onClick={() => { const i = (safeIndex + 1) % images.length; setSelectedImage(i); setPinnedImage(images[i]); }}
+                  onClick={() => {
+                    const i = (safeIndex + 1) % mediaItems.length;
+                    setSelectedMediaIndex(i);
+                    setPinnedMedia(mediaItems[i]);
+                  }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                  aria-label="รูปถัดไป"
+                  aria-label="ถัดไป"
                 >
                   <svg className="w-4 h-4 text-stone-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
-                {/* Dot indicators */}
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                  {images.map((img, idx) => (
+                  {mediaItems.map((item, idx) => (
                     <button
                       key={idx}
-                      onClick={() => { setSelectedImage(idx); setPinnedImage(img); }}
+                      onClick={() => {
+                        setSelectedMediaIndex(idx);
+                        setPinnedMedia(item);
+                      }}
                       className={`h-2 rounded-full transition-all duration-200 ${
                         idx === safeIndex ? "bg-white w-5" : "bg-white/60 w-2"
                       }`}
@@ -222,19 +252,28 @@ export default function ProductDetailClient({ id }: { id: string }) {
           </div>
 
           {/* Thumbnails */}
-          {images.length > 1 && (
+          {mediaItems.length > 1 && (
             <div className="flex gap-2 overflow-x-auto pb-1">
-              {images.map((img, idx) => (
+              {mediaItems.map((item, idx) => (
                 <button
                   key={idx}
-                  onClick={() => { setSelectedImage(idx); setPinnedImage(img); }}
+                  onClick={() => {
+                    setSelectedMediaIndex(idx);
+                    setPinnedMedia(item);
+                  }}
                   className={`relative w-20 h-20 rounded-xl overflow-hidden shrink-0 border-2 transition-all ${
                     safeIndex === idx
                       ? "border-orange-500 scale-105 shadow-md"
                       : "border-stone-100 hover:border-stone-300"
                   }`}
                 >
-                  <Image src={img} alt="" fill className="object-cover" sizes="80px" />
+                  {item.type === "video" ? (
+                    <div className="w-full h-full bg-stone-200 flex items-center justify-center">
+                      <span className="text-2xl">▶</span>
+                    </div>
+                  ) : (
+                    <Image src={item.url} alt="" fill className="object-cover" sizes="80px" />
+                  )}
                 </button>
               ))}
             </div>
@@ -353,7 +392,7 @@ export default function ProductDetailClient({ id }: { id: string }) {
                   return (
                     <button
                       key={v.id}
-                      onClick={() => { setSelectedVariant(isSelected ? null : v); setPinnedImage(null); }}
+                      onClick={() => { setSelectedVariant(isSelected ? null : v); setPinnedMedia(null); }}
                       disabled={isOut}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 text-sm font-medium transition-all ${
                         isSelected

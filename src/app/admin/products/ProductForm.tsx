@@ -223,6 +223,14 @@ export default function ProductForm({ productId, productShopId, initialData }: P
     setForm((f) => ({ ...f, images: imageList.filter((_, i) => i !== idx).join(", ") }));
   };
 
+  const moveImage = (idx: number, dir: "up" | "down") => {
+    const next = [...imageList];
+    const target = dir === "up" ? idx - 1 : idx + 1;
+    if (target < 0 || target >= next.length) return;
+    [next[idx], next[target]] = [next[target], next[idx]];
+    setForm((f) => ({ ...f, images: next.join(", ") }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -313,13 +321,13 @@ export default function ProductForm({ productId, productShopId, initialData }: P
           )}
         </div>
 
-        {/* Previews with remove button */}
+        {/* Previews with remove + reorder */}
         {imageList.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-3">
             {imageList.map((url, i) => {
               const isValid = (() => { try { new URL(url); return true; } catch { return false; } })();
               return (
-                <div key={i} className="relative group">
+                <div key={i} className="relative group flex flex-col items-center gap-1">
                   <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-stone-100 border border-stone-200">
                     {isValid ? (
                       <Image src={url} alt="" fill className="object-cover" sizes="80px" />
@@ -329,9 +337,32 @@ export default function ProductForm({ productId, productShopId, initialData }: P
                       </div>
                     )}
                   </div>
-                  <button type="button" onClick={() => removeImage(i)}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  >✕</button>
+                  <div className="flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => moveImage(i, "up")}
+                      disabled={i === 0}
+                      className="w-6 h-6 rounded bg-stone-100 hover:bg-stone-200 disabled:opacity-40 disabled:cursor-not-allowed text-[10px] flex items-center justify-center"
+                      title="เลื่อนขึ้น"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveImage(i, "down")}
+                      disabled={i === imageList.length - 1}
+                      className="w-6 h-6 rounded bg-stone-100 hover:bg-stone-200 disabled:opacity-40 disabled:cursor-not-allowed text-[10px] flex items-center justify-center"
+                      title="เลื่อนลง"
+                    >
+                      ↓
+                    </button>
+                    <button type="button" onClick={() => removeImage(i)}
+                      className="w-6 h-6 rounded bg-red-100 hover:bg-red-200 text-red-600 text-xs flex items-center justify-center"
+                      title="ลบ"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               );
             })}

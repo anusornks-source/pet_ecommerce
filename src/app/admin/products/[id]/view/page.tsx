@@ -4,6 +4,7 @@ import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import MarketingAssetsSection from "@/components/admin/MarketingAssetsSection";
+import toast from "react-hot-toast";
 
 interface ProductVariant {
   id: string;
@@ -40,6 +41,7 @@ interface ProductDetail {
   normalPrice: number | null;
   stock: number;
   images: string[];
+  videos: string[];
   active: boolean;
   featured: boolean;
   deliveryDays: number;
@@ -53,12 +55,34 @@ interface ProductDetail {
 export default function ProductViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [product, setProduct] = useState<ProductDetail | null>(null);
+  const [addingAll, setAddingAll] = useState(false);
 
-  useEffect(() => {
+  const fetchProduct = () => {
     fetch(`/api/admin/products/${id}`)
       .then((r) => r.json())
       .then((d) => d.success && setProduct(d.data));
+  };
+
+  useEffect(() => {
+    fetchProduct();
   }, [id]);
+
+  const handleAddAllToMarketingAssets = async () => {
+    setAddingAll(true);
+    try {
+      const res = await fetch(`/api/admin/products/${id}/add-images-to-marketing-assets`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        const msg = data.data.created > 0
+          ? `เพิ่ม ${data.data.created} รูปใน marketing assets แล้ว`
+          : "รูปทั้งหมดอยู่ใน marketing assets แล้ว";
+        toast.success(msg);
+        fetchProduct();
+      }
+    } finally {
+      setAddingAll(false);
+    }
+  };
 
   if (!product) {
     return (
@@ -76,11 +100,20 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href={`/admin/products/${id}`} className="text-stone-400 hover:text-stone-600">
-          ← แก้ไขสินค้า
-        </Link>
-        <h1 className="text-2xl font-bold text-stone-800">รายละเอียดสินค้า: {product.name_th ?? product.name}</h1>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Link href={`/admin/products/${id}`} className="text-stone-400 hover:text-stone-600">
+            ← แก้ไขสินค้า
+          </Link>
+          <h1 className="text-2xl font-bold text-stone-800">รายละเอียดสินค้า: {product.name_th ?? product.name}</h1>
+        </div>
+        <button
+          onClick={handleAddAllToMarketingAssets}
+          disabled={addingAll || (product.images.length === 0 && product.variants.every((v) => !v.variantImage))}
+          className="btn-outline text-sm py-2 px-4"
+        >
+          {addingAll ? "กำลังเพิ่ม..." : "เพิ่มรูปทั้งหมดเข้า Marketing Assets"}
+        </button>
       </div>
 
       {/* Product hero */}
@@ -204,7 +237,13 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
       )}
 
       {/* Marketing Assets */}
-      <MarketingAssetsSection productId={id} count={product._count?.marketingAssets} />
+      <MarketingAssetsSection
+        productId={id}
+        productImages={product.images}
+        productVideos={product.videos ?? []}
+        onDisplayChange={fetchProduct}
+        count={product._count?.marketingAssets}
+      />
     </div>
   );
 }

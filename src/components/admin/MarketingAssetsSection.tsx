@@ -41,6 +41,12 @@ interface Props {
   shopId?: string;
   productId?: string;
   marketingPackId?: string;
+  /** รูปที่ใช้แสดงใน product detail (สำหรับ badge + add/remove) */
+  productImages?: string[];
+  /** วิดีโอที่ใช้แสดงใน product detail */
+  productVideos?: string[];
+  /** เรียกหลัง add/remove จาก product display */
+  onDisplayChange?: () => void;
   /** ซ่อนปุ่มอัปโหลด (เช่น เมื่อใช้ marketingPackId — assets มาจาก Save to Marketing Asset เท่านั้น) */
   hideUpload?: boolean;
   /** ใช้ refetch เมื่อ key เปลี่ยน (เช่น หลัง save สำเร็จ) */
@@ -49,7 +55,7 @@ interface Props {
   count?: number | null;
 }
 
-export default function MarketingAssetsSection({ shopId, productId, marketingPackId, hideUpload, refreshKey, count }: Props) {
+export default function MarketingAssetsSection({ shopId, productId, marketingPackId, productImages = [], productVideos = [], onDisplayChange, hideUpload, refreshKey, count }: Props) {
   const [assets, setAssets] = useState<MarketingAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -115,6 +121,77 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
     }
   };
 
+  const isProductImage = (url: string) => productImages.some((u) => u === url || u.trim() === url.trim());
+  const isProductVideo = (url: string) => productVideos.some((u) => u === url || u.trim() === url.trim());
+
+  const handleAddToProductImages = async (url: string) => {
+    if (!productId) return;
+    const newImages = [...productImages, url];
+    const res = await fetch(`/api/admin/products/${productId}/display`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images: newImages }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast.success("เพิ่มเป็นรูปสินค้าแล้ว");
+      onDisplayChange?.();
+    } else {
+      toast.error(data.error ?? "ไม่สำเร็จ");
+    }
+  };
+
+  const handleRemoveFromProductImages = async (url: string) => {
+    if (!productId) return;
+    const newImages = productImages.filter((u) => u !== url && u.trim() !== url.trim());
+    const res = await fetch(`/api/admin/products/${productId}/display`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images: newImages }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast.success("เอาออกจากรูปสินค้าแล้ว");
+      onDisplayChange?.();
+    } else {
+      toast.error(data.error ?? "ไม่สำเร็จ");
+    }
+  };
+
+  const handleAddToProductVideos = async (url: string) => {
+    if (!productId) return;
+    const newVideos = [...productVideos, url];
+    const res = await fetch(`/api/admin/products/${productId}/display`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ videos: newVideos }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast.success("เพิ่มเป็นวิดีโอสินค้าแล้ว");
+      onDisplayChange?.();
+    } else {
+      toast.error(data.error ?? "ไม่สำเร็จ");
+    }
+  };
+
+  const handleRemoveFromProductVideos = async (url: string) => {
+    if (!productId) return;
+    const newVideos = productVideos.filter((u) => u !== url && u.trim() !== url.trim());
+    const res = await fetch(`/api/admin/products/${productId}/display`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ videos: newVideos }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast.success("เอาออกจากวิดีโอสินค้าแล้ว");
+      onDisplayChange?.();
+    } else {
+      toast.error(data.error ?? "ไม่สำเร็จ");
+    }
+  };
+
   return (
     <div id="marketing-assets" className="bg-white rounded-2xl border border-stone-100 p-6 scroll-mt-4">
       <div className="flex items-center justify-between mb-4">
@@ -173,6 +250,54 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
                 )}
               </div>
               <div className="p-3 space-y-1">
+                {productId && (asset.type === "IMAGE" || asset.type === "VIDEO") && (
+                  <div className="flex flex-wrap gap-1 mb-1">
+                    {asset.type === "IMAGE" && (
+                      isProductImage(asset.url) ? (
+                        <>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-medium">Product Image</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFromProductImages(asset.url)}
+                            className="text-[9px] px-1.5 py-0.5 rounded bg-stone-100 hover:bg-stone-200 text-stone-600"
+                          >
+                            เอาออก
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleAddToProductImages(asset.url)}
+                          className="text-[9px] px-1.5 py-0.5 rounded bg-orange-100 hover:bg-orange-200 text-orange-700"
+                        >
+                          + เป็นรูปสินค้า
+                        </button>
+                      )
+                    )}
+                    {asset.type === "VIDEO" && (
+                      isProductVideo(asset.url) ? (
+                        <>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">Product Video</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFromProductVideos(asset.url)}
+                            className="text-[9px] px-1.5 py-0.5 rounded bg-stone-100 hover:bg-stone-200 text-stone-600"
+                          >
+                            เอาออก
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleAddToProductVideos(asset.url)}
+                          className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 hover:bg-blue-200 text-blue-700"
+                        >
+                          + เป็นวิดีโอสินค้า
+                        </button>
+                      )
+                    )}
+                  </div>
+                )}
                 {asset.product && !productId && (
                   <Link
                     href={`/admin/products/${asset.product.id}/view`}

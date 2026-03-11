@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { MarketingAssetType } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import sharp from "sharp";
 
-const ALLOWED_TYPES: Record<string, string> = {
-  "image/jpeg": "IMAGE",
-  "image/png": "IMAGE",
-  "image/webp": "IMAGE",
-  "image/gif": "IMAGE",
-  "video/mp4": "VIDEO",
-  "video/webm": "VIDEO",
-  "application/pdf": "PDF",
+const ALLOWED_TYPES: Record<string, (typeof MarketingAssetType)[keyof typeof MarketingAssetType]> = {
+  "image/jpeg": MarketingAssetType.IMAGE,
+  "image/png": MarketingAssetType.IMAGE,
+  "image/webp": MarketingAssetType.IMAGE,
+  "image/gif": MarketingAssetType.IMAGE,
+  "video/mp4": MarketingAssetType.VIDEO,
+  "video/webm": MarketingAssetType.VIDEO,
+  "application/pdf": MarketingAssetType.PDF,
 };
 
 const MAX_IMAGE = 10 * 1024 * 1024; // 10MB
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const maxSize = assetType === "IMAGE" ? MAX_IMAGE : assetType === "VIDEO" ? MAX_VIDEO : MAX_PDF;
+  const maxSize = assetType === MarketingAssetType.IMAGE ? MAX_IMAGE : assetType === MarketingAssetType.VIDEO ? MAX_VIDEO : MAX_PDF;
   if (file.size > maxSize) {
     return NextResponse.json(
       { success: false, error: `ไฟล์ใหญ่เกิน ${Math.round(maxSize / 1024 / 1024)}MB` },
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
   let width: number | null = null;
   let height: number | null = null;
 
-  if (assetType === "IMAGE") {
+  if (assetType === MarketingAssetType.IMAGE) {
     try {
       const buf = Buffer.from(await file.arrayBuffer());
       const meta = await sharp(buf).metadata();

@@ -83,12 +83,12 @@ function getExtensionFromUrl(url: string): string {
   }
 }
 
-function useDebouncedCallback<T extends (...args: unknown[]) => void>(fn: T, delay: number) {
+function useDebouncedCallback<A extends unknown[]>(fn: (...args: A) => void, delay: number) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fnRef = useRef(fn);
   fnRef.current = fn;
   return useCallback(
-    (...args: Parameters<T>) => {
+    (...args: A) => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => fnRef.current(...args), delay);
     },

@@ -175,7 +175,11 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
     const mediaOrder = product.mediaOrder ?? [];
     const items =
       mediaOrder.length > 0
-        ? mediaOrder.map((url) => ({ type: (videoSet.has(url) ? "video" : "image") as const, url }))
+        ? mediaOrder.map((url) =>
+            videoSet.has(url)
+              ? ({ type: "video" as const, url })
+              : ({ type: "image" as const, url })
+          )
         : [
             ...images.map((url) => ({ type: "image" as const, url })),
             ...videos.map((url) => ({ type: "video" as const, url })),
@@ -203,7 +207,11 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
   const mediaOrder = product.mediaOrder ?? [];
   const mediaItems =
     mediaOrder.length > 0
-      ? mediaOrder.map((url) => ({ type: (videoSet.has(url) ? "video" : "image") as const, url }))
+      ? mediaOrder.map((url) =>
+          videoSet.has(url)
+            ? ({ type: "video" as const, url })
+            : ({ type: "image" as const, url })
+        )
       : [
           ...images.map((url) => ({ type: "image" as const, url })),
           ...videos.map((url) => ({ type: "video" as const, url })),

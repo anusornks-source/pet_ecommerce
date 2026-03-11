@@ -154,7 +154,11 @@ export default function ProductDetailClient({ id }: { id: string }) {
   const images = validImages.length > 0 ? validImages : [placeholder];
   const fromMediaOrder = mediaOrder
     .filter((url) => validImages.includes(url) || validVideos.includes(url))
-    .map((url) => ({ type: (videoSet.has(url) ? "video" : "image") as const, url }));
+    .map((url) =>
+      videoSet.has(url)
+        ? ({ type: "video" as const, url })
+        : ({ type: "image" as const, url })
+    );
   const mediaItems: { type: "image" | "video"; url: string }[] =
     fromMediaOrder.length > 0
       ? fromMediaOrder

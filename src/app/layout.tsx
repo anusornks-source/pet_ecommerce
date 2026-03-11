@@ -84,7 +84,7 @@ export default async function RootLayout({
             />
             <ChatAssistant shopId={shopId} shopName={shopName} />
             <Toaster
-              position="top-right"
+              position="bottom-right"
               toastOptions={{
                 duration: 3000,
                 style: {

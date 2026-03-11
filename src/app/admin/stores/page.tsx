@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -33,6 +34,8 @@ const emptyForm = {
 
 export default function AdminStoresPage() {
   const { activeShop, shops, isAdmin } = useShopAdmin();
+  const searchParams = useSearchParams();
+  const urlShopId = searchParams.get("shopId") || "";
   const [shopFilter, setShopFilter] = useState<string>("");
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,20 +45,26 @@ export default function AdminStoresPage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Initial shopFilter from URL (?shopId=) or activeShop
   useEffect(() => {
-    if (activeShop?.id && !shopFilter) setShopFilter(activeShop.id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeShop?.id]);
+    if (!shopFilter) {
+      if (urlShopId) {
+        setShopFilter(urlShopId);
+      } else if (activeShop?.id) {
+        setShopFilter(activeShop.id);
+      }
+    }
+  }, [urlShopId, activeShop?.id, shopFilter]);
 
   const fetchStores = useCallback(() => {
     setLoading(true);
-    const sid = shopFilter || activeShop?.id;
+    const sid = shopFilter || urlShopId || activeShop?.id;
     const url = sid ? `/api/admin/stores?shopId=${sid}` : "/api/admin/stores";
     fetch(url)
       .then((r) => r.json())
       .then((d) => { if (d.success) setStores(d.data); })
       .finally(() => setLoading(false));
-  }, [shopFilter, activeShop?.id]);
+  }, [shopFilter, urlShopId, activeShop?.id]);
 
   useEffect(() => { fetchStores(); }, [fetchStores]);
 

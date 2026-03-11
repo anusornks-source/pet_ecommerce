@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
+import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+
+// Global tags shared across all shops. Only platform ADMIN can CRUD.
 
 export async function GET(request: NextRequest) {
-  const auth = await requireShopAdmin(request);
-  if (isShopAuthResponse(auth)) return auth;
-  const { shopId } = auth;
+  const auth = await requireAdmin(request);
+  if (isNextResponse(auth)) return auth;
 
-  const tags = await prisma.tag.findMany({ where: { OR: [{ shopId }, { shopId: null }] }, orderBy: { createdAt: "asc" } });
+  const tags = await prisma.tag.findMany({ orderBy: { createdAt: "asc" } });
   return NextResponse.json({ success: true, data: tags });
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireShopAdmin(request);
-  if (isShopAuthResponse(auth)) return auth;
-  const { shopId } = auth;
+  const auth = await requireAdmin(request);
+  if (isNextResponse(auth)) return auth;
 
   const body = await request.json();
   const { name, nameEn, slug, color = "orange", icon } = body;
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const tag = await prisma.tag.create({
-      data: { shopId, name, nameEn: nameEn || null, slug, color, icon: icon || null },
+      data: { shopId: null, name, nameEn: nameEn || null, slug, color, icon: icon || null },
     });
     return NextResponse.json({ success: true, data: tag });
   } catch (err: unknown) {

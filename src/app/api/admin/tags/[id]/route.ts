@@ -1,20 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
+import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireShopAdmin(request);
-  if (isShopAuthResponse(auth)) return auth;
-  const { shopId } = auth;
+// Global tags — only platform ADMIN can edit/delete.
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireAdmin(request);
+  if (isNextResponse(auth)) return auth;
 
   const { id } = await params;
   const body = await request.json();
   const { name, nameEn, slug, color, icon } = body;
 
-  // Verify tag belongs to this shop (only shop-owned tags can be edited)
-  const existingTag = await prisma.tag.findFirst({ where: { id, shopId } });
+  const existingTag = await prisma.tag.findUnique({ where: { id } });
   if (!existingTag) {
-    return NextResponse.json({ success: false, error: "ไม่พบแท็กหรือไม่มีสิทธิ์แก้ไข" }, { status: 404 });
+    return NextResponse.json({ success: false, error: "ไม่พบแท็ก" }, { status: 404 });
   }
 
   try {
@@ -38,19 +41,19 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireShopAdmin(request);
-  if (isShopAuthResponse(auth)) return auth;
-  const { shopId } = auth;
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireAdmin(request);
+  if (isNextResponse(auth)) return auth;
 
   const { id } = await params;
-  // Verify tag belongs to this shop (only shop-owned tags can be deleted)
-  const existingTagDel = await prisma.tag.findFirst({ where: { id, shopId } });
-  if (!existingTagDel) {
-    return NextResponse.json({ success: false, error: "ไม่พบแท็กหรือไม่มีสิทธิ์ลบ" }, { status: 404 });
+  const existingTag = await prisma.tag.findUnique({ where: { id } });
+  if (!existingTag) {
+    return NextResponse.json({ success: false, error: "ไม่พบแท็ก" }, { status: 404 });
   }
 
-  // Prisma handles implicit many-to-many disconnect automatically on delete
   await prisma.tag.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }

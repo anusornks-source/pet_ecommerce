@@ -140,12 +140,43 @@ export default function OrderHistoryPage() {
                       </div>
                     );
                   })}
-                  <div className="pt-3 border-t border-stone-100">
-                    <div className="flex justify-between text-sm text-stone-500 mb-1">
+                  <div className="pt-3 border-t border-stone-100 space-y-2">
+                    <div className="flex justify-between text-sm text-stone-500">
                       <span>ที่อยู่</span>
                       <span className="text-right max-w-xs">{order.address}</span>
                     </div>
-                    <div className="flex justify-between font-bold text-base mt-2">
+                    {(order.trackingNumber || order.selfTrackingNumber) ? (
+                      <div className="flex flex-wrap items-center gap-2 pt-2">
+                        <span className="text-sm text-stone-500">📦 Tracking:</span>
+                        {order.trackingNumber && (
+                          <a
+                            href={`https://t.17track.net/th#nums=${order.trackingNumber}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-mono font-semibold text-blue-600 hover:underline"
+                          >
+                            {order.trackingNumber}
+                          </a>
+                        )}
+                        {order.selfTrackingNumber && order.selfTrackingNumber !== order.trackingNumber && (
+                          <a
+                            href={`https://t.17track.net/th#nums=${order.selfTrackingNumber}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-mono font-semibold text-blue-600 hover:underline"
+                          >
+                            {order.selfTrackingNumber}
+                          </a>
+                        )}
+                        <Link
+                          href={`/orders/${order.id}`}
+                          className="text-xs text-blue-500 hover:underline"
+                        >
+                          ดูรายละเอียด →
+                        </Link>
+                      </div>
+                    ) : null}
+                    <div className="flex justify-between font-bold text-base pt-2">
                       <span>รวมทั้งหมด</span>
                       <span className="text-orange-500">{formatPrice(order.total)}</span>
                     </div>

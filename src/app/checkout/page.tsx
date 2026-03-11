@@ -27,7 +27,11 @@ interface ShopSettings {
 export default function CheckoutPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { cart, cartCount, clearCart } = useCart();
+  const { cart, cartCount, clearCart, refreshCart, cartLoading } = useCart();
+
+  useEffect(() => {
+    if (user) refreshCart();
+  }, [user, refreshCart]);
 
   const [form, setForm] = useState({
     address: user?.address || "",
@@ -47,6 +51,21 @@ export default function CheckoutPage() {
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [shippingInfo, setShippingInfo] = useState<{
+    shipping: number;
+    subtotal: number;
+    addForFreeShipping: number | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (cart?.items && cart.items.length > 0) {
+      fetch("/api/cart/shipping")
+        .then((r) => r.json())
+        .then((d) => d.success && setShippingInfo(d.data));
+    } else {
+      setShippingInfo(null);
+    }
+  }, [cart]);
 
   useEffect(() => { window.scrollTo(0, 0); }, [step]);
 
@@ -79,6 +98,14 @@ export default function CheckoutPage() {
   }
 
   const items = cart?.items || [];
+  if (cartLoading) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+        <div className="inline-block w-10 h-10 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-stone-500">กำลังโหลดตะกร้า...</p>
+      </div>
+    );
+  }
   if (items.length === 0) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
@@ -89,8 +116,8 @@ export default function CheckoutPage() {
     );
   }
 
-  const subtotal = items.reduce((sum, item) => sum + (item.variant?.price ?? item.product.price) * item.quantity, 0);
-  const shipping = 0;
+  const subtotal = shippingInfo?.subtotal ?? items.reduce((sum, item) => sum + (item.variant?.price ?? item.product.price) * item.quantity, 0);
+  const shipping = shippingInfo?.shipping ?? 0;
   const discount = couponApplied?.discount ?? 0;
   const total = subtotal + shipping - discount;
 
@@ -484,6 +511,9 @@ export default function CheckoutPage() {
                 <span>ค่าจัดส่ง</span>
                 <span className={shipping === 0 ? "text-green-500" : ""}>{shipping === 0 ? "ฟรี" : formatPrice(shipping)}</span>
               </div>
+              {shippingInfo?.addForFreeShipping != null && shippingInfo.addForFreeShipping > 0 && (
+                <p className="text-xs text-stone-400">ซื้อเพิ่มอีก {formatPrice(shippingInfo.addForFreeShipping)} เพื่อรับส่งฟรี</p>
+              )}
               {discount > 0 && (
                 <div className="flex justify-between text-green-600"><span>ส่วนลด</span><span>-{formatPrice(discount)}</span></div>
               )}

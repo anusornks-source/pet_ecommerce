@@ -130,6 +130,10 @@ export interface Order {
   createdAt: string;
   items: OrderItem[];
   payment?: Payment | null;
+  trackingNumber?: string | null;
+  trackingCarrier?: string | null;
+  selfTrackingNumber?: string | null;
+  selfTrackingCarrier?: string | null;
 }
 
 export interface Review {

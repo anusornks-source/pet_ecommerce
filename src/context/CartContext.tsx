@@ -8,6 +8,7 @@ interface CartContextType {
   cart: Cart | null;
   cartCount: number;
   loading: boolean;
+  cartLoading: boolean;
   addToCart: (productId: string, quantity?: number, variantId?: string | null) => Promise<void>;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
@@ -21,9 +22,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(false);
+  const [cartLoading, setCartLoading] = useState(true);
 
   const refreshCart = useCallback(async () => {
-    if (!user) { setCart(null); return; }
+    if (!user) {
+      setCart(null);
+      setCartLoading(false);
+      return;
+    }
+    setCartLoading(true);
     try {
       const res = await fetch("/api/cart");
       if (res.ok) {
@@ -32,6 +39,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {
       // ignore
+    } finally {
+      setCartLoading(false);
     }
   }, [user]);
 
@@ -93,7 +102,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <CartContext.Provider
-      value={{ cart, cartCount, loading, addToCart, updateQuantity, removeItem, clearCart, refreshCart }}
+      value={{ cart, cartCount, loading, cartLoading, addToCart, updateQuantity, removeItem, clearCart, refreshCart }}
     >
       {children}
     </CartContext.Provider>

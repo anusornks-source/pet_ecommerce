@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
+import { useShopAdmin } from "@/context/ShopAdminContext";
 import { formatPrice } from "@/lib/utils";
 
 interface Coupon {
@@ -23,6 +25,11 @@ const empty = {
 };
 
 export default function AdminCouponsPage() {
+  const { activeShop, shops, isAdmin, setActiveShopId } = useShopAdmin();
+  const searchParams = useSearchParams();
+  const urlShopId = searchParams.get("shopId") || "";
+  const [shopFilter, setShopFilter] = useState<string>(urlShopId || "");
+  const [shopName, setShopName] = useState<string>("");
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -30,14 +37,35 @@ export default function AdminCouponsPage() {
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
 
-  const load = async () => {
-    const res = await fetch("/api/admin/coupons");
+  const load = async (sidOverride?: string) => {
+    setLoading(true);
+    const sid = (sidOverride ?? shopFilter) || activeShop?.id || "";
+    const qs = sid ? `?shopId=${sid}` : "";
+    const res = await fetch(`/api/admin/coupons${qs}`);
     const data = await res.json();
     if (data.success) setCoupons(data.data);
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  // Initial load & keep in sync with URL / activeShop
+  useEffect(() => {
+    const initialId = shopFilter || urlShopId || activeShop?.id || "";
+    if (!shopFilter && initialId) {
+      setShopFilter(initialId);
+      setActiveShopId(initialId);
+      load(initialId);
+    } else {
+      load(initialId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Derive current shop name from filter / URL / activeShop
+  useEffect(() => {
+    const sid = shopFilter || urlShopId || activeShop?.id || "";
+    const shop = shops.find((s) => s.id === sid) || activeShop || null;
+    setShopName(shop?.name ?? "");
+  }, [shopFilter, urlShopId, activeShop, shops]);
 
   const openCreate = () => { setForm(empty); setEditId(null); setShowForm(true); };
   const openEdit = (c: Coupon) => {
@@ -92,7 +120,31 @@ export default function AdminCouponsPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-stone-800">คูปองส่วนลด</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-stone-800">คูปองส่วนลด</h1>
+          {(isAdmin || shops.length > 1) && (
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-sm text-stone-500">ร้าน:</span>
+              <select
+                value={shopFilter}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setShopFilter(val);
+                  if (val) setActiveShopId(val);
+                  load(val);
+                }}
+                className="text-xs border border-stone-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-200 bg-white text-stone-600"
+              >
+                <option value="">{activeShop ? activeShop.name : "เลือกร้าน"}</option>
+                {shops.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
         <button onClick={openCreate} className="btn-primary px-4 py-2 text-sm">
           + สร้างคูปอง
         </button>

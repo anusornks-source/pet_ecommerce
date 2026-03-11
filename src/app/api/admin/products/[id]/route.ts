@@ -15,7 +15,13 @@ export async function GET(
   const { id } = await params;
   const product = await prisma.product.findFirst({
     where: isAdmin ? { id } : { id, shopId },
-    include: { category: true, petType: true, variants: { orderBy: { createdAt: "asc" } }, tags: true },
+    include: {
+      category: true,
+      petType: true,
+      variants: { orderBy: { createdAt: "asc" } },
+      tags: true,
+      _count: { select: { marketingAssets: true } },
+    },
   });
 
   if (!product) {

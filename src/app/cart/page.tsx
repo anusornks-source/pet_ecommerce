@@ -3,15 +3,34 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { formatPrice } from "@/lib/utils";
 import toast from "react-hot-toast";
 
+interface ShippingInfo {
+  shipping: number;
+  subtotal: number;
+  freeShippingMin: number | null;
+  addForFreeShipping: number | null;
+}
+
 export default function CartPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { cart, cartCount, loading, updateQuantity, removeItem } = useCart();
+  const [shippingInfo, setShippingInfo] = useState<ShippingInfo | null>(null);
+
+  useEffect(() => {
+    if (cart?.items && cart.items.length > 0) {
+      fetch("/api/cart/shipping")
+        .then((r) => r.json())
+        .then((d) => d.success && setShippingInfo(d.data));
+    } else {
+      setShippingInfo(null);
+    }
+  }, [cart]);
 
   if (!user) {
     return (
@@ -26,8 +45,8 @@ export default function CartPage() {
 
   const items = cart?.items || [];
   const itemPrice = (item: typeof items[0]) => item.variant?.price ?? item.product.price;
-  const subtotal = items.reduce((sum, item) => sum + itemPrice(item) * item.quantity, 0);
-  const shipping = 0;
+  const subtotal = shippingInfo?.subtotal ?? items.reduce((sum, item) => sum + itemPrice(item) * item.quantity, 0);
+  const shipping = shippingInfo?.shipping ?? 0;
   const total = subtotal + shipping;
 
   const handleRemove = async (itemId: string, name: string) => {
@@ -161,9 +180,9 @@ export default function CartPage() {
                     <span>{formatPrice(shipping)}</span>
                   )}
                 </div>
-                {shipping > 0 && (
+                {shippingInfo?.addForFreeShipping != null && shippingInfo.addForFreeShipping > 0 && (
                   <p className="text-xs text-stone-400">
-                    ซื้อเพิ่มอีก {formatPrice(500 - subtotal)} เพื่อรับส่งฟรี
+                    ซื้อเพิ่มอีก {formatPrice(shippingInfo.addForFreeShipping)} เพื่อรับส่งฟรี
                   </p>
                 )}
                 <div className="pt-3 border-t border-stone-100 flex justify-between font-bold text-base">

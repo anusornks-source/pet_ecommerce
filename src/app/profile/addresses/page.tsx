@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import type { Address } from "@/types";
@@ -13,6 +15,7 @@ const emptyForm = { label: "บ้าน", name: "", phone: "", address: "", cit
 
 export default function AddressesPage() {
   const { user, loading: authLoading } = useAuth();
+  const { cartCount } = useCart();
   const router = useRouter();
 
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -98,7 +101,14 @@ export default function AddressesPage() {
           <h1 className="text-2xl font-bold text-stone-800">📍 ที่อยู่จัดส่ง</h1>
           <p className="text-sm text-stone-500 mt-0.5">บันทึกที่อยู่ที่ใช้บ่อยเพื่อความสะดวกในการสั่งซื้อ</p>
         </div>
-        <button onClick={openAdd} className="btn-primary px-4 py-2 text-sm">+ เพิ่มที่อยู่</button>
+        <div className="flex items-center gap-2">
+          {cartCount > 0 && (
+            <Link href="/checkout" className="btn-outline px-4 py-2 text-sm">
+              ← กลับไปชำระเงิน
+            </Link>
+          )}
+          <button onClick={openAdd} className="btn-primary px-4 py-2 text-sm">+ เพิ่มที่อยู่</button>
+        </div>
       </div>
 
       {/* Address List */}

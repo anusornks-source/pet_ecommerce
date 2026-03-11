@@ -8,11 +8,12 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
-  if (!process.env.FAL_API_KEY) {
-    return NextResponse.json({ success: false, error: "FAL_API_KEY ยังไม่ได้ตั้งค่า" }, { status: 500 });
+  const falKey = process.env.FAL_API_KEY ?? process.env.FAL_KEY;
+  if (!falKey) {
+    return NextResponse.json({ success: false, error: "FAL_API_KEY หรือ FAL_KEY ยังไม่ได้ตั้งค่า" }, { status: 500 });
   }
 
-  fal.config({ credentials: process.env.FAL_API_KEY });
+  fal.config({ credentials: falKey });
 
   const { prompt, aspectRatio = "1:1", imageUrls } = await request.json();
 

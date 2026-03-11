@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendOrderNotification, sendCustomerOrderConfirmation } from "@/lib/email";
 import { logApi } from "@/lib/apiLogger";
+import { calculateCartShipping } from "@/lib/shipping";
 
 // GET user orders
 export async function GET() {
@@ -63,11 +64,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const subtotal = cart.items.reduce(
-    (sum, item) => sum + (item.variant?.price ?? item.product.price) * item.quantity,
-    0
-  );
-  const shipping = subtotal > 500 ? 0 : 50;
+  const { shipping, subtotal } = await calculateCartShipping(cart.items);
 
   // Validate coupon if provided
   let discount = 0;

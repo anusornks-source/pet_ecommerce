@@ -16,7 +16,7 @@ export async function GET(
       settings: true,
       members: { include: { user: { select: { id: true, name: true, email: true, avatar: true } } } },
       shopCategories: { include: { category: true } },
-      _count: { select: { products: true, orders: true } },
+      _count: { select: { products: true, orders: true, marketingAssets: true } },
     },
   });
 

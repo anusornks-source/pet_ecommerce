@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { useShopAdmin } from "@/context/ShopAdminContext";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -166,6 +167,8 @@ function SortableBannerCard({
 
 export default function AdminBannersPage() {
   const { activeShop, shops, isAdmin } = useShopAdmin();
+  const searchParams = useSearchParams();
+  const urlShopId = searchParams.get("shopId") || "";
   const [shopFilter, setShopFilter] = useState<string>("");
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
@@ -176,20 +179,25 @@ export default function AdminBannersPage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Init shopFilter from activeShop when it first loads
+  // Init shopFilter from URL (?shopId=) or activeShop when they first load
   useEffect(() => {
-    if (activeShop?.id && !shopFilter) setShopFilter(activeShop.id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeShop?.id]);
+    if (!shopFilter) {
+      if (urlShopId) {
+        setShopFilter(urlShopId);
+      } else if (activeShop?.id) {
+        setShopFilter(activeShop.id);
+      }
+    }
+  }, [urlShopId, activeShop?.id, shopFilter]);
 
   const load = useCallback(() => {
-    const sid = shopFilter || activeShop?.id;
+    const sid = shopFilter || urlShopId || activeShop?.id;
     const url = sid ? `/api/admin/banners?shopId=${sid}` : "/api/admin/banners";
     fetch(url)
       .then((r) => r.json())
       .then((d) => { if (d.success) setBanners(d.data); })
       .finally(() => setLoading(false));
-  }, [shopFilter, activeShop?.id]);
+  }, [shopFilter, urlShopId, activeShop?.id]);
 
   useEffect(() => { load(); }, [load]);
 

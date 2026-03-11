@@ -6,22 +6,42 @@ import { Tag } from "@/types";
 
 const TAG_COLORS: Record<string, string> = {
   orange: "bg-orange-100 text-orange-700 border-orange-200",
-  red:    "bg-red-100 text-red-700 border-red-200",
-  green:  "bg-green-100 text-green-700 border-green-200",
-  blue:   "bg-blue-100 text-blue-700 border-blue-200",
-  purple: "bg-purple-100 text-purple-700 border-purple-200",
+  red: "bg-red-100 text-red-700 border-red-200",
+  rose: "bg-rose-100 text-rose-700 border-rose-200",
+  pink: "bg-pink-100 text-pink-700 border-pink-200",
+  amber: "bg-amber-100 text-amber-700 border-amber-200",
   yellow: "bg-yellow-100 text-yellow-800 border-yellow-200",
+  lime: "bg-lime-100 text-lime-700 border-lime-200",
+  green: "bg-green-100 text-green-700 border-green-200",
+  emerald: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  teal: "bg-teal-100 text-teal-700 border-teal-200",
+  cyan: "bg-cyan-100 text-cyan-700 border-cyan-200",
+  sky: "bg-sky-100 text-sky-700 border-sky-200",
+  blue: "bg-blue-100 text-blue-700 border-blue-200",
+  indigo: "bg-indigo-100 text-indigo-700 border-indigo-200",
+  violet: "bg-violet-100 text-violet-700 border-violet-200",
+  purple: "bg-purple-100 text-purple-700 border-purple-200",
 };
 
 const COLOR_KEYS = Object.keys(TAG_COLORS);
 
 const COLOR_SWATCH: Record<string, string> = {
   orange: "bg-orange-400",
-  red:    "bg-red-400",
-  green:  "bg-green-500",
-  blue:   "bg-blue-400",
-  purple: "bg-purple-400",
+  red: "bg-red-400",
+  rose: "bg-rose-400",
+  pink: "bg-pink-400",
+  amber: "bg-amber-400",
   yellow: "bg-yellow-400",
+  lime: "bg-lime-400",
+  green: "bg-green-500",
+  emerald: "bg-emerald-400",
+  teal: "bg-teal-400",
+  cyan: "bg-cyan-400",
+  sky: "bg-sky-400",
+  blue: "bg-blue-400",
+  indigo: "bg-indigo-400",
+  violet: "bg-violet-400",
+  purple: "bg-purple-400",
 };
 
 function slugify(str: string) {
@@ -38,6 +58,7 @@ export default function AdminTagsPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [aiTarget, setAiTarget] = useState<keyof TagForm | null>(null);
 
   const loadTags = () => {
     fetch("/api/admin/tags")
@@ -54,6 +75,38 @@ export default function AdminTagsPage() {
       nameEn: val,
       slug: editId ? f.slug : slugify(val),
     }));
+  };
+
+  const handleAiSuggest = async (target: keyof TagForm) => {
+    setAiTarget(target);
+    try {
+      const res = await fetch("/api/admin/automation/tags/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          target,
+          context: {
+            name: form.name,
+            nameEn: form.nameEn,
+            slug: form.slug,
+            icon: form.icon,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!data.success || !data.value) {
+        toast.error(data.error || "AI ช่วยเติมไม่สำเร็จ");
+        return;
+      }
+      setForm((f) => ({
+        ...f,
+        [target]: target === "slug" ? slugify(data.value) : data.value,
+      }));
+    } catch (err) {
+      toast.error("เรียก AI ไม่สำเร็จ");
+    } finally {
+      setAiTarget(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -126,7 +179,17 @@ export default function AdminTagsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-stone-500 mb-1">ชื่อไทย *</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs text-stone-500">ชื่อไทย *</label>
+                <button
+                  type="button"
+                  onClick={() => handleAiSuggest("name")}
+                  disabled={aiTarget === "name"}
+                  className="text-[10px] px-2 py-0.5 rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-50 disabled:opacity-50"
+                >
+                  {aiTarget === "name" ? "AI กำลังคิด..." : "AI ช่วยตั้งชื่อ"}
+                </button>
+              </div>
               <input
                 value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
@@ -134,7 +197,17 @@ export default function AdminTagsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs text-stone-500 mb-1">ชื่ออังกฤษ</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs text-stone-500">ชื่ออังกฤษ</label>
+                <button
+                  type="button"
+                  onClick={() => handleAiSuggest("nameEn")}
+                  disabled={aiTarget === "nameEn"}
+                  className="text-[10px] px-2 py-0.5 rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-50 disabled:opacity-50"
+                >
+                  {aiTarget === "nameEn" ? "AI กำลังคิด..." : "AI แปล/คิด EN"}
+                </button>
+              </div>
               <input
                 value={form.nameEn} onChange={(e) => handleNameEnChange(e.target.value)}
                 className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
@@ -142,7 +215,17 @@ export default function AdminTagsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs text-stone-500 mb-1">Slug * (ใช้ใน URL/filter)</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs text-stone-500">Slug * (ใช้ใน URL/filter)</label>
+                <button
+                  type="button"
+                  onClick={() => handleAiSuggest("slug")}
+                  disabled={aiTarget === "slug"}
+                  className="text-[10px] px-2 py-0.5 rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-50 disabled:opacity-50"
+                >
+                  {aiTarget === "slug" ? "AI กำลังคิด..." : "ให้ AI ช่วย slug"}
+                </button>
+              </div>
               <input
                 value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: slugify(e.target.value) }))}
                 className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-200"
@@ -150,7 +233,17 @@ export default function AdminTagsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs text-stone-500 mb-1">Icon (emoji)</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs text-stone-500">Icon (emoji)</label>
+                <button
+                  type="button"
+                  onClick={() => handleAiSuggest("icon")}
+                  disabled={aiTarget === "icon"}
+                  className="text-[10px] px-2 py-0.5 rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-50 disabled:opacity-50"
+                >
+                  {aiTarget === "icon" ? "AI กำลังคิด..." : "AI ช่วยเลือกอีโมจิ"}
+                </button>
+              </div>
               <input
                 value={form.icon} onChange={(e) => setForm((f) => ({ ...f, icon: e.target.value }))}
                 className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
@@ -207,7 +300,8 @@ export default function AdminTagsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-stone-100 bg-stone-50 text-xs text-stone-400 font-medium">
-                <th className="text-left px-4 py-3">Badge</th>
+                <th className="text-left px-4 py-3">Badge (TH)</th>
+                <th className="text-left px-4 py-3">Badge (EN)</th>
                 <th className="text-left px-4 py-3">Slug</th>
                 <th className="text-left px-4 py-3">สี</th>
                 <th className="text-right px-4 py-3"></th>
@@ -221,6 +315,15 @@ export default function AdminTagsPage() {
                       {tag.icon && <span>{tag.icon}</span>}
                       {tag.name}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {tag.nameEn ? (
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${TAG_COLORS[tag.color] ?? TAG_COLORS.orange}`}>
+                        {tag.nameEn}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-stone-300">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 font-mono text-stone-500">{tag.slug}</td>
                   <td className="px-4 py-3">

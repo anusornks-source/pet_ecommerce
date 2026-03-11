@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { formatSize } from "@/lib/utils";
@@ -36,7 +36,13 @@ interface MarketingAsset {
   angle: string | null;
   note: string | null;
   marketingPack?: { id: string; productName: string; lang: string } | null;
-  product?: { id: string; name: string; name_th: string | null } | null;
+  product?: {
+    id: string;
+    name: string;
+    name_th: string | null;
+    images?: string[];
+    videos?: string[];
+  } | null;
 }
 
 function formatLabel(ct: string | null): string {
@@ -90,7 +96,7 @@ function useDebouncedCallback<T extends (...args: unknown[]) => void>(fn: T, del
   );
 }
 
-function SortableAssetCard({
+const SortableAssetCard = memo(function SortableAssetCard({
   asset,
   productId,
   marketingPackId,
@@ -122,7 +128,14 @@ function SortableAssetCard({
   onNoteSave: (id: string, note: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: asset.id });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    willChange: isDragging ? "transform" : undefined,
+    zIndex: isDragging ? 1 : undefined,
+    contain: "layout",
+  };
   const [localNote, setLocalNote] = useState(asset.note ?? "");
   const debouncedSave = useDebouncedCallback((id: string, note: string) => onNoteSave(id, note), 500);
 
@@ -139,7 +152,7 @@ function SortableAssetCard({
     <div
       ref={setNodeRef}
       style={style}
-      className="group relative rounded-xl border border-stone-100 overflow-hidden bg-stone-50"
+      className={`group relative rounded-xl border border-stone-100 overflow-hidden bg-stone-50 ${isDragging ? "pointer-events-none" : ""}`}
     >
       <div
         {...attributes}
@@ -206,13 +219,25 @@ function SortableAssetCard({
           </div>
         )}
         {asset.product && !productId && (
-          <Link
-            href={`/admin/products/${asset.product.id}/view`}
-            className="block text-[10px] text-blue-600 hover:text-blue-700 truncate"
-            title={`${asset.product.name} (${asset.product.id})`}
-          >
-            📦 {asset.product.name_th ?? asset.product.name}
-          </Link>
+          <>
+            {(asset.type === "IMAGE" || asset.type === "VIDEO") &&
+              (asset.product.images?.includes(asset.url) || asset.product.videos?.includes(asset.url)) && (
+                <span
+                  className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
+                    asset.type === "VIDEO" ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"
+                  }`}
+                >
+                  {asset.type === "VIDEO" ? "วิดีโอสินค้า" : "รูปสินค้า"}
+                </span>
+              )}
+            <Link
+              href={`/admin/products/${asset.product.id}/view`}
+              className="block text-[10px] text-blue-600 hover:text-blue-700 truncate"
+              title={`${asset.product.name} (${asset.product.id})`}
+            >
+              📦 {asset.product.name_th ?? asset.product.name}
+            </Link>
+          </>
         )}
         <div className="flex items-center justify-between gap-1 text-xs">
           <span className="font-medium text-stone-600 truncate">
@@ -288,7 +313,7 @@ function SortableAssetCard({
       </div>
     </div>
   );
-}
+});
 
 interface Props {
   shopId?: string;
@@ -308,28 +333,50 @@ interface Props {
   count?: number | null;
 }
 
+const PAGE_SIZE = 32;
+
 export default function MarketingAssetsSection({ shopId, productId, marketingPackId, productImages = [], productVideos = [], onDisplayChange, hideUpload, refreshKey, count }: Props) {
   const [assets, setAssets] = useState<MarketingAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [enriching, setEnriching] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadAssets = () => {
+  const loadAssets = useCallback((p: number) => {
+    setLoading(true);
     const params = new URLSearchParams();
     if (shopId) params.set("shopId", shopId);
     if (productId) params.set("productId", productId);
     if (marketingPackId) params.set("marketingPackId", marketingPackId);
+    params.set("page", String(p));
+    params.set("limit", String(PAGE_SIZE));
     fetch(`/api/admin/marketing-assets?${params}`)
       .then((r) => r.json())
-      .then((d) => d.success && setAssets(d.data))
+      .then((d) => {
+        if (d.success) {
+          setAssets(d.data);
+          setTotal(d.pagination?.total ?? d.data.length);
+          setTotalPages(d.pagination?.totalPages ?? 1);
+        }
+      })
       .finally(() => setLoading(false));
-  };
+  }, [shopId, productId, marketingPackId]);
 
   useEffect(() => {
-    loadAssets();
-  }, [shopId, productId, marketingPackId, refreshKey]);
+    setPage(1);
+  }, [shopId, productId, marketingPackId]);
+
+  useEffect(() => {
+    loadAssets(page);
+  }, [loadAssets, page, refreshKey]);
+
+  const goToPage = (p: number) => {
+    if (p >= 1 && p <= totalPages) setPage(p);
+  };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -344,7 +391,7 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
       const data = await res.json();
       if (data.success) {
         toast.success("อัปโหลดสำเร็จ");
-        loadAssets();
+        loadAssets(1);
       } else {
         toast.error(data.error ?? "อัปโหลดไม่สำเร็จ");
       }
@@ -366,7 +413,7 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
         const { updated, failed } = data.data;
         if (updated > 0) toast.success(`อัปเดต metadata แล้ว ${updated} รายการ`);
         if (failed > 0) toast.error(`ดึง metadata ไม่ได้ ${failed} รายการ (URL อาจถูกบล็อกโดย CDN)`);
-        loadAssets();
+        loadAssets(page);
       } else {
         toast.error(data.error ?? "อัปเดตไม่สำเร็จ");
       }
@@ -388,6 +435,8 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
       if (data.success) {
         toast.success("ลบแล้ว");
         setAssets((prev) => prev.filter((a) => a.id !== id));
+        setTotal((t) => Math.max(0, t - 1));
+        if (assets.length === 1 && page > 1) setPage((p) => p - 1);
         onDisplayChange?.(); // refresh product ถ้าลบ asset ที่เป็นรูปสินค้า
       } else {
         toast.error(data.error ?? "ลบไม่สำเร็จ");
@@ -472,10 +521,22 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
 
   const handleReorder = useCallback(
     async (orderedIds: string[]) => {
+      const body: {
+        ids: string[];
+        shopId?: string;
+        productId?: string;
+        marketingPackId?: string;
+        page?: number;
+        limit?: number;
+      } = { ids: orderedIds, page, limit: PAGE_SIZE };
+      if (shopId && !productId && !marketingPackId) body.shopId = shopId;
+      else if (productId && !marketingPackId) body.productId = productId;
+      else if (marketingPackId) body.marketingPackId = marketingPackId;
+
       const res = await fetch("/api/admin/marketing-assets/reorder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: orderedIds }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (data.success) {
@@ -484,7 +545,7 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
         toast.error(data.error ?? "จัดลำดับไม่สำเร็จ");
       }
     },
-    []
+    [shopId, productId, marketingPackId, page]
   );
 
   const handleNoteChange = useCallback(async (id: string, note: string) => {
@@ -520,7 +581,9 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
           className="font-semibold text-stone-800 hover:text-orange-600 transition-colors cursor-pointer"
         >
           Marketing Assets
-          {count != null && <span className="ml-2 text-stone-500 font-normal">({count} ชิ้น)</span>}
+          <span className="ml-2 text-stone-500 font-normal">
+            ({total > 0 ? total : count ?? 0} ชิ้น{totalPages > 1 ? ` · หน้า ${page}/${totalPages}` : ""})
+          </span>
         </a>
         {(!hideUpload || needsEnrich) && (
           <div className="flex items-center gap-2">
@@ -594,6 +657,30 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
             </div>
           </SortableContext>
         </DndContext>
+      )}
+
+      {!loading && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-6">
+          <button
+            type="button"
+            onClick={() => goToPage(page - 1)}
+            disabled={page <= 1}
+            className="px-3 py-1.5 rounded-lg border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            ← ก่อนหน้า
+          </button>
+          <span className="text-sm text-stone-500">
+            หน้า {page} จาก {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => goToPage(page + 1)}
+            disabled={page >= totalPages}
+            className="px-3 py-1.5 rounded-lg border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            ถัดไป →
+          </button>
+        </div>
       )}
     </div>
   );

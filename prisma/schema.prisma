@@ -69,6 +69,8 @@ model Shop {
   painPoints       PainPoint[]
   trendCandidates  TrendCandidate[]
   marketingAssets  MarketingAsset[]
+  /// ลำดับ marketing assets เมื่อดูที่หน้าร้าน (asset IDs)
+  marketingAssetOrder String[] @default([])
 
   @@map("shops")
 }
@@ -229,6 +231,8 @@ model Product {
   marketingPacks   ProductMarketingPack[]
   trendCandidate   TrendCandidate?
   marketingAssets  MarketingAsset[]
+  /// ลำดับ marketing assets เมื่อดูที่หน้าสินค้า (asset IDs)
+  marketingAssetOrder String[] @default([])
 
   @@index([shopId])
   @@index([shopId, active])
@@ -290,6 +294,8 @@ model ProductMarketingPack {
   rawImagePrompts String? @db.Text
   rawVideoPrompts String? @db.Text
   createdAt      DateTime @default(now())
+  /// ลำดับ marketing assets เมื่อดูที่ pack นี้ (asset IDs)
+  marketingAssetOrder String[] @default([])
 
   marketingAssets MarketingAsset[]
 

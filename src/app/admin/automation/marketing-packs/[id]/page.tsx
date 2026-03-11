@@ -804,7 +804,23 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
             ดูทั้งหมดใน Product →
           </Link>
         </div>
-        <MarketingAssetsSection marketingPackId={pack.id} hideUpload refreshKey={packAssetsRefreshKey} />
+        <MarketingAssetsSection
+          marketingPackId={pack.id}
+          productId={pack.productId}
+          productImages={pack.product?.images ?? []}
+          productVideos={pack.product?.videos ?? []}
+          productMediaOrder={(pack.product as { mediaOrder?: string[] })?.mediaOrder}
+          productName={pack.lang === "th" ? (pack.product?.name_th || pack.product?.name || pack.productName) : (pack.product?.name || pack.productName)}
+          productContext={pack.product ? {
+            name: pack.product.name,
+            name_th: pack.product.name_th ?? undefined,
+            price: pack.product.price,
+            normalPrice: pack.product.normalPrice ?? undefined,
+            shortDescription: (pack.lang === "th" ? pack.product.shortDescription_th : pack.product.shortDescription) ?? pack.product.shortDescription ?? pack.product.shortDescription_th ?? undefined,
+          } : undefined}
+          hideUpload
+          refreshKey={packAssetsRefreshKey}
+        />
       </div>
 
       {/* 7. Short Video Ad Concepts */}

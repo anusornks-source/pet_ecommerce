@@ -116,6 +116,7 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [addingAll, setAddingAll] = useState(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
+  const [marketingAssetsRefreshKey, setMarketingAssetsRefreshKey] = useState(0);
 
   const fetchProduct = () => {
     fetch(`/api/admin/products/${id}`, { cache: "no-store" })
@@ -143,6 +144,7 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
           : "รูปทั้งหมดอยู่ใน marketing assets แล้ว";
         toast.success(msg);
         fetchProduct();
+        setMarketingAssetsRefreshKey((k) => k + 1);
       }
     } finally {
       setAddingAll(false);
@@ -414,8 +416,20 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
         productId={id}
         productImages={product.images}
         productVideos={product.videos ?? []}
+        productMediaOrder={
+          (product.mediaOrder && product.mediaOrder.length > 0 ? product.mediaOrder : [...(product.images ?? []), ...(product.videos ?? [])]) as string[]
+        }
         onDisplayChange={fetchProduct}
+        refreshKey={marketingAssetsRefreshKey}
         count={product._count?.marketingAssets}
+        productName={product.name_th ?? product.name}
+        productContext={{
+          name: product.name,
+          name_th: product.name_th ?? undefined,
+          price: product.price,
+          normalPrice: product.normalPrice ?? undefined,
+          shortDescription: product.shortDescription ?? undefined,
+        }}
       />
     </div>
   );

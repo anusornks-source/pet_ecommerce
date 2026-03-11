@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatSize } from "@/lib/utils";
 import toast from "react-hot-toast";
+import AIImageGenModal, { type ProductContext } from "@/components/admin/AIImageGenModal";
 import {
   DndContext,
   closestCenter,
@@ -111,6 +112,7 @@ const SortableAssetCard = memo(function SortableAssetCard({
   onDelete,
   deletingId,
   onNoteSave,
+  onAiGenClick,
 }: {
   asset: MarketingAsset;
   productId?: string;
@@ -126,6 +128,7 @@ const SortableAssetCard = memo(function SortableAssetCard({
   onDelete: (id: string) => void;
   deletingId: string | null;
   onNoteSave: (id: string, note: string) => void;
+  onAiGenClick?: (imageUrl: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: asset.id });
   const style: React.CSSProperties = {
@@ -294,6 +297,16 @@ const SortableAssetCard = memo(function SortableAssetCard({
         </div>
       </div>
       <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {asset.type === "IMAGE" && onAiGenClick && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onAiGenClick(asset.url); }}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-[10px]"
+            title="AI สร้างรูป"
+          >
+            ✨
+          </button>
+        )}
         <a
           href={asset.url}
           download={asset.filename ?? "asset"}
@@ -323,6 +336,8 @@ interface Props {
   productImages?: string[];
   /** วิดีโอที่ใช้แสดงใน product detail */
   productVideos?: string[];
+  /** ลำดับ media (urls) สำหรับ gallery — ใช้เมื่อ add/remove เพื่ออัปเดต mediaOrder ให้ถูกต้อง */
+  productMediaOrder?: string[];
   /** เรียกหลัง add/remove จาก product display */
   onDisplayChange?: () => void;
   /** ซ่อนปุ่มอัปโหลด (เช่น เมื่อใช้ marketingPackId — assets มาจาก Save to Marketing Asset เท่านั้น) */
@@ -331,13 +346,18 @@ interface Props {
   refreshKey?: string | number;
   /** จำนวน assets (แสดงในหัวข้อ ถ้ามี) */
   count?: number | null;
+  /** ชื่อสินค้า (สำหรับ AI modal) */
+  productName?: string | null;
+  /** ข้อมูลสินค้าให้ AI ใช้ (แปะป้ายราคา, ใส่ข้อมูล) */
+  productContext?: ProductContext | null;
 }
 
 const PAGE_SIZE = 32;
 
-export default function MarketingAssetsSection({ shopId, productId, marketingPackId, productImages = [], productVideos = [], onDisplayChange, hideUpload, refreshKey, count }: Props) {
+export default function MarketingAssetsSection({ shopId, productId, marketingPackId, productImages = [], productVideos = [], productMediaOrder, onDisplayChange, hideUpload, refreshKey, count, productName, productContext }: Props) {
   const [assets, setAssets] = useState<MarketingAsset[]>([]);
   const [loading, setLoading] = useState(true);
+  const [aiModalImageUrl, setAiModalImageUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [enriching, setEnriching] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -451,13 +471,22 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
   const isProductImage = (url: string) => productImages.some((u) => u === url || u.trim() === url.trim());
   const isProductVideo = (url: string) => productVideos.some((u) => u === url || u.trim() === url.trim());
 
+  const videoSet = new Set(productVideos);
+  const currentMediaItems =
+    productMediaOrder && productMediaOrder.length > 0
+      ? productMediaOrder.map((u) => (videoSet.has(u) ? ({ type: "video" as const, url: u }) : ({ type: "image" as const, url: u })))
+      : [
+          ...productImages.map((u) => ({ type: "image" as const, url: u })),
+          ...productVideos.map((u) => ({ type: "video" as const, url: u })),
+        ];
+
   const handleAddToProductImages = async (url: string) => {
     if (!productId) return;
-    const newImages = [...productImages, url];
+    const mediaItems = [...currentMediaItems, { type: "image" as const, url }];
     const res = await fetch(`/api/admin/products/${productId}/display`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ images: newImages }),
+      body: JSON.stringify({ mediaItems }),
     });
     const data = await res.json();
     if (data.success) {
@@ -470,11 +499,11 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
 
   const handleRemoveFromProductImages = async (url: string) => {
     if (!productId) return;
-    const newImages = productImages.filter((u) => u !== url && u.trim() !== url.trim());
+    const mediaItems = currentMediaItems.filter((m) => m.url !== url && m.url.trim() !== url.trim());
     const res = await fetch(`/api/admin/products/${productId}/display`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ images: newImages }),
+      body: JSON.stringify({ mediaItems }),
     });
     const data = await res.json();
     if (data.success) {
@@ -487,11 +516,11 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
 
   const handleAddToProductVideos = async (url: string) => {
     if (!productId) return;
-    const newVideos = [...productVideos, url];
+    const mediaItems = [...currentMediaItems, { type: "video" as const, url }];
     const res = await fetch(`/api/admin/products/${productId}/display`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ videos: newVideos }),
+      body: JSON.stringify({ mediaItems }),
     });
     const data = await res.json();
     if (data.success) {
@@ -504,11 +533,11 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
 
   const handleRemoveFromProductVideos = async (url: string) => {
     if (!productId) return;
-    const newVideos = productVideos.filter((u) => u !== url && u.trim() !== url.trim());
+    const mediaItems = currentMediaItems.filter((m) => m.url !== url && m.url.trim() !== url.trim());
     const res = await fetch(`/api/admin/products/${productId}/display`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ videos: newVideos }),
+      body: JSON.stringify({ mediaItems }),
     });
     const data = await res.json();
     if (data.success) {
@@ -652,6 +681,7 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
                   onDelete={handleDelete}
                   deletingId={deletingId}
                   onNoteSave={handleNoteChange}
+                  onAiGenClick={productId ? (url) => setAiModalImageUrl(url) : undefined}
                 />
               ))}
             </div>
@@ -681,6 +711,18 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
             ถัดไป →
           </button>
         </div>
+      )}
+
+      {aiModalImageUrl && (
+        <AIImageGenModal
+          imageUrl={aiModalImageUrl}
+          productId={productId ?? undefined}
+          marketingPackId={marketingPackId ?? undefined}
+          productName={productName ?? undefined}
+          productContext={productContext ?? undefined}
+          onClose={() => setAiModalImageUrl(null)}
+          onSaveSuccess={() => loadAssets(page)}
+        />
       )}
     </div>
   );

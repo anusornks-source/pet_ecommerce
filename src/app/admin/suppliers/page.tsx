@@ -48,6 +48,9 @@ export default function AdminSuppliersPage() {
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [urlModalSupplierId, setUrlModalSupplierId] = useState<string | null>(null);
+  const [urlInput, setUrlInput] = useState("");
+  const [urlScanning, setUrlScanning] = useState(false);
 
   const loadSuppliers = () => {
     fetch("/api/admin/suppliers")
@@ -126,6 +129,61 @@ export default function AdminSuppliersPage() {
       toast.success("อัปโหลดรูปสำเร็จ");
     } else {
       toast.error(data.error ?? "อัปโหลดไม่สำเร็จ");
+    }
+  };
+
+  const handleScanUrl = async () => {
+    const url = urlInput.trim();
+    const supplierId = urlModalSupplierId;
+    if (!url) {
+      toast.error("กรุณาแปะ URL");
+      return;
+    }
+    if (!supplierId) return;
+    setUrlScanning(true);
+    try {
+      const res = await fetch("/api/admin/supplier-products/parse-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (!data.success || !data.data) {
+        toast.error(data.error || "Scan ไม่สำเร็จ");
+        return;
+      }
+      const d = data.data;
+      const createRes = await fetch(`/api/admin/suppliers/${supplierId}/supplier-products`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: d.name || "Product",
+          name_th: d.name_th || null,
+          description: d.description || "",
+          description_th: d.description_th || null,
+          shortDescription: d.shortDescription || null,
+          shortDescription_th: d.shortDescription_th || null,
+          supplierSku: d.supplierSku || null,
+          supplierUrl: d.supplierUrl || null,
+          supplierPrice: d.supplierPrice ?? null,
+          images: Array.isArray(d.images) ? d.images : [],
+          categoryId: null,
+          remark: d.remark || null,
+        }),
+      });
+      const createData = await createRes.json();
+      if (createData.success) {
+        toast.success("เพิ่มสินค้าจาก URL แล้ว");
+        setUrlModalSupplierId(null);
+        setUrlInput("");
+        loadSuppliers();
+      } else {
+        toast.error(createData.error || "เพิ่มไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("เกิดข้อผิดพลาด");
+    } finally {
+      setUrlScanning(false);
     }
   };
 
@@ -309,7 +367,13 @@ export default function AdminSuppliersPage() {
               key={s.id}
               className="relative bg-white border border-stone-200 rounded-xl p-3 hover:border-stone-300 transition-colors"
             >
-              <div className="absolute top-2 right-2 flex items-center gap-1">
+              <div className="absolute top-2 right-2 flex flex-wrap items-center gap-1 justify-end">
+                <button
+                  onClick={() => { setUrlModalSupplierId(s.id); setUrlInput(""); }}
+                  className="text-[10px] px-2 py-0.5 rounded border border-violet-300 bg-violet-50 text-violet-700 hover:bg-violet-100 font-medium"
+                >
+                  + จาก URL
+                </button>
                 <Link
                   href={`/admin/suppliers/${s.id}/view`}
                   className="text-[10px] px-2 py-0.5 rounded border border-stone-300 bg-stone-50 text-stone-600 hover:bg-stone-100 font-medium"
@@ -335,7 +399,7 @@ export default function AdminSuppliersPage() {
                   ลบ
                 </button>
               </div>
-              <div className="flex items-center gap-2 pr-36">
+              <div className="flex items-center gap-2 pr-44">
                 {s.imageUrl ? (
                   <div className="relative w-10 h-10 rounded-lg overflow-hidden border border-stone-100 shrink-0">
                     <Image src={s.imageUrl} alt="" fill className="object-cover" sizes="40px" />
@@ -429,6 +493,54 @@ export default function AdminSuppliersPage() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Add from URL Modal */}
+      {urlModalSupplierId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !urlScanning) {
+              setUrlModalSupplierId(null);
+              setUrlInput("");
+            }
+          }}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-bold text-stone-800 mb-4">เพิ่มสินค้าจาก URL</h3>
+            <p className="text-sm text-stone-500 mb-4">แปะ link สินค้า AI จะ scan และเพิ่มสินค้าให้ร้านนี้</p>
+            <input
+              type="url"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleScanUrl()}
+              placeholder="https://..."
+              className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-teal-300"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleScanUrl}
+                disabled={urlScanning}
+                className="flex-1 px-4 py-2 rounded-xl bg-teal-500 hover:bg-teal-600 disabled:bg-stone-300 text-white text-sm font-medium transition-colors"
+              >
+                {urlScanning ? "กำลัง Scan..." : "Scan & เพิ่ม"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setUrlModalSupplierId(null); setUrlInput(""); }}
+                disabled={urlScanning}
+                className="px-4 py-2 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-50 text-sm disabled:opacity-50"
+              >
+                ยกเลิก
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

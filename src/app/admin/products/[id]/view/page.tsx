@@ -686,10 +686,16 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
         )}
       </CollapsibleSection>
 
-      {/* Description */}
+      {/* Description EN */}
       {product.description && (
-        <CollapsibleSection id="description" title="รายละเอียด">
+        <CollapsibleSection id="description-en" title="รายละเอียด (EN)">
           <div className="text-sm text-stone-600 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: product.description }} />
+        </CollapsibleSection>
+      )}
+      {/* Description TH */}
+      {product.description_th && (
+        <CollapsibleSection id="description-th" title="รายละเอียด (TH)">
+          <div className="text-sm text-stone-600 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: product.description_th }} />
         </CollapsibleSection>
       )}
 

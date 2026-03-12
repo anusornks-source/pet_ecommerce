@@ -3,7 +3,53 @@
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import toast from "react-hot-toast";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  rectSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { ProductValidationStatus } from "@/generated/prisma/enums";
+
+function SortableImageThumb({
+  id,
+  url,
+  isSelected,
+  onSelect,
+}: {
+  id: number;
+  url: string;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      className={`relative w-14 h-14 rounded-lg overflow-hidden shrink-0 border-2 transition-all cursor-grab active:cursor-grabbing ${
+        isSelected ? "border-orange-500 ring-1 ring-orange-200" : "border-stone-200 hover:border-stone-300"
+      }`}
+      title="ลากเพื่อจัดลำดับ"
+    >
+      <Image src={url} alt="" fill className="object-cover" sizes="56px" unoptimized />
+    </div>
+  );
+}
 
 const STATUS_COLORS: Record<string, string> = {
   [ProductValidationStatus.Lead]: "bg-stone-100 text-stone-700",
@@ -49,17 +95,54 @@ export default function SupplierProductViewPage({ params }: { params: Promise<{ 
   const { id } = use(params);
   const [sp, setSp] = useState<SupplierProductDetail | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [reorderingImages, setReorderingImages] = useState(false);
 
-  useEffect(() => {
-    setSp(null);
+  const fetchProduct = () => {
     fetch(`/api/admin/supplier-products/${id}`)
       .then((r) => r.json())
       .then((d) => d.success && setSp(d.data));
+  };
+
+  useEffect(() => {
+    setSp(null);
+    fetchProduct();
   }, [id]);
 
   useEffect(() => {
     setSelectedImageIndex(0);
   }, [sp?.id]);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleImageDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !sp) return;
+    const images = sp.images ?? [];
+    if (images.length < 2) return;
+    const oldIndex = Number(active.id);
+    const newIndex = Number(over.id);
+    const reordered = arrayMove(images, oldIndex, newIndex);
+    setReorderingImages(true);
+    try {
+      const res = await fetch(`/api/admin/suppliers/${sp.supplier.id}/supplier-products/${sp.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: reordered }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("จัดลำดับรูปแล้ว");
+        setSp((prev) => prev ? { ...prev, images: reordered } : null);
+        setSelectedImageIndex(newIndex);
+      } else {
+        toast.error(data.error ?? "จัดลำดับไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("เกิดข้อผิดพลาด");
+    } finally {
+      setReorderingImages(false);
+    }
+  };
 
   if (!sp) {
     return (
@@ -117,20 +200,25 @@ export default function SupplierProductViewPage({ params }: { params: Promise<{ 
               )}
             </div>
             {images.length > 1 && (
-              <div className="flex flex-wrap gap-2">
-                {images.map((url, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setSelectedImageIndex(i)}
-                    className={`relative w-14 h-14 rounded-lg overflow-hidden shrink-0 border-2 transition-all ${
-                      selectedImageIndex === i ? "border-orange-500 ring-1 ring-orange-200" : "border-stone-200 hover:border-stone-300"
-                    }`}
-                  >
-                    <Image src={url} alt="" fill className="object-cover" sizes="56px" unoptimized />
-                  </button>
-                ))}
-              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleImageDragEnd}
+              >
+                <SortableContext items={images.map((_, i) => i)} strategy={rectSortingStrategy}>
+                  <div className={`flex flex-wrap gap-2 ${reorderingImages ? "opacity-70" : ""}`}>
+                    {images.map((url, i) => (
+                      <SortableImageThumb
+                        key={i}
+                        id={i}
+                        url={url}
+                        isSelected={selectedImageIndex === i}
+                        onSelect={() => setSelectedImageIndex(i)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -209,11 +297,11 @@ export default function SupplierProductViewPage({ params }: { params: Promise<{ 
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1">คำอธิบาย (EN)</p>
-              <p className="text-stone-700 text-sm whitespace-pre-wrap">{sp.description || "—"}</p>
+              <div className="text-stone-700 text-sm prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sp.description || "—" }} />
             </div>
             <div>
               <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1">คำอธิบาย (TH)</p>
-              <p className="text-stone-700 text-sm whitespace-pre-wrap">{sp.description_th || "—"}</p>
+              <div className="text-stone-700 text-sm prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sp.description_th || "—" }} />
             </div>
           </div>
           <div className="grid md:grid-cols-2 gap-6">

@@ -178,8 +178,8 @@ export default function ProductForm({ productId, productShopId, initialData }: P
   });
   const [showSourceDesc, setShowSourceDesc] = useState(false); // always collapsed by default
 
-  const [descPreview, setDescPreview] = useState(false);
-  const [descPreviewTh, setDescPreviewTh] = useState(false);
+  const [descPreview, setDescPreview] = useState(!!(initialData?.description?.trim()));
+  const [descPreviewTh, setDescPreviewTh] = useState(!!(initialData?.description_th?.trim()));
   const [variants, setVariants] = useState<VariantRow[]>(initialData?.variants ?? []);
   const [stockRange, setStockRange] = useState({ min: 50, max: 100 });
   const [allTags, setAllTags] = useState<TagOption[]>([]);

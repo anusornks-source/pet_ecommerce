@@ -56,6 +56,7 @@ export default function AdminSupplierProductsPage() {
   const [suppliers, setSuppliers] = useState<{ id: string; name: string; imageUrl: string | null }[]>([]);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
+  const [deletingSpId, setDeletingSpId] = useState<string | null>(null);
   const [editPriceValue, setEditPriceValue] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [savingAdd, setSavingAdd] = useState(false);
@@ -131,6 +132,13 @@ export default function AdminSupplierProductsPage() {
   const [petTypes, setPetTypes] = useState<{ id: string; name: string }[]>([]);
   const [importCategories, setImportCategories] = useState<{ id: string; name: string }[]>([]);
   const [aiTarget, setAiTarget] = useState<string | null>(null);
+  const [addDescPreview, setAddDescPreview] = useState(false);
+  const [addDescPreviewTh, setAddDescPreviewTh] = useState(false);
+  const [editDescPreview, setEditDescPreview] = useState(false);
+  const [editDescPreviewTh, setEditDescPreviewTh] = useState(false);
+  const [showUrlModal, setShowUrlModal] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
+  const [urlScanning, setUrlScanning] = useState(false);
   const pageSize = 50;
 
   const suggestField = async (field: string, ctx: Record<string, string>, setter: (v: string) => void) => {
@@ -233,6 +241,8 @@ export default function AdminSupplierProductsPage() {
       if (data.success) {
         toast.success("เพิ่มสินค้าแล้ว");
         setShowAddModal(false);
+        setAddDescPreview(false);
+        setAddDescPreviewTh(false);
         setAddForm({
           supplierId: "",
           name: "",
@@ -262,6 +272,25 @@ export default function AdminSupplierProductsPage() {
   const startEditPrice = (sp: SupplierProductItem) => {
     setEditingPriceId(sp.id);
     setEditPriceValue(sp.supplierPrice != null ? String(sp.supplierPrice) : "");
+  };
+
+  const handleDeleteSp = async (sp: SupplierProductItem) => {
+    if (!confirm(`ลบ "${sp.name}"?`)) return;
+    setDeletingSpId(sp.id);
+    try {
+      const res = await fetch(`/api/admin/suppliers/${sp.supplier.id}/supplier-products/${sp.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("ลบแล้ว");
+        fetchItems(page);
+      } else {
+        toast.error(data.error || "ลบไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("เกิดข้อผิดพลาด");
+    } finally {
+      setDeletingSpId(null);
+    }
   };
 
   const handleSavePrice = async (sp: SupplierProductItem) => {
@@ -339,6 +368,8 @@ export default function AdminSupplierProductsPage() {
       if (data.success) {
         toast.success("แก้ไขแล้ว");
         setEditSpModal(null);
+        setEditDescPreview(false);
+        setEditDescPreviewTh(false);
         fetchItems(page);
       } else {
         toast.error(data.error || "แก้ไขไม่สำเร็จ");
@@ -381,6 +412,52 @@ export default function AdminSupplierProductsPage() {
     }
   };
 
+  const handleScanUrl = async () => {
+    const url = urlInput.trim();
+    if (!url) {
+      toast.error("กรุณาแปะ URL");
+      return;
+    }
+    setUrlScanning(true);
+    try {
+      const res = await fetch("/api/admin/supplier-products/parse-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toast.error(data.error || "Scan ไม่สำเร็จ");
+        return;
+      }
+      const d = data.data;
+      setAddForm({
+        supplierId: "",
+        name: d.name || "",
+        name_th: d.name_th || "",
+        description: d.description || "",
+        description_th: d.description_th || "",
+        shortDescription: d.shortDescription || "",
+        shortDescription_th: d.shortDescription_th || "",
+        supplierSku: d.supplierSku || "",
+        supplierUrl: d.supplierUrl || "",
+        supplierPrice: d.supplierPrice != null ? String(d.supplierPrice) : "",
+        imagesText: Array.isArray(d.images) ? d.images.join(", ") : "",
+        categoryId: "",
+        remark: d.remark || "",
+        validationStatus: ProductValidationStatus.Lead,
+      });
+      setShowUrlModal(false);
+      setUrlInput("");
+      setShowAddModal(true);
+      toast.success("โหลดข้อมูลสำเร็จ เลือก Supplier แล้วบันทึกได้");
+    } catch {
+      toast.error("เกิดข้อผิดพลาด");
+    } finally {
+      setUrlScanning(false);
+    }
+  };
+
   const activeFilterCount = [filterSupplier, filterStatus].filter(Boolean).length;
 
   return (
@@ -398,12 +475,20 @@ export default function AdminSupplierProductsPage() {
             </Link>
           </div>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
-        >
-          + เพิ่มสินค้า
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowUrlModal(true)}
+            className="border border-teal-400 text-teal-600 hover:bg-teal-50 px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+          >
+            นำเข้าจาก URL
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+          >
+            + เพิ่มสินค้า
+          </button>
+        </div>
       </div>
 
       {/* Search + Filters */}
@@ -630,6 +715,13 @@ export default function AdminSupplierProductsPage() {
                           Import
                         </button>
                       ) : null}
+                      <button
+                        onClick={() => handleDeleteSp(sp)}
+                        disabled={deletingSpId === sp.id}
+                        className="inline-block text-[7px] px-1.5 py-0.5 rounded border border-red-200/80 text-red-600 bg-red-50/50 hover:bg-red-100/80 hover:border-red-300 transition-colors text-center leading-tight disabled:opacity-50"
+                      >
+                        {deletingSpId === sp.id ? "…" : "ลบ"}
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -683,11 +775,66 @@ export default function AdminSupplierProductsPage() {
         </div>
       )}
 
+      {/* Import from URL Modal */}
+      {showUrlModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !urlScanning) {
+              setShowUrlModal(false);
+              setUrlInput("");
+            }
+          }}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-bold text-stone-800 mb-4">นำเข้าจาก URL</h3>
+            <p className="text-sm text-stone-500 mb-4">แปะ link สินค้า AI จะ scan และเติมข้อมูลให้</p>
+            <div>
+              <label className="block text-xs font-semibold text-stone-600 mb-1">URL สินค้า *</label>
+              <input
+                type="url"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+                disabled={urlScanning}
+              />
+            </div>
+            <div className="flex gap-2 mt-6">
+              <button
+                type="button"
+                onClick={handleScanUrl}
+                disabled={urlScanning}
+                className="flex-1 px-4 py-2 rounded-xl bg-teal-500 hover:bg-teal-600 disabled:bg-stone-300 text-white text-sm font-medium transition-colors"
+              >
+                {urlScanning ? "กำลัง Scan..." : "Scan"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowUrlModal(false); setUrlInput(""); }}
+                disabled={urlScanning}
+                className="px-4 py-2 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-50 text-sm disabled:opacity-50"
+              >
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Modal */}
       {showAddModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
-          onClick={(e) => e.target === e.currentTarget && setShowAddModal(false)}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowAddModal(false);
+              setAddDescPreview(false);
+              setAddDescPreviewTh(false);
+            }
+          }}
         >
           <div
             className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
@@ -697,7 +844,7 @@ export default function AdminSupplierProductsPage() {
               <h2 className="font-bold text-stone-800">เพิ่ม Supplier Product</h2>
               <button
                 type="button"
-                onClick={() => setShowAddModal(false)}
+                onClick={() => { setShowAddModal(false); setAddDescPreview(false); setAddDescPreviewTh(false); }}
                 className="text-stone-400 hover:text-stone-600 text-xl leading-none"
               >
                 ×
@@ -742,29 +889,43 @@ export default function AdminSupplierProductsPage() {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-semibold text-stone-600">คำอธิบาย (EN) *</label>
-                  <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description", { description_th: addForm.description_th, name: addForm.name, name_th: addForm.name_th }, (v) => setAddForm((f) => ({ ...f, description: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description" ? "…" : "✨ AI"}</button>
+                  <div className="flex items-center gap-1">
+                    <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description", { description_th: addForm.description_th, name: addForm.name, name_th: addForm.name_th }, (v) => setAddForm((f) => ({ ...f, description: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description" ? "…" : "✨ AI"}</button>
+                    <button type="button" onClick={() => setAddDescPreview((v) => !v)} className="text-[10px] text-stone-400 hover:text-orange-500 transition-colors">{addDescPreview ? "✏️ แก้ไข" : "👁 HTML"}</button>
+                  </div>
                 </div>
-                <textarea
-                  value={addForm.description}
-                  onChange={(e) => setAddForm((f) => ({ ...f, description: e.target.value }))}
-                  rows={3}
-                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
-                  placeholder="Description"
-                  required
-                />
+                {addDescPreview ? (
+                  <div className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm min-h-24 prose prose-sm max-w-none overflow-auto" dangerouslySetInnerHTML={{ __html: addForm.description }} />
+                ) : (
+                  <textarea
+                    value={addForm.description}
+                    onChange={(e) => setAddForm((f) => ({ ...f, description: e.target.value }))}
+                    rows={3}
+                    className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
+                    placeholder="Description (รองรับ HTML)"
+                    required
+                  />
+                )}
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-semibold text-stone-600">คำอธิบาย (TH)</label>
-                  <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description_th", { description: addForm.description, name: addForm.name, name_th: addForm.name_th }, (v) => setAddForm((f) => ({ ...f, description_th: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description_th" ? "…" : "✨ AI"}</button>
+                  <div className="flex items-center gap-1">
+                    <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description_th", { description: addForm.description, name: addForm.name, name_th: addForm.name_th }, (v) => setAddForm((f) => ({ ...f, description_th: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description_th" ? "…" : "✨ AI"}</button>
+                    <button type="button" onClick={() => setAddDescPreviewTh((v) => !v)} className="text-[10px] text-stone-400 hover:text-orange-500 transition-colors">{addDescPreviewTh ? "✏️ แก้ไข" : "👁 HTML"}</button>
+                  </div>
                 </div>
-                <textarea
-                  value={addForm.description_th}
-                  onChange={(e) => setAddForm((f) => ({ ...f, description_th: e.target.value }))}
-                  rows={3}
-                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
-                  placeholder="คำอธิบายสินค้า"
-                />
+                {addDescPreviewTh ? (
+                  <div className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm min-h-24 prose prose-sm max-w-none overflow-auto" dangerouslySetInnerHTML={{ __html: addForm.description_th }} />
+                ) : (
+                  <textarea
+                    value={addForm.description_th}
+                    onChange={(e) => setAddForm((f) => ({ ...f, description_th: e.target.value }))}
+                    rows={3}
+                    className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
+                    placeholder="คำอธิบายสินค้า (รองรับ HTML)"
+                  />
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -847,7 +1008,7 @@ export default function AdminSupplierProductsPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => { setShowAddModal(false); setAddDescPreview(false); setAddDescPreviewTh(false); }}
                   className="px-4 py-2 rounded-lg border border-stone-200 text-stone-600 text-sm"
                 >
                   ยกเลิก
@@ -862,7 +1023,13 @@ export default function AdminSupplierProductsPage() {
       {editSpModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 overflow-y-auto"
-          onClick={(e) => e.target === e.currentTarget && !savingEditSp && setEditSpModal(null)}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !savingEditSp) {
+              setEditSpModal(null);
+              setEditDescPreview(false);
+              setEditDescPreviewTh(false);
+            }
+          }}
         >
           <div
             className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col my-8"
@@ -904,16 +1071,30 @@ export default function AdminSupplierProductsPage() {
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-xs font-semibold text-stone-600">คำอธิบาย (EN) *</label>
-                    <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description", { description_th: editSpForm.description_th, name: editSpForm.name, name_th: editSpForm.name_th }, (v) => setEditSpForm((f) => ({ ...f, description: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description" ? "…" : "✨ AI"}</button>
+                    <div className="flex items-center gap-1">
+                      <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description", { description_th: editSpForm.description_th, name: editSpForm.name, name_th: editSpForm.name_th }, (v) => setEditSpForm((f) => ({ ...f, description: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description" ? "…" : "✨ AI"}</button>
+                      <button type="button" onClick={() => setEditDescPreview((v) => !v)} className="text-[10px] text-stone-400 hover:text-orange-500 transition-colors">{editDescPreview ? "✏️ แก้ไข" : "👁 HTML"}</button>
+                    </div>
                   </div>
-                  <textarea value={editSpForm.description} onChange={(e) => setEditSpForm((f) => ({ ...f, description: e.target.value }))} rows={3} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" required />
+                  {editDescPreview ? (
+                    <div className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm min-h-24 prose prose-sm max-w-none overflow-auto" dangerouslySetInnerHTML={{ __html: editSpForm.description }} />
+                  ) : (
+                    <textarea value={editSpForm.description} onChange={(e) => setEditSpForm((f) => ({ ...f, description: e.target.value }))} rows={3} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" required />
+                  )}
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-xs font-semibold text-stone-600">คำอธิบาย (TH)</label>
-                    <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description_th", { description: editSpForm.description, name: editSpForm.name, name_th: editSpForm.name_th }, (v) => setEditSpForm((f) => ({ ...f, description_th: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description_th" ? "…" : "✨ AI"}</button>
+                    <div className="flex items-center gap-1">
+                      <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description_th", { description: editSpForm.description, name: editSpForm.name, name_th: editSpForm.name_th }, (v) => setEditSpForm((f) => ({ ...f, description_th: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description_th" ? "…" : "✨ AI"}</button>
+                      <button type="button" onClick={() => setEditDescPreviewTh((v) => !v)} className="text-[10px] text-stone-400 hover:text-orange-500 transition-colors">{editDescPreviewTh ? "✏️ แก้ไข" : "👁 HTML"}</button>
+                    </div>
                   </div>
-                  <textarea value={editSpForm.description_th} onChange={(e) => setEditSpForm((f) => ({ ...f, description_th: e.target.value }))} rows={3} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" />
+                  {editDescPreviewTh ? (
+                    <div className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm min-h-24 prose prose-sm max-w-none overflow-auto" dangerouslySetInnerHTML={{ __html: editSpForm.description_th }} />
+                  ) : (
+                    <textarea value={editSpForm.description_th} onChange={(e) => setEditSpForm((f) => ({ ...f, description_th: e.target.value }))} rows={3} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" />
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -971,7 +1152,7 @@ export default function AdminSupplierProductsPage() {
                 <button type="submit" disabled={savingEditSp} className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium disabled:opacity-50">
                   {savingEditSp ? "กำลังบันทึก..." : "บันทึก"}
                 </button>
-                <button type="button" onClick={() => setEditSpModal(null)} disabled={savingEditSp} className="px-4 py-2 rounded-lg border border-stone-200 text-stone-600 text-sm">
+                <button type="button" onClick={() => { setEditSpModal(null); setEditDescPreview(false); setEditDescPreviewTh(false); }} disabled={savingEditSp} className="px-4 py-2 rounded-lg border border-stone-200 text-stone-600 text-sm">
                   ยกเลิก
                 </button>
               </div>

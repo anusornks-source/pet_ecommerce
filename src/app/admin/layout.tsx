@@ -25,7 +25,7 @@ export default async function AdminLayout({
     <ShopAdminProvider session={session}>
       <div className="flex h-screen bg-stone-50 overflow-hidden">
         <AdminSidebar />
-        <main className="flex-1 min-w-0 p-6 overflow-y-auto">{children}</main>
+        <main className="flex-1 min-w-0 px-6 pt-4 pb-6 overflow-y-auto">{children}</main>
       </div>
     </ShopAdminProvider>
   );

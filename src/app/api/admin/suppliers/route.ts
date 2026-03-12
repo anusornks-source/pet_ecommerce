@@ -35,12 +35,23 @@ export async function GET(request: NextRequest) {
     orderBy: { name: "asc" },
     take: where ? limit : undefined,
     include: {
-      _count: { select: { products: true } },
+      _count: { select: { products: true, supplierProducts: true } },
       products: {
         include: {
           product: {
             select: { id: true, name: true, name_th: true, images: true },
           },
+        },
+      },
+      supplierProducts: {
+        select: {
+          id: true,
+          name: true,
+          name_th: true,
+          images: true,
+          productId: true,
+          supplierPrice: true,
+          validationStatus: true,
         },
       },
     },

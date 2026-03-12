@@ -6,9 +6,19 @@ import Image from "next/image";
 import toast from "react-hot-toast";
 import { useLocale } from "@/context/LocaleContext";
 
-interface SupplierProduct {
+interface ImportedProduct {
   id: string;
   product: { id: string; name: string; name_th: string | null; images: string[] };
+}
+
+interface SupplierProductItem {
+  id: string;
+  name: string;
+  name_th: string | null;
+  images: string[];
+  productId: string | null;
+  supplierPrice: number | null;
+  validationStatus: string;
 }
 
 interface Supplier {
@@ -21,8 +31,9 @@ interface Supplier {
   contact: string | null;
   website: string | null;
   note: string | null;
-  _count: { products: number };
-  products: SupplierProduct[];
+  _count: { products: number; supplierProducts: number };
+  products: ImportedProduct[];
+  supplierProducts: SupplierProductItem[];
 }
 
 const emptyForm = { name: "", nameTh: "", imageUrl: "", tel: "", email: "", contact: "", website: "", note: "" };
@@ -134,7 +145,7 @@ export default function AdminSuppliersPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 pt-2 pb-6 space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-stone-800">{t("suppliers", "adminPages")}</h1>
@@ -296,9 +307,9 @@ export default function AdminSuppliersPage() {
           {suppliers.map((s) => (
             <div
               key={s.id}
-              className="relative bg-white border border-stone-200 rounded-xl p-4 hover:border-stone-300 transition-colors"
+              className="relative bg-white border border-stone-200 rounded-xl p-3 hover:border-stone-300 transition-colors"
             >
-              <div className="absolute top-3 right-3 flex items-center gap-1">
+              <div className="absolute top-2 right-2 flex items-center gap-1">
                 <Link
                   href={`/admin/suppliers/${s.id}/view`}
                   className="text-[10px] px-2 py-0.5 rounded border border-stone-300 bg-stone-50 text-stone-600 hover:bg-stone-100 font-medium"
@@ -324,13 +335,13 @@ export default function AdminSuppliersPage() {
                   ลบ
                 </button>
               </div>
-              <div className="flex items-center gap-3 pr-40">
+              <div className="flex items-center gap-2 pr-36">
                 {s.imageUrl ? (
-                  <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-stone-100 shrink-0">
-                    <Image src={s.imageUrl} alt="" fill className="object-cover" sizes="48px" />
+                  <div className="relative w-10 h-10 rounded-lg overflow-hidden border border-stone-100 shrink-0">
+                    <Image src={s.imageUrl} alt="" fill className="object-cover" sizes="40px" />
                   </div>
                 ) : (
-                  <div className="w-12 h-12 rounded-lg bg-stone-100 flex items-center justify-center text-stone-400 text-lg shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center text-stone-400 text-base shrink-0">
                     🏭
                   </div>
                 )}
@@ -342,7 +353,7 @@ export default function AdminSuppliersPage() {
                     )}
                   </div>
                   <p className="text-xs text-stone-400 mt-0.5">
-                    {s._count.products} สินค้า
+                    {s._count.supplierProducts} สินค้า Supplier · {s._count.products} Import แล้ว
                   </p>
                   {(s.tel || s.email || s.contact) && (
                     <p className="text-xs text-stone-500 mt-1 truncate" title={[s.tel && `📞 ${s.tel}`, s.email && `✉️ ${s.email}`, s.contact].filter(Boolean).join(" · ")}>
@@ -351,28 +362,59 @@ export default function AdminSuppliersPage() {
                   )}
                 </div>
               </div>
-              {s.products && s.products.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-stone-100">
-                  {s.products.map((ps) => (
-                    <Link
-                      key={ps.id}
-                      href={`/admin/products/${ps.product.id}`}
-                      className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-stone-50 hover:bg-stone-100 border border-stone-100 transition-colors group shrink-0"
-                    >
-                      {ps.product.images?.[0] ? (
-                        <div className="relative w-8 h-8 rounded overflow-hidden shrink-0">
-                          <Image src={ps.product.images[0]} alt="" fill className="object-cover" sizes="32px" />
-                        </div>
-                      ) : (
-                        <div className="w-8 h-8 rounded bg-stone-200 flex items-center justify-center text-stone-400 text-xs shrink-0">
-                          —
-                        </div>
+              {((s.supplierProducts && s.supplierProducts.length > 0) || (s.products && s.products.length > 0)) && (
+                <div className="mt-2 pt-2 border-t border-stone-100 grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0">
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-medium text-stone-500 mb-1">Supplier Products</p>
+                    <div className="flex flex-wrap gap-1">
+                      {s.supplierProducts?.length ? s.supplierProducts.map((sp) => (
+                        <Link
+                          key={sp.id}
+                          href={`/admin/supplier-products/${sp.id}/view`}
+                          className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 hover:bg-amber-100 border border-amber-100 transition-colors group shrink-0 min-w-0"
+                        >
+                          {sp.images?.[0] ? (
+                            <div className="relative w-5 h-5 rounded overflow-hidden shrink-0">
+                              <Image src={sp.images[0]} alt="" fill className="object-cover" sizes="20px" />
+                            </div>
+                          ) : (
+                            <div className="w-5 h-5 rounded bg-stone-200 flex items-center justify-center text-stone-400 text-[9px] shrink-0">—</div>
+                          )}
+                          <span className="text-[10px] text-stone-600 group-hover:text-amber-700 truncate max-w-24" title={sp.name_th ?? sp.name}>
+                            {sp.name_th ?? sp.name}
+                          </span>
+                          {sp.productId ? <span className="text-[8px] px-0.5 rounded bg-green-100 text-green-700 shrink-0">✓</span> : null}
+                        </Link>
+                      )) : (
+                        <span className="text-[10px] text-stone-400">—</span>
                       )}
-                      <span className="text-xs text-stone-600 group-hover:text-teal-600 truncate max-w-28" title={ps.product.name_th ?? ps.product.name}>
-                        {ps.product.name_th ?? ps.product.name}
-                      </span>
-                    </Link>
-                  ))}
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-medium text-stone-500 mb-1">Products (Import แล้ว)</p>
+                    <div className="flex flex-wrap gap-1">
+                      {s.products?.length ? s.products.map((ps) => (
+                        <Link
+                          key={ps.id}
+                          href={`/admin/products/${ps.product.id}`}
+                          className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-50 hover:bg-green-100 border border-green-100 transition-colors group shrink-0 min-w-0"
+                        >
+                          {ps.product.images?.[0] ? (
+                            <div className="relative w-5 h-5 rounded overflow-hidden shrink-0">
+                              <Image src={ps.product.images[0]} alt="" fill className="object-cover" sizes="20px" />
+                            </div>
+                          ) : (
+                            <div className="w-5 h-5 rounded bg-stone-200 flex items-center justify-center text-stone-400 text-[9px] shrink-0">—</div>
+                          )}
+                          <span className="text-[10px] text-stone-600 group-hover:text-green-700 truncate max-w-24" title={ps.product.name_th ?? ps.product.name}>
+                            {ps.product.name_th ?? ps.product.name}
+                          </span>
+                        </Link>
+                      )) : (
+                        <span className="text-[10px] text-stone-400">—</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

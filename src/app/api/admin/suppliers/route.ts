@@ -1,0 +1,39 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { prisma } from "@/lib/prisma";
+
+export async function GET(request: NextRequest) {
+  const auth = await requireAdmin(request);
+  if (isNextResponse(auth)) return auth;
+
+  const suppliers = await prisma.supplier.findMany({
+    orderBy: { name: "asc" },
+    include: {
+      _count: { select: { products: true } },
+    },
+  });
+  return NextResponse.json({ success: true, data: suppliers });
+}
+
+export async function POST(request: NextRequest) {
+  const auth = await requireAdmin(request);
+  if (isNextResponse(auth)) return auth;
+
+  const body = await request.json();
+  const { name, nameTh, contact, website, note } = body;
+
+  if (!name?.trim()) {
+    return NextResponse.json({ success: false, error: "กรุณากรอกชื่อ" }, { status: 400 });
+  }
+
+  const supplier = await prisma.supplier.create({
+    data: {
+      name: name.trim(),
+      nameTh: nameTh?.trim() || null,
+      contact: contact?.trim() || null,
+      website: website?.trim() || null,
+      note: note?.trim() || null,
+    },
+  });
+  return NextResponse.json({ success: true, data: supplier });
+}

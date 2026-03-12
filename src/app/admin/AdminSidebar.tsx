@@ -31,6 +31,7 @@ const navEntries: NavEntry[] = [
       { href: "/admin/shop-categories", label: "หมวดหมู่ของร้าน", icon: "🏷️" },
       { href: "/admin/pet-types", label: "ประเภทสัตว์", icon: "🐾" },
       { href: "/admin/tags", label: "แท็กสินค้า", icon: "🔖" },
+      { href: "/admin/suppliers", label: "ซัพพลายเออร์", icon: "🏭" },
     ],
   },
   {

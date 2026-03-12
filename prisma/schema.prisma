@@ -185,6 +185,41 @@ model PetType {
   @@map("pet_types")
 }
 
+// ─── Suppliers ─────────────────────────────────────────────────
+
+model Supplier {
+  id          String   @id @default(cuid())
+  name        String
+  nameTh      String?
+  contact     String?  @db.Text
+  website     String?
+  note        String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products ProductSupplier[]
+
+  @@map("suppliers")
+}
+
+model ProductSupplier {
+  id         String   @id @default(cuid())
+  productId  String
+  supplierId String
+  supplierSku String?
+  supplierUrl String?
+  note       String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, supplierId])
+  @@index([productId])
+  @@index([supplierId])
+  @@map("product_suppliers")
+}
+
 // ─── Products ─────────────────────────────────────────────────
 
 model Product {
@@ -233,6 +268,7 @@ model Product {
   marketingAssets  MarketingAsset[]
   /// ลำดับ marketing assets เมื่อดูที่หน้าสินค้า (asset IDs)
   marketingAssetOrder String[] @default([])
+  suppliers       ProductSupplier[]
 
   @@index([shopId])
   @@index([shopId, active])

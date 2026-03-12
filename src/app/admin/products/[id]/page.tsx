@@ -73,6 +73,8 @@ export default function EditProductPage({
   const [addingAll, setAddingAll] = useState(false);
   const [packs, setPacks] = useState<PackSummary[]>([]);
   const [packsLoading, setPacksLoading] = useState(true);
+  const [supplierLinks, setSupplierLinks] = useState<{ id: string; supplier: { id: string; name: string; nameTh: string | null } }[]>([]);
+  const [suppliersLoading, setSuppliersLoading] = useState(true);
 
   const handleDuplicate = async () => {
     if (!product) return;
@@ -169,6 +171,10 @@ export default function EditProductPage({
       .then((r) => r.json())
       .then((d) => { if (d.success) setPacks(d.data); })
       .finally(() => setPacksLoading(false));
+    fetch(`/api/admin/product-suppliers?productId=${id}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setSupplierLinks(d.data); })
+      .finally(() => setSuppliersLoading(false));
   }, [id]);
 
   if (loading) {
@@ -301,6 +307,49 @@ export default function EditProductPage({
                   {new Date(pack.createdAt).toLocaleDateString("th-TH", { day: "2-digit", month: "2-digit", year: "2-digit" })}
                 </span>
                 <span className="text-stone-300 group-hover:text-orange-400 text-xs">→</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Suppliers section */}
+      <div className="bg-white rounded-2xl border border-stone-100 p-6 max-w-6xl">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-semibold text-stone-800">ซัพพลายเออร์</h2>
+            <p className="text-xs text-stone-400 mt-0.5">
+              {suppliersLoading ? "..." : `ซื้อได้จาก ${supplierLinks.length} แหล่ง`}
+            </p>
+          </div>
+          <Link
+            href="/admin/suppliers"
+            className="text-xs px-3 py-1.5 rounded-lg border border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100 transition-colors font-medium"
+          >
+            จัดการซัพพลายเออร์
+          </Link>
+        </div>
+        {suppliersLoading ? (
+          <div className="text-xs text-stone-400">กำลังโหลด...</div>
+        ) : supplierLinks.length === 0 ? (
+          <div className="text-xs text-stone-400 py-2">
+            ยังไม่มีซัพพลายเออร์ — ไปที่หน้าซัพพลายเออร์เพื่อ map สินค้า
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {supplierLinks.map((link) => (
+              <Link
+                key={link.id}
+                href={`/admin/suppliers/${link.supplier.id}`}
+                className="flex items-center gap-3 p-3 rounded-xl border border-stone-100 hover:border-teal-200 hover:bg-teal-50 transition-colors group"
+              >
+                <span className="text-sm font-medium text-stone-700">
+                  {link.supplier.name}
+                  {link.supplier.nameTh && (
+                    <span className="text-stone-400 ml-1">({link.supplier.nameTh})</span>
+                  )}
+                </span>
+                <span className="text-stone-300 group-hover:text-teal-400 text-xs">→</span>
               </Link>
             ))}
           </div>

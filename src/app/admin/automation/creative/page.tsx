@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/context/LocaleContext";
 import { useState, useCallback, useRef, useEffect } from "react";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -401,7 +402,7 @@ const [editedHooks, setEditedHooks] = useState<string[]>([]);
   return (
     <div className="max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-stone-800">Creative Studio</h1>
+        <h1 className="text-2xl font-bold text-stone-800">{t("creativeStudio", "adminPages")}</h1>
         <p className="text-sm text-stone-500 mt-1">AI-generated marketing content for your products</p>
       </div>
 

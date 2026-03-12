@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useLocale } from "@/context/LocaleContext";
 
 interface CjLog {
   id: string;
@@ -60,7 +61,7 @@ export default function CjLogsPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-stone-800">📋 CJ API Logs</h1>
+        <h1 className="text-2xl font-bold text-stone-800">📋 {t("cjLogs", "adminPages")}</h1>
         <p className="text-sm text-stone-400 mt-1">ประวัติการเรียก CJ Dropshipping API ทั้งหมด ({total.toLocaleString()} รายการ)</p>
       </div>
 

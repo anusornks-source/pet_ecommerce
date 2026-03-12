@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useShopAdmin } from "@/context/ShopAdminContext";
+import { useLocale } from "@/context/LocaleContext";
 
 interface LogEntry {
   time: string;
@@ -81,6 +82,7 @@ const SOURCE_COLORS: Record<string, string> = {
 
 export default function ProductResearchPage() {
   const { activeShop, shops } = useShopAdmin();
+  const { t } = useLocale();
   const [selectedShopId, setSelectedShopId] = useState("");
   useEffect(() => { if (activeShop && !selectedShopId) setSelectedShopId(activeShop.id); }, [activeShop, selectedShopId]);
 
@@ -559,7 +561,7 @@ export default function ProductResearchPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">Product Research</h1>
+          <h1 className="text-2xl font-bold text-stone-800">{t("productResearch", "adminPages")}</h1>
           <p className="text-sm text-stone-500 mt-1">Pain Points → Ideation → Trend Research → CJ Product Search</p>
         </div>
         {shops.length > 1 && (

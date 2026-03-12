@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useLocale } from "@/context/LocaleContext";
 
 interface CategoryGroup {
   id: string;
@@ -152,7 +153,7 @@ export default function EditShopPage({ params }: { params: Promise<{ id: string 
         <button onClick={() => router.push("/admin/shops")} className="text-stone-400 hover:text-stone-600">
           &larr;
         </button>
-        <h1 className="text-2xl font-bold text-stone-800">Edit Shop: {shop.name}</h1>
+        <h1 className="text-2xl font-bold text-stone-800">{t("editShop", "adminPages")}: {shop.name}</h1>
         <div className="ml-auto flex items-center gap-2">
           <Link
             href={`/admin/shops/${id}/view`}

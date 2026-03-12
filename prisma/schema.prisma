@@ -191,6 +191,9 @@ model Supplier {
   id          String   @id @default(cuid())
   name        String
   nameTh      String?
+  imageUrl    String?
+  tel         String?
+  email       String?
   contact     String?  @db.Text
   website     String?
   note        String?  @db.Text
@@ -203,13 +206,14 @@ model Supplier {
 }
 
 model ProductSupplier {
-  id         String   @id @default(cuid())
-  productId  String
-  supplierId String
-  supplierSku String?
-  supplierUrl String?
-  note       String?  @db.Text
-  createdAt  DateTime @default(now())
+  id            String   @id @default(cuid())
+  productId     String
+  supplierId    String
+  supplierSku   String?
+  supplierUrl   String?
+  supplierPrice Float?   /// ราคาที่ supplier ขาย (ต้นทุนจาก supplier)
+  note          String?  @db.Text
+  createdAt     DateTime @default(now())
 
   product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)

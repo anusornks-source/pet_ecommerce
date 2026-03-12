@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { useShopAdmin } from "@/context/ShopAdminContext";
+import { useLocale } from "@/context/LocaleContext";
 
 export default function AdminSettingsPage() {
   const { isAdmin } = useShopAdmin();
@@ -92,7 +93,7 @@ export default function AdminSettingsPage() {
   return (
     <div className="max-w-2xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-stone-800">ตั้งค่าร้าน</h1>
+        <h1 className="text-2xl font-bold text-stone-800">{t("shopSettings", "adminPages")}</h1>
         <p className="text-sm text-stone-500 mt-0.5">ชื่อร้าน, โลโก้, การแจ้งเตือน และช่องทางชำระเงิน</p>
       </div>
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useLocale } from "@/context/LocaleContext";
 
 interface Shop {
   id: string;
@@ -17,6 +18,7 @@ interface Shop {
 }
 
 export default function ShopsPage() {
+  const { t } = useLocale();
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -74,12 +76,12 @@ export default function ShopsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-stone-800">Shops</h1>
+        <h1 className="text-2xl font-bold text-stone-800">{t("shops", "adminPages")}</h1>
         <button
           onClick={() => setShowForm(!showForm)}
           className="btn-primary px-4 py-2 text-sm"
         >
-          + New Shop
+          + {t("newShop", "adminLabels")}
         </button>
       </div>
 
@@ -94,7 +96,7 @@ export default function ShopsPage() {
         />
         <select value={filterActive} onChange={(e) => setFilterActive(e.target.value as "" | "true" | "false")}
           className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white">
-          <option value="">สถานะ: ทั้งหมด</option>
+          <option value="">{t("statusAll", "adminLabels")}</option>
           <option value="true">Active</option>
           <option value="false">Inactive</option>
         </select>

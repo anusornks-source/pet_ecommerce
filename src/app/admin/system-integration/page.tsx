@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useLocale } from "@/context/LocaleContext";
 
 interface ConfigStatus {
   database: boolean;
@@ -111,6 +112,7 @@ function TestButton({
 }
 
 export default function SystemIntegrationPage() {
+  const { t } = useLocale();
   const [config, setConfig] = useState<ConfigStatus | null>(null);
   const [tests, setTests] = useState<Record<string, TestState>>({});
   const [testEmail, setTestEmail] = useState("");
@@ -194,7 +196,7 @@ export default function SystemIntegrationPage() {
     <div>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-stone-800">System Integration</h1>
+        <h1 className="text-2xl font-bold text-stone-800">{t("systemIntegration", "adminPages")}</h1>
         <p className="text-stone-500 text-sm mt-1">ตรวจสอบและทดสอบการเชื่อมต่อ API ทั้งหมด</p>
       </div>
 

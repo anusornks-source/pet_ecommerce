@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { useShopAdmin } from "@/context/ShopAdminContext";
+import { useLocale } from "@/context/LocaleContext";
 
 const StoresMap = dynamic(() => import("@/app/stores/StoresMap"), { ssr: false });
 
@@ -151,7 +152,7 @@ export default function AdminStoresPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">จัดการสาขา</h1>
+          <h1 className="text-2xl font-bold text-stone-800">{t("stores", "adminPages")}</h1>
           <div className="flex items-center gap-2 mt-0.5">
             <p className="text-sm text-stone-500">{stores.length} สาขา</p>
             {isAdmin ? (

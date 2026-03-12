@@ -4,6 +4,7 @@ import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import MarketingAssetsSection from "@/components/admin/MarketingAssetsSection";
+import { useLocale } from "@/context/LocaleContext";
 
 interface Category {
   id: string;
@@ -99,7 +100,7 @@ export default function ShopViewPage({ params }: { params: Promise<{ id: string 
         <Link href="/admin/shops" className="text-stone-400 hover:text-stone-600 text-sm">
           ← รายการร้าน
         </Link>
-        <h1 className="text-2xl font-bold text-stone-800 flex-1 min-w-0">รายละเอียดร้าน: {shop.name}</h1>
+        <h1 className="text-2xl font-bold text-stone-800 flex-1 min-w-0">{t("shopDetail", "adminPages")}: {shop.name}</h1>
         <div className="flex items-center gap-2">
           <Link href={`/admin/shops/${id}`} className="btn-primary text-sm px-4 py-2 rounded-xl">
             แก้ไขร้าน

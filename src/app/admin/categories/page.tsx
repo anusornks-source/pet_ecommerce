@@ -17,6 +17,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useLocale } from "@/context/LocaleContext";
 
 interface CategoryGroup {
   id: string;
@@ -298,7 +299,7 @@ export default function AdminCategoriesPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">หมวดหมู่</h1>
+          <h1 className="text-2xl font-bold text-stone-800">{t("categories", "adminPages")}</h1>
           <p className="text-stone-500 text-sm mt-1">{categories.length} หมวดหมู่ · {groups.length} กลุ่ม</p>
         </div>
         <button onClick={() => setShowGroupForm((v) => !v)}

@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useShopAdmin } from "@/context/ShopAdminContext";
+import { useLocale } from "@/context/LocaleContext";
 
-type NavItem = { href: string; label: string; icon: string; exact?: boolean; adminOnly?: boolean; minRole?: string };
-type NavGroup = { label: string; icon: string; items: NavItem[]; adminOnly?: boolean; minRole?: string };
+type NavItem = { href: string; labelKey: string; icon: string; exact?: boolean; adminOnly?: boolean; minRole?: string };
+type NavGroup = { labelKey: string; icon: string; items: NavItem[]; adminOnly?: boolean; minRole?: string };
 type NavEntry = NavItem | NavGroup;
 
 function isGroup(e: NavEntry): e is NavGroup {
@@ -16,71 +17,71 @@ function isGroup(e: NavEntry): e is NavGroup {
 const ROLE_LEVEL: Record<string, number> = { STAFF: 1, MANAGER: 2, OWNER: 3 };
 
 const navEntries: NavEntry[] = [
-  { href: "/admin", label: "Dashboard", icon: "📊", exact: true },
-  { href: "/admin/analytics", label: "Analytics", icon: "📈", minRole: "MANAGER" },
-  { href: "/admin/shops", label: "Shops", icon: "🏪", adminOnly: true },
+  { href: "/admin", labelKey: "dashboard", icon: "📊", exact: true },
+  { href: "/admin/analytics", labelKey: "analytics", icon: "📈", minRole: "MANAGER" },
+  { href: "/admin/shops", labelKey: "shops", icon: "🏪", adminOnly: true },
   {
-    label: "สินค้า",
+    labelKey: "products",
     icon: "📦",
     minRole: "MANAGER",
     items: [
-      { href: "/admin/products", label: "สินค้าทั้งหมด", icon: "📦" },
-      { href: "/admin/variants", label: "Variants", icon: "🔀" },
-      { href: "/admin/shelves", label: "Product Shelves", icon: "🗂️" },
-      { href: "/admin/categories", label: "หมวดหมู่", icon: "🏷️", adminOnly: true },
-      { href: "/admin/shop-categories", label: "หมวดหมู่ของร้าน", icon: "🏷️" },
-      { href: "/admin/pet-types", label: "ประเภทสัตว์", icon: "🐾" },
-      { href: "/admin/tags", label: "แท็กสินค้า", icon: "🔖" },
-      { href: "/admin/suppliers", label: "ซัพพลายเออร์", icon: "🏭" },
+      { href: "/admin/products", labelKey: "allProducts", icon: "📦" },
+      { href: "/admin/variants", labelKey: "variants", icon: "🔀" },
+      { href: "/admin/shelves", labelKey: "shelves", icon: "🗂️" },
+      { href: "/admin/categories", labelKey: "categories", icon: "🏷️", adminOnly: true },
+      { href: "/admin/shop-categories", labelKey: "shopCategories", icon: "🏷️" },
+      { href: "/admin/pet-types", labelKey: "petTypes", icon: "🐾" },
+      { href: "/admin/tags", labelKey: "tags", icon: "🔖" },
+      { href: "/admin/suppliers", labelKey: "suppliers", icon: "🏭" },
     ],
   },
   {
-    label: "นำเข้าสินค้า",
+    labelKey: "importProducts",
     icon: "📥",
     minRole: "MANAGER",
     items: [
-      { href: "/admin/cj-import", label: "CJ Dropshipping", icon: "🚚" },
+      { href: "/admin/cj-import", labelKey: "cjDropshipping", icon: "🚚" },
     ],
   },
   {
-    label: "Marketing Automation",
+    labelKey: "marketingAuto",
     icon: "🤖",
     minRole: "MANAGER",
     items: [
-      { href: "/admin/automation/research", label: "Product Research", icon: "🔬" },
-      { href: "/admin/automation/pain-points", label: "Pain Point Bank", icon: "🎯" },
-      { href: "/admin/automation/niche-keywords", label: "Niche Keyword Bank", icon: "🗃️" },
-      { href: "/admin/automation/trend-pipeline", label: "Trend Pipeline", icon: "🔥" },
-      { href: "/admin/automation/creative", label: "Creative Studio", icon: "✨" },
-      { href: "/admin/automation/marketing-packs", label: "Marketing Packs", icon: "📦" },
+      { href: "/admin/automation/research", labelKey: "productResearch", icon: "🔬" },
+      { href: "/admin/automation/pain-points", labelKey: "painPointBank", icon: "🎯" },
+      { href: "/admin/automation/niche-keywords", labelKey: "nicheKeywords", icon: "🗃️" },
+      { href: "/admin/automation/trend-pipeline", labelKey: "trendPipeline", icon: "🔥" },
+      { href: "/admin/automation/creative", labelKey: "creativeStudio", icon: "✨" },
+      { href: "/admin/automation/marketing-packs", labelKey: "marketingPacks", icon: "📦" },
     ],
   },
-  { href: "/admin/orders", label: "คำสั่งซื้อ", icon: "🛒" },
-  { href: "/admin/abandoned-carts", label: "Abandoned Carts", icon: "🛒", minRole: "MANAGER" },
-  { href: "/admin/coupons", label: "คูปอง", icon: "🎟️", minRole: "MANAGER" },
-  { href: "/admin/shops/__active__", label: "ข้อมูลร้าน", icon: "🏪", minRole: "OWNER" },
+  { href: "/admin/orders", labelKey: "orders", icon: "🛒" },
+  { href: "/admin/abandoned-carts", labelKey: "abandonedCarts", icon: "🛒", minRole: "MANAGER" },
+  { href: "/admin/coupons", labelKey: "coupons", icon: "🎟️", minRole: "MANAGER" },
+  { href: "/admin/shops/__active__", labelKey: "shopInfo", icon: "🏪", minRole: "OWNER" },
   {
-    label: "เนื้อหาหน้าเว้บ",
+    labelKey: "webContent",
     icon: "🌐",
     minRole: "MANAGER",
     items: [
-      { href: "/admin/banners", label: "Hero Banner", icon: "🖼️" },
-      { href: "/admin/articles", label: "บทความ", icon: "📝" },
-      { href: "/admin/stores", label: "สาขา", icon: "📍" },
+      { href: "/admin/banners", labelKey: "heroBanner", icon: "🖼️" },
+      { href: "/admin/articles", labelKey: "articles", icon: "📝" },
+      { href: "/admin/stores", labelKey: "stores", icon: "📍" },
     ],
   },
-  { href: "/admin/staff", label: "Shop Staff", icon: "👤", minRole: "OWNER" },
-  { href: "/admin/users", label: "ผู้ใช้งาน", icon: "👥", adminOnly: true },
+  { href: "/admin/staff", labelKey: "staff", icon: "👤", minRole: "OWNER" },
+  { href: "/admin/users", labelKey: "users", icon: "👥", adminOnly: true },
   {
-    label: "ระบบ",
+    labelKey: "system",
     icon: "⚙️",
     minRole: "OWNER",
     items: [
-      { href: "/admin/site-settings", label: "Site Settings (CartNova)", icon: "🌐", adminOnly: true },
-      { href: "/admin/settings", label: "ตั้งค่า", icon: "⚙️" },
-      { href: "/admin/system-integration", label: "System Integration", icon: "🔌", adminOnly: true },
-      { href: "/admin/api-logs", label: "API & Webhook Logs", icon: "🗂️", adminOnly: true },
-      { href: "/admin/cj-logs", label: "CJ Logs", icon: "📋" },
+      { href: "/admin/site-settings", labelKey: "siteSettings", icon: "🌐", adminOnly: true },
+      { href: "/admin/settings", labelKey: "settings", icon: "⚙️" },
+      { href: "/admin/system-integration", labelKey: "systemIntegration", icon: "🔌", adminOnly: true },
+      { href: "/admin/api-logs", labelKey: "apiLogs", icon: "🗂️", adminOnly: true },
+      { href: "/admin/cj-logs", labelKey: "cjLogs", icon: "📋" },
     ],
   },
 ];
@@ -88,20 +89,22 @@ const navEntries: NavEntry[] = [
 export default function AdminSidebar() {
   const pathname = usePathname();
   const { activeShop, shops, setActiveShopId, isAdmin, shopRole, loading } = useShopAdmin();
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(["สินค้า", "นำเข้าสินค้า", "เนื้อหาหน้าเว้บ", "Marketing Automation"]));
+  const { t, lang, toggle } = useLocale();
+  const getLabel = (key: string) => t(key, "adminMenu");
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(["products", "importProducts", "webContent", "marketingAuto"]));
 
   useEffect(() => {
     navEntries.forEach((entry) => {
       if (isGroup(entry) && entry.items.some((i) => pathname.startsWith(i.href))) {
-        setOpenGroups((prev) => new Set([...prev, entry.label]));
+        setOpenGroups((prev) => new Set([...prev, entry.labelKey]));
       }
     });
   }, [pathname]);
 
-  const toggleGroup = (label: string) => {
+  const toggleGroup = (labelKey: string) => {
     setOpenGroups((prev) => {
       const next = new Set(prev);
-      next.has(label) ? next.delete(label) : next.add(label);
+      next.has(labelKey) ? next.delete(labelKey) : next.add(labelKey);
       return next;
     });
   };
@@ -169,12 +172,12 @@ export default function AdminSidebar() {
         {visibleEntries.map((entry) => {
           if (isGroup(entry)) {
             const visibleItems = entry.items.filter((item) => canSee(item));
-            const isOpen = openGroups.has(entry.label);
+            const isOpen = openGroups.has(entry.labelKey);
             const hasActive = visibleItems.some((i) => pathname.startsWith(i.href));
             return (
-              <div key={entry.label}>
+              <div key={entry.labelKey}>
                 <button
-                  onClick={() => toggleGroup(entry.label)}
+                  onClick={() => toggleGroup(entry.labelKey)}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors ${
                     hasActive
                       ? "text-orange-600 bg-orange-50"
@@ -182,7 +185,7 @@ export default function AdminSidebar() {
                   }`}
                 >
                   <span className="text-base">{entry.icon}</span>
-                  <span className="flex-1 text-left">{entry.label}</span>
+                  <span className="flex-1 text-left">{getLabel(entry.labelKey)}</span>
                   <span
                     className={`text-xs transition-transform duration-200 ${
                       isOpen ? "rotate-180" : ""
@@ -204,7 +207,7 @@ export default function AdminSidebar() {
                         }`}
                       >
                         <span>{item.icon}</span>
-                        {item.label}
+                        {getLabel(item.labelKey)}
                       </Link>
                     ))}
                   </div>
@@ -224,19 +227,27 @@ export default function AdminSidebar() {
               }`}
             >
               <span className="text-base">{entry.icon}</span>
-              {entry.label}
+              {getLabel(entry.labelKey)}
             </Link>
           );
         })}
       </nav>
 
-      <div className="px-3 pb-4 border-t border-stone-100 pt-3">
+      <div className="px-3 pb-4 border-t border-stone-100 pt-3 space-y-1">
+        <button
+          type="button"
+          onClick={toggle}
+          className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-xs text-stone-500 hover:bg-stone-50 hover:text-stone-700 transition-colors"
+        >
+          <span>🌐</span>
+          <span>{lang === "th" ? "TH" : "EN"}</span>
+        </button>
         <Link
           href="/"
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-stone-500 hover:bg-stone-50 hover:text-stone-700 transition-colors"
         >
           <span>🌐</span>
-          กลับหน้าเว็บ
+          {getLabel("backToSite")}
         </Link>
       </div>
     </aside>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useShopAdmin } from "@/context/ShopAdminContext";
+import { useLocale } from "@/context/LocaleContext";
 
 interface CategoryGroup {
   id: string;
@@ -23,6 +24,7 @@ interface Category {
 
 export default function ShopCategoriesPage() {
   const { activeShop } = useShopAdmin();
+  const { t } = useLocale();
   const [categories, setCategories] = useState<Category[]>([]);
   const [groups, setGroups] = useState<CategoryGroup[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -91,7 +93,7 @@ export default function ShopCategoriesPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-stone-800">หมวดหมู่ของร้าน</h1>
+        <h1 className="text-2xl font-bold text-stone-800">{t("shopCategories", "adminPages")}</h1>
         <p className="text-stone-500 text-sm mt-1">
           เลือกหมวดหมู่ที่ร้านของคุณต้องการใช้
           {!loading && <span className="ml-1 text-orange-500 font-medium">({selected.size} หมวดหมู่ที่เลือก)</span>}

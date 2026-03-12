@@ -20,9 +20,13 @@ export async function GET(
               id: true,
               name: true,
               name_th: true,
+              shortDescription: true,
+              shortDescription_th: true,
+              cjProductId: true,
               images: true,
               price: true,
               stock: true,
+              costPrice: true,
             },
           },
         },
@@ -45,7 +49,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { name, nameTh, contact, website, note } = body;
+  const { name, nameTh, imageUrl, tel, email, contact, website, note } = body;
 
   const supplier = await prisma.supplier.findUnique({ where: { id } });
   if (!supplier) {
@@ -57,6 +61,9 @@ export async function PATCH(
     data: {
       ...(name !== undefined && { name: name?.trim() || supplier.name }),
       ...(nameTh !== undefined && { nameTh: nameTh?.trim() || null }),
+      ...(imageUrl !== undefined && { imageUrl: imageUrl?.trim() || null }),
+      ...(tel !== undefined && { tel: tel?.trim() || null }),
+      ...(email !== undefined && { email: email?.trim() || null }),
       ...(contact !== undefined && { contact: contact?.trim() || null }),
       ...(website !== undefined && { website: website?.trim() || null }),
       ...(note !== undefined && { note: note?.trim() || null }),

@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { formatPrice } from "@/lib/utils";
+import { useLocale } from "@/context/LocaleContext";
 
 interface Shelf {
   id: string;
@@ -51,6 +52,7 @@ const toSlug = (name: string) =>
 
 export default function AdminShelvesPage() {
   const { activeShop, shops, isAdmin } = useShopAdmin();
+  const { t } = useLocale();
   const searchParams = useSearchParams();
   const [shopFilter, setShopFilter] = useState<string>(searchParams.get("shopId") ?? "");
   const [shelves, setShelves] = useState<Shelf[]>([]);
@@ -234,7 +236,7 @@ export default function AdminShelvesPage() {
     <div className="p-6 max-w-4xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">🗂️ Product Shelves</h1>
+          <h1 className="text-2xl font-bold text-stone-800">🗂️ {t("shelves", "adminPages")}</h1>
           <div className="flex items-center gap-2 mt-0.5">
             <p className="text-sm text-stone-400">จัดการ shelf แสดงสินค้าบน homepage</p>
             {(isAdmin || shops.length > 1) ? (

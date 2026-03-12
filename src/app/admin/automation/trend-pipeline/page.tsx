@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/context/LocaleContext";
 import { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
 import { useShopAdmin } from "@/context/ShopAdminContext";
@@ -182,7 +183,7 @@ export default function TrendPipelinePage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">Trend Pipeline</h1>
+          <h1 className="text-2xl font-bold text-stone-800">{t("trendPipeline", "adminPages")}</h1>
           <p className="text-sm text-stone-500 mt-1">
             Scrape → Score → Approve → Enrich → Import
             <a href={`https://ads.tiktok.com/business/creativecenter/inspiration/topproducts/pc/${scrapeLang}?region=${scrapeRegion}`} target="_blank" rel="noopener noreferrer"

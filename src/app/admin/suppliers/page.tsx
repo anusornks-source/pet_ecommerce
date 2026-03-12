@@ -1,28 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import toast from "react-hot-toast";
+import { useLocale } from "@/context/LocaleContext";
+
+interface SupplierProduct {
+  id: string;
+  product: { id: string; name: string; name_th: string | null; images: string[] };
+}
 
 interface Supplier {
   id: string;
   name: string;
   nameTh: string | null;
+  imageUrl: string | null;
+  tel: string | null;
+  email: string | null;
   contact: string | null;
   website: string | null;
   note: string | null;
   _count: { products: number };
+  products: SupplierProduct[];
 }
 
-const emptyForm = { name: "", nameTh: "", contact: "", website: "", note: "" };
+const emptyForm = { name: "", nameTh: "", imageUrl: "", tel: "", email: "", contact: "", website: "", note: "" };
 
 export default function AdminSuppliersPage() {
+  const { t } = useLocale();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const loadSuppliers = () => {
     fetch("/api/admin/suppliers")
@@ -53,6 +67,7 @@ export default function AdminSuppliersPage() {
         body: JSON.stringify({
           name: form.name.trim(),
           nameTh: form.nameTh.trim() || null,
+          imageUrl: form.imageUrl.trim() || null,
           contact: form.contact.trim() || null,
           website: form.website.trim() || null,
           note: form.note.trim() || null,
@@ -60,7 +75,7 @@ export default function AdminSuppliersPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(editId ? "อัปเดตแล้ว" : "สร้างซัพพลายเออร์แล้ว");
+        toast.success(editId ? "Updated" : "Supplier created");
         setForm(emptyForm);
         setEditId(null);
         setShowForm(false);
@@ -85,10 +100,28 @@ export default function AdminSuppliersPage() {
     }
   };
 
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const data = await res.json();
+    setUploading(false);
+    if (data.success) {
+      setForm((f) => ({ ...f, imageUrl: data.url }));
+      toast.success("อัปโหลดรูปสำเร็จ");
+    } else {
+      toast.error(data.error ?? "อัปโหลดไม่สำเร็จ");
+    }
+  };
+
   const startEdit = (s: Supplier) => {
     setForm({
       name: s.name,
       nameTh: s.nameTh ?? "",
+      imageUrl: s.imageUrl ?? "",
+      tel: s.tel ?? "",
+      email: s.email ?? "",
       contact: s.contact ?? "",
       website: s.website ?? "",
       note: s.note ?? "",
@@ -101,9 +134,9 @@ export default function AdminSuppliersPage() {
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">ซัพพลายเออร์</h1>
+          <h1 className="text-2xl font-bold text-stone-800">{t("suppliers", "adminPages")}</h1>
           <p className="text-sm text-stone-500 mt-1">
-            จัดการแหล่งซื้อสินค้า และ map สินค้ากับซัพพลายเออร์
+            Manage product sources and map products to suppliers
           </p>
         </div>
         <button
@@ -114,7 +147,7 @@ export default function AdminSuppliersPage() {
           }}
           className="text-sm bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-xl font-medium transition-colors"
         >
-          {showForm ? "ยกเลิก" : "+ เพิ่มซัพพลายเออร์"}
+          {showForm ? "Cancel" : "+ Add Supplier"}
         </button>
       </div>
 
@@ -124,7 +157,7 @@ export default function AdminSuppliersPage() {
           className="bg-white border border-stone-200 rounded-2xl p-6 space-y-4"
         >
           <h2 className="font-bold text-stone-800">
-            {editId ? "แก้ไขซัพพลายเออร์" : "เพิ่มซัพพลายเออร์"}
+            {editId ? "Edit Supplier" : "Add Supplier"}
           </h2>
           <div>
             <label className="block text-xs font-semibold text-stone-600 mb-1">ชื่อ *</label>
@@ -145,13 +178,64 @@ export default function AdminSuppliersPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-stone-600 mb-1">ติดต่อ / ข้อมูล</label>
+            <label className="block text-xs font-semibold text-stone-600 mb-1">รูป</label>
+            <div className="flex items-center gap-3">
+              {form.imageUrl ? (
+                <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-stone-200 shrink-0">
+                  <Image src={form.imageUrl} alt="" fill className="object-cover" sizes="64px" />
+                </div>
+              ) : null}
+              <label className={`flex items-center gap-2 border-2 border-dashed border-stone-200 rounded-xl px-4 py-2.5 cursor-pointer hover:border-teal-300 hover:bg-teal-50/50 transition-colors text-sm text-stone-500 ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
+                />
+                {uploading ? "กำลังอัปโหลด..." : "คลิกเพื่ออัปโหลดรูป"}
+              </label>
+              {form.imageUrl && (
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, imageUrl: "" }))}
+                  className="text-xs text-red-500 hover:text-red-600"
+                >
+                  ลบรูป
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-stone-600 mb-1">เบอร์โทร</label>
+              <input
+                type="tel"
+                value={form.tel}
+                onChange={(e) => setForm((f) => ({ ...f, tel: e.target.value }))}
+                className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+                placeholder="02-xxx-xxxx"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-stone-600 mb-1">อีเมล</label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+                placeholder="supplier@example.com"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-stone-600 mb-1">ติดต่อ / ข้อมูลเพิ่มเติม</label>
             <textarea
               value={form.contact}
               onChange={(e) => setForm((f) => ({ ...f, contact: e.target.value }))}
               rows={2}
               className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 resize-none"
-              placeholder="เบอร์โทร, อีเมล, ลิงก์"
+              placeholder="ข้อมูลติดต่ออื่น ๆ"
             />
           </div>
           <div>
@@ -201,28 +285,40 @@ export default function AdminSuppliersPage() {
       ) : suppliers.length === 0 ? (
         <div className="text-center py-16 bg-stone-50 rounded-2xl border border-stone-100">
           <div className="text-4xl mb-3">🏭</div>
-          <p className="text-stone-500">ยังไม่มีซัพพลายเออร์</p>
-          <p className="text-sm text-stone-400 mt-1">กด &quot;เพิ่มซัพพลายเออร์&quot; เพื่อเริ่มต้น</p>
+          <p className="text-stone-500">No suppliers yet</p>
+          <p className="text-sm text-stone-400 mt-1">Click &quot;Add Supplier&quot; to get started</p>
         </div>
       ) : (
         <div className="grid gap-3">
           {suppliers.map((s) => (
             <div
               key={s.id}
-              className="bg-white border border-stone-200 rounded-xl p-4 flex items-center justify-between hover:border-stone-300 transition-colors"
+              className="bg-white border border-stone-200 rounded-xl p-4 hover:border-stone-300 transition-colors"
             >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-stone-800">{s.name}</span>
-                  {s.nameTh && (
-                    <span className="text-sm text-stone-500">({s.nameTh})</span>
+              <div className="flex items-center gap-4 justify-between">
+                <div className="min-w-0 flex-1 flex items-center gap-3">
+                  {s.imageUrl ? (
+                    <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-stone-100 shrink-0">
+                      <Image src={s.imageUrl} alt="" fill className="object-cover" sizes="48px" />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-stone-100 flex items-center justify-center text-stone-400 text-lg shrink-0">
+                      🏭
+                    </div>
                   )}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-stone-800">{s.name}</span>
+                      {s.nameTh && (
+                        <span className="text-sm text-stone-500">({s.nameTh})</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-stone-400 mt-0.5">
+                      {s._count.products} สินค้า
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-stone-400 mt-0.5">
-                  {s._count.products} สินค้า
-                </p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                 <Link
                   href={`/admin/suppliers/${s.id}`}
                   className="text-sm px-3 py-1.5 rounded-lg bg-teal-50 text-teal-600 hover:bg-teal-100 font-medium"
@@ -241,7 +337,32 @@ export default function AdminSuppliersPage() {
                 >
                   ลบ
                 </button>
+                </div>
               </div>
+              {s.products && s.products.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-stone-100">
+                  {s.products.map((ps) => (
+                    <Link
+                      key={ps.id}
+                      href={`/admin/products/${ps.product.id}`}
+                      className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-stone-50 hover:bg-stone-100 border border-stone-100 transition-colors group shrink-0"
+                    >
+                      {ps.product.images?.[0] ? (
+                        <div className="relative w-8 h-8 rounded overflow-hidden shrink-0">
+                          <Image src={ps.product.images[0]} alt="" fill className="object-cover" sizes="32px" />
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 rounded bg-stone-200 flex items-center justify-center text-stone-400 text-xs shrink-0">
+                          —
+                        </div>
+                      )}
+                      <span className="text-xs text-stone-600 group-hover:text-teal-600 truncate max-w-28" title={ps.product.name_th ?? ps.product.name}>
+                        {ps.product.name_th ?? ps.product.name}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>

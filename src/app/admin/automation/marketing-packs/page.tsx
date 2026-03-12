@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useLocale } from "@/context/LocaleContext";
 import Image from "next/image";
 import toast from "react-hot-toast";
 
@@ -507,6 +508,7 @@ function PackCard({
 
 export default function MarketingPacksPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const searchParams = useSearchParams();
   const filterProductId = searchParams.get("productId") ?? "";
   const [packs, setPacks] = useState<PackSummary[]>([]);
@@ -638,7 +640,7 @@ export default function MarketingPacksPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-stone-800">Marketing Packs</h1>
+            <h1 className="text-2xl font-bold text-stone-800">{t("marketingPacks", "adminPages")}</h1>
             <p className="text-sm text-stone-500 mt-1">{packs.length} packs</p>
           </div>
           <div className="flex gap-2">

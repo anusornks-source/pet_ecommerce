@@ -2,6 +2,7 @@ import { use, Suspense } from "react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import ArticleForm from "../ArticleForm";
+import AdminPageTitle from "@/components/admin/AdminPageTitle";
 
 export default async function EditArticlePage({
   params,
@@ -15,7 +16,7 @@ export default async function EditArticlePage({
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-stone-800 mb-6">แก้ไขบทความ</h1>
+      <AdminPageTitle keyName="editArticle" className="text-2xl font-bold text-stone-800 mb-6" />
       <div className="bg-white rounded-2xl border border-stone-100 p-6">
         <Suspense>
         <ArticleForm

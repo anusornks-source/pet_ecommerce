@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import MarketingAssetsSection from "@/components/admin/MarketingAssetsSection";
+import { useLocale } from "@/context/LocaleContext";
 
 function AutoTextarea({ value, onChange, className, minHeight = 72 }: { value: string; onChange: (v: string) => void; className?: string; minHeight?: number }) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -326,6 +327,7 @@ function RawToggle({ raw }: { label: string; raw: string | null }) {
 export default function MarketingPackDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { t } = useLocale();
   const [pack, setPack] = useState<Pack | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -432,7 +434,7 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
           >
             ← Marketing Packs
           </button>
-          <h1 className="text-2xl font-bold text-stone-800">Marketing Pack</h1>
+          <h1 className="text-2xl font-bold text-stone-800">{t("marketingPack", "adminPages")}</h1>
           <p className="text-sm text-stone-500 mt-1">
             {pack.productName}
             {pack.product.name_th && pack.product.name_th !== pack.productName && ` · ${pack.product.name_th}`}

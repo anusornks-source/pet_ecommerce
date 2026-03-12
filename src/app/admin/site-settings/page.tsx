@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import { useLocale } from "@/context/LocaleContext";
 
 export default function SiteSettingsPage() {
+  const { t } = useLocale();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -73,7 +75,7 @@ export default function SiteSettingsPage() {
   return (
     <div className="max-w-3xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-stone-800">Site Settings (CartNova)</h1>
+        <h1 className="text-2xl font-bold text-stone-800">{t("siteSettings", "adminPages")}</h1>
         <p className="text-sm text-stone-500 mt-0.5">
           ตั้งค่าหน้า Home ของแพลตฟอร์ม CartNova เช่น Hero banner กลาง
         </p>

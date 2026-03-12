@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import toast from "react-hot-toast";
+import { useLocale } from "@/context/LocaleContext";
 
 interface User {
   id: string;
@@ -16,6 +17,7 @@ interface User {
 }
 
 export default function AdminUsersPage() {
+  const { t } = useLocale();
   const [users, setUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -134,7 +136,7 @@ export default function AdminUsersPage() {
     <div>
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">ผู้ใช้งาน</h1>
+          <h1 className="text-2xl font-bold text-stone-800">{t("users", "adminPages")}</h1>
           <p className="text-stone-500 text-sm mt-1">{total.toLocaleString()} คน</p>
         </div>
         <button onClick={() => { setShowForm(!showForm); setEditingUser(null); }} className="btn-primary px-4 py-2 text-sm">

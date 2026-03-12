@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/context/LocaleContext";
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useShopAdmin } from "@/context/ShopAdminContext";
@@ -20,6 +21,7 @@ interface Article {
 
 export default function AdminArticlesPage() {
   const { activeShop, shops, isAdmin } = useShopAdmin();
+  const { t } = useLocale();
   const searchParams = useSearchParams();
   const [shopFilter, setShopFilter] = useState<string>(searchParams.get("shopId") ?? "");
   const [articles, setArticles] = useState<Article[]>([]);
@@ -87,7 +89,7 @@ export default function AdminArticlesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">บทความ</h1>
+          <h1 className="text-2xl font-bold text-stone-800">{t("articles", "adminPages")}</h1>
           <div className="flex items-center gap-2 mt-0.5">
             <p className="text-sm text-stone-500">{total.toLocaleString()} บทความ</p>
             {(isAdmin || shops.length > 1) ? (

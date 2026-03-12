@@ -4,6 +4,7 @@ import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import MarketingAssetsSection from "@/components/admin/MarketingAssetsSection";
+import { useLocale } from "@/context/LocaleContext";
 import toast from "react-hot-toast";
 import {
   DndContext,
@@ -113,6 +114,7 @@ interface ProductDetail {
 
 export default function ProductViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const { t } = useLocale();
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [addingAll, setAddingAll] = useState(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
@@ -231,7 +233,7 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
           <Link href={`/admin/products/${id}`} className="text-stone-400 hover:text-stone-600">
             แก้ไข
           </Link>
-          <h1 className="text-2xl font-bold text-stone-800">รายละเอียดสินค้า: {product.name_th ?? product.name}</h1>
+          <h1 className="text-2xl font-bold text-stone-800">{t("productDetail", "adminPages")}: {product.name_th ?? product.name}</h1>
         </div>
         <button
           onClick={handleAddAllToMarketingAssets}

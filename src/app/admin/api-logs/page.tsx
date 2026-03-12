@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useLocale } from "@/context/LocaleContext";
 
 interface ApiLog {
   id: string;
@@ -88,7 +89,7 @@ export default function ApiLogsPage() {
     <div className="p-6 max-w-6xl mx-auto space-y-5">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">🗂️ API & Webhook Logs</h1>
+          <h1 className="text-2xl font-bold text-stone-800">🗂️ {t("apiLogs", "adminPages")}</h1>
           <p className="text-sm text-stone-400 mt-1">
             ประวัติการเรียก API และ Webhook ทั้งหมด ({total.toLocaleString()} รายการ)
           </p>

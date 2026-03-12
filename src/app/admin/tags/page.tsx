@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { useLocale } from "@/context/LocaleContext";
 import { Tag } from "@/types";
 
 const TAG_COLORS: Record<string, string> = {
@@ -52,6 +53,7 @@ interface TagForm { name: string; nameEn: string; slug: string; color: string; i
 const emptyForm: TagForm = { name: "", nameEn: "", slug: "", color: "orange", icon: "" };
 
 export default function AdminTagsPage() {
+  const { t } = useLocale();
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<TagForm>(emptyForm);
@@ -161,7 +163,7 @@ export default function AdminTagsPage() {
   return (
     <div>
       <div className="mb-5 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-stone-800">🏷️ จัดการ Tags</h1>
+        <h1 className="text-xl font-bold text-stone-800">🏷️ {t("tags", "adminPages")}</h1>
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}

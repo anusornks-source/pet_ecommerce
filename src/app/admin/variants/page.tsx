@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useShopAdmin } from "@/context/ShopAdminContext";
+import { useLocale } from "@/context/LocaleContext";
 import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -140,7 +141,7 @@ export default function AdminVariantsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-stone-800">Variants</h1>
+          <h1 className="text-xl font-bold text-stone-800">{t("variants", "adminPages")}</h1>
           <div className="flex items-center gap-2 mt-0.5">
             <p className="text-sm text-stone-500">รายการ variant ทั้งหมด {total > 0 && `(${total.toLocaleString()} รายการ)`}</p>
             {(isAdmin || shops.length > 1) ? (

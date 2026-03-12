@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useShopAdmin } from "@/context/ShopAdminContext";
+import { useLocale } from "@/context/LocaleContext";
 import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -114,6 +115,7 @@ function formatDate(iso: string) {
 
 export default function AdminProductsPage() {
   const { activeShop, shops, isAdmin } = useShopAdmin();
+  const { t } = useLocale();
   const searchParams = useSearchParams();
   const urlShopId = searchParams.get("shopId") || "";
   const [shopFilter, setShopFilter] = useState<string>("");  // "" = use cookie/URL, "all" = all shops, shopId = specific
@@ -349,7 +351,7 @@ export default function AdminProductsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">สินค้า</h1>
+          <h1 className="text-2xl font-bold text-stone-800">{t("products", "adminPages")}</h1>
           <div className="flex items-center gap-2 mt-1">
             <p className="text-stone-500 text-sm">{total.toLocaleString()} รายการ</p>
             {(isAdmin || shops.length > 1) ? (

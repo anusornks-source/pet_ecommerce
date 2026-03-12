@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useShopAdmin } from "@/context/ShopAdminContext";
+import { useLocale } from "@/context/LocaleContext";
 import { formatPrice } from "@/lib/utils";
 
 interface Coupon {
@@ -26,6 +27,7 @@ const empty = {
 
 export default function AdminCouponsPage() {
   const { activeShop, shops, isAdmin, setActiveShopId } = useShopAdmin();
+  const { t } = useLocale();
   const searchParams = useSearchParams();
   const urlShopId = searchParams.get("shopId") || "";
   const [shopFilter, setShopFilter] = useState<string>(urlShopId || "");
@@ -121,7 +123,7 @@ export default function AdminCouponsPage() {
     <div className="p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">คูปองส่วนลด</h1>
+          <h1 className="text-2xl font-bold text-stone-800">{t("coupons", "adminPages")}</h1>
           {(isAdmin || shops.length > 1) && (
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-sm text-stone-500">ร้าน:</span>

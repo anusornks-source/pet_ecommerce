@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/context/LocaleContext";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -296,7 +297,7 @@ export default function NicheKeywordsPage() {
     <div className="max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">Niche Keyword Bank</h1>
+          <h1 className="text-2xl font-bold text-stone-800">{t("nicheKeywords", "adminPages")}</h1>
           <p className="text-sm text-stone-500 mt-1">Saved niche keywords for research</p>
         </div>
         <div className="flex items-center gap-2">

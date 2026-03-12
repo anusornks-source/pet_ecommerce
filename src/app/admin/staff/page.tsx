@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useShopAdmin } from "@/context/ShopAdminContext";
+import { useLocale } from "@/context/LocaleContext";
 import toast from "react-hot-toast";
 
 interface Member {
@@ -14,6 +15,7 @@ interface Member {
 
 export default function StaffPage() {
   const { activeShop, shops, isAdmin } = useShopAdmin();
+  const { t } = useLocale();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -138,7 +140,7 @@ export default function StaffPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
-        <h1 className="text-2xl font-bold text-stone-800">Staff Management</h1>
+        <h1 className="text-2xl font-bold text-stone-800">{t("staff", "adminPages")}</h1>
         {(isAdmin || shops.length > 1) && (
           <select
             value={selectedShopId}
@@ -155,7 +157,7 @@ export default function StaffPage() {
 
       {/* Add Member */}
       <div className="bg-white rounded-2xl border border-stone-100 p-5 mb-6">
-        <h2 className="font-semibold text-stone-800 mb-3">Add Member</h2>
+        <h2 className="font-semibold text-stone-800 mb-3">{t("addMember", "adminLabels")}</h2>
         <div className="space-y-3">
           <div className="flex gap-3 items-end flex-wrap">
             <div className="flex-1 min-w-48">

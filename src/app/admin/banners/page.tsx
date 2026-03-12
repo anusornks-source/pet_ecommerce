@@ -20,6 +20,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useLocale } from "@/context/LocaleContext";
 
 interface Banner {
   id: string;
@@ -167,6 +168,7 @@ function SortableBannerCard({
 
 export default function AdminBannersPage() {
   const { activeShop, shops, isAdmin } = useShopAdmin();
+  const { t } = useLocale();
   const searchParams = useSearchParams();
   const urlShopId = searchParams.get("shopId") || "";
   const [shopFilter, setShopFilter] = useState<string>("");
@@ -449,7 +451,7 @@ export default function AdminBannersPage() {
     <div>
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-stone-800">🖼️ Hero Banner</h1>
+          <h1 className="text-xl font-bold text-stone-800">🖼️ {t("heroBanner", "adminPages")}</h1>
           <div className="flex items-center gap-2 mt-0.5">
             {(isAdmin || shops.length > 1) ? (
               <select

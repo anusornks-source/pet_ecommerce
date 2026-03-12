@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useShopAdmin } from "@/context/ShopAdminContext";
+import { useLocale } from "@/context/LocaleContext";
 import Image from "next/image";
 
 interface CartItem {
@@ -103,7 +104,7 @@ export default function AbandonedCartsPage() {
     <div>
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-stone-800">🛒 Abandoned Carts</h1>
+          <h1 className="text-xl font-bold text-stone-800">🛒 {t("abandonedCarts", "adminPages")}</h1>
           <p className="text-xs text-stone-400 mt-0.5">ตะกร้าที่มีสินค้าแต่ยังไม่สั่งซื้อ</p>
         </div>
         {(isAdmin || shops.length > 1) && (

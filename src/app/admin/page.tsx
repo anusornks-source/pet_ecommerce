@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useShopAdmin } from "@/context/ShopAdminContext";
+import { useLocale } from "@/context/LocaleContext";
 import { PAYMENT_METHOD_LABEL } from "@/lib/utils";
 
 interface RecentOrder {
@@ -47,6 +48,7 @@ const paymentStatusConfig: Record<string, { label: string; icon: string; color: 
 
 export default function AdminDashboard() {
   const { activeShop, shops, isAdmin } = useShopAdmin();
+  const { t } = useLocale();
   const [shopFilter, setShopFilter] = useState<string>("");
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -108,7 +110,7 @@ export default function AdminDashboard() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
-        <h1 className="text-2xl font-bold text-stone-800">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-stone-800">{t("dashboard", "adminPages")}</h1>
         {(isAdmin || shops.length > 1) ? (
           <select
             value={shopFilter}

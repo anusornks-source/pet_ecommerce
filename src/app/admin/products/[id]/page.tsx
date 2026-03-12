@@ -1,12 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import ProductForm from "../ProductForm";
 import { useShopAdmin } from "@/context/ShopAdminContext";
+import { useLocale } from "@/context/LocaleContext";
 import toast from "react-hot-toast";
+
+interface SupplierForAdd {
+  id: string;
+  name: string;
+  nameTh: string | null;
+  imageUrl: string | null;
+  tel: string | null;
+  email: string | null;
+  contact: string | null;
+  website: string | null;
+  note: string | null;
+  _count: { products: number };
+}
 
 interface PackSummary {
   id: string;
@@ -65,6 +80,7 @@ export default function EditProductPage({
   const { id } = use(params);
   const router = useRouter();
   const { activeShop, shops } = useShopAdmin();
+  const { t } = useLocale();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -73,8 +89,13 @@ export default function EditProductPage({
   const [addingAll, setAddingAll] = useState(false);
   const [packs, setPacks] = useState<PackSummary[]>([]);
   const [packsLoading, setPacksLoading] = useState(true);
-  const [supplierLinks, setSupplierLinks] = useState<{ id: string; supplier: { id: string; name: string; nameTh: string | null } }[]>([]);
+  const [supplierLinks, setSupplierLinks] = useState<{ id: string; supplier: { id: string; name: string; nameTh: string | null; imageUrl: string | null; tel: string | null; email: string | null; contact: string | null } }[]>([]);
   const [suppliersLoading, setSuppliersLoading] = useState(true);
+  const [showAddSupplier, setShowAddSupplier] = useState(false);
+  const [allSuppliers, setAllSuppliers] = useState<SupplierForAdd[]>([]);
+  const [addSupplierSearch, setAddSupplierSearch] = useState("");
+  const [addingSupplierId, setAddingSupplierId] = useState<string | null>(null);
+  const [removingSupplierId, setRemovingSupplierId] = useState<string | null>(null);
 
   const handleDuplicate = async () => {
     if (!product) return;
@@ -177,6 +198,70 @@ export default function EditProductPage({
       .finally(() => setSuppliersLoading(false));
   }, [id]);
 
+  const loadSuppliersForAdd = () => {
+    fetch("/api/admin/suppliers")
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setAllSuppliers(d.data); });
+  };
+
+  const availableSuppliers = useMemo(() => {
+    const notLinked = allSuppliers.filter((s) => !supplierLinks.some((l) => l.supplier.id === s.id));
+    if (!addSupplierSearch.trim()) return notLinked;
+    const q = addSupplierSearch.trim().toLowerCase();
+    return notLinked.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        (s.nameTh?.toLowerCase().includes(q) ?? false) ||
+        (s.contact?.toLowerCase().includes(q) ?? false) ||
+        (s.website?.toLowerCase().includes(q) ?? false)
+    );
+  }, [allSuppliers, supplierLinks, addSupplierSearch]);
+
+  const handleAddSupplier = async (supplierId: string) => {
+    setAddingSupplierId(supplierId);
+    try {
+      const res = await fetch(`/api/admin/suppliers/${supplierId}/products`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Added supplier");
+        setShowAddSupplier(false);
+        setAddSupplierSearch("");
+        fetch(`/api/admin/product-suppliers?productId=${id}`)
+          .then((r) => r.json())
+          .then((d) => { if (d.success) setSupplierLinks(d.data); });
+      } else {
+        toast.error(data.error ?? "Failed");
+      }
+    } catch {
+      toast.error("Failed");
+    } finally {
+      setAddingSupplierId(null);
+    }
+  };
+
+  const handleRemoveSupplier = async (supplierId: string, supplierName: string) => {
+    if (!confirm(`ยืนยันลบ ${supplierName} ออกจากสินค้านี้?`)) return;
+    setRemovingSupplierId(supplierId);
+    try {
+      const res = await fetch(`/api/admin/suppliers/${supplierId}/products/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("ลบ supplier ออกจากสินค้าแล้ว");
+        setSupplierLinks((prev) => prev.filter((l) => l.supplier.id !== supplierId));
+      } else {
+        toast.error(data.error ?? "ลบไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("ลบไม่สำเร็จ");
+    } finally {
+      setRemovingSupplierId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -205,7 +290,7 @@ export default function EditProductPage({
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-stone-800">แก้ไขสินค้า</h1>
+            <h1 className="text-2xl font-bold text-stone-800">{t("editProduct", "adminPages")}</h1>
             <Link
               href={`/admin/products/${id}/view`}
               className="text-sm text-stone-500 hover:text-stone-800 border border-stone-200 rounded-xl px-3 py-1.5 transition-colors"
@@ -317,41 +402,136 @@ export default function EditProductPage({
       <div className="bg-white rounded-2xl border border-stone-100 p-6 max-w-6xl">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="font-semibold text-stone-800">ซัพพลายเออร์</h2>
+            <h2 className="font-semibold text-stone-800">Suppliers</h2>
             <p className="text-xs text-stone-400 mt-0.5">
-              {suppliersLoading ? "..." : `ซื้อได้จาก ${supplierLinks.length} แหล่ง`}
+              {suppliersLoading ? "..." : `Available from ${supplierLinks.length} supplier(s)`}
             </p>
           </div>
-          <Link
-            href="/admin/suppliers"
-            className="text-xs px-3 py-1.5 rounded-lg border border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100 transition-colors font-medium"
+          <button
+            type="button"
+            onClick={() => { setShowAddSupplier(true); loadSuppliersForAdd(); }}
+            className="text-xs px-3 py-1.5 rounded-lg border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors font-medium"
           >
-            จัดการซัพพลายเออร์
-          </Link>
+            + Add Supplier
+          </button>
         </div>
         {suppliersLoading ? (
           <div className="text-xs text-stone-400">กำลังโหลด...</div>
         ) : supplierLinks.length === 0 ? (
           <div className="text-xs text-stone-400 py-2">
-            ยังไม่มีซัพพลายเออร์ — ไปที่หน้าซัพพลายเออร์เพื่อ map สินค้า
+            No suppliers yet — go to Suppliers page to map products
           </div>
         ) : (
           <div className="space-y-2">
             {supplierLinks.map((link) => (
-              <Link
+              <div
                 key={link.id}
-                href={`/admin/suppliers/${link.supplier.id}`}
                 className="flex items-center gap-3 p-3 rounded-xl border border-stone-100 hover:border-teal-200 hover:bg-teal-50 transition-colors group"
               >
-                <span className="text-sm font-medium text-stone-700">
-                  {link.supplier.name}
-                  {link.supplier.nameTh && (
-                    <span className="text-stone-400 ml-1">({link.supplier.nameTh})</span>
+                {link.supplier.imageUrl ? (
+                  <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-stone-100 shrink-0">
+                    <Image src={link.supplier.imageUrl} alt="" fill className="object-cover" sizes="32px" />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center text-stone-400 text-sm shrink-0">
+                    🏭
+                  </div>
+                )}
+                <Link
+                  href={`/admin/suppliers/${link.supplier.id}`}
+                  className="flex-1 min-w-0 flex flex-col gap-0.5"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-stone-700">
+                      {link.supplier.name}
+                      {link.supplier.nameTh && (
+                        <span className="text-stone-400 ml-1">({link.supplier.nameTh})</span>
+                      )}
+                    </span>
+                    <span className="text-stone-300 group-hover:text-teal-400 text-xs">→</span>
+                  </div>
+                  {(link.supplier.tel || link.supplier.email) && (
+                    <span className="text-xs text-stone-500">
+                      {[link.supplier.tel && `📞 ${link.supplier.tel}`, link.supplier.email && `✉️ ${link.supplier.email}`].filter(Boolean).join(" · ")}
+                    </span>
                   )}
-                </span>
-                <span className="text-stone-300 group-hover:text-teal-400 text-xs">→</span>
-              </Link>
+                </Link>
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); handleRemoveSupplier(link.supplier.id, link.supplier.nameTh ?? link.supplier.name); }}
+                  disabled={removingSupplierId === link.supplier.id}
+                  className="text-xs px-2.5 py-1 rounded-lg text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors disabled:opacity-50 shrink-0"
+                >
+                  {removingSupplierId === link.supplier.id ? "กำลังลบ..." : "Remove"}
+                </button>
+              </div>
             ))}
+          </div>
+        )}
+
+        {showAddSupplier && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => { setShowAddSupplier(false); setAddSupplierSearch(""); }}>
+            <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+              <div className="p-4 border-b border-stone-100 flex items-center justify-between shrink-0">
+                <h3 className="font-semibold text-stone-800">Add Supplier</h3>
+                <button type="button" onClick={() => { setShowAddSupplier(false); setAddSupplierSearch(""); }} className="w-8 h-8 rounded-lg hover:bg-stone-100 text-stone-500 flex items-center justify-center">✕</button>
+              </div>
+              <div className="p-4 border-b border-stone-100 shrink-0">
+                <input
+                  type="text"
+                  value={addSupplierSearch}
+                  onChange={(e) => setAddSupplierSearch(e.target.value)}
+                  placeholder="ค้นหาชื่อ, ชื่อไทย, ติดต่อ, เว็บไซต์..."
+                  className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 placeholder:text-stone-400"
+                />
+              </div>
+              <div className="p-4 overflow-y-auto flex-1 min-h-0">
+                {allSuppliers.length === 0 ? (
+                  <p className="text-sm text-stone-400">No suppliers. Create one in Suppliers page.</p>
+                ) : availableSuppliers.length === 0 ? (
+                  <p className="text-sm text-stone-400">
+                    {addSupplierSearch.trim() ? "ไม่พบ supplier ตามคำค้น" : "Product is already linked to all suppliers."}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {availableSuppliers.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => handleAddSupplier(s.id)}
+                        disabled={addingSupplierId === s.id}
+                        className="w-full text-left flex items-center gap-3 p-3 rounded-xl border border-stone-100 hover:border-teal-200 hover:bg-teal-50/50 transition-colors disabled:opacity-50 group"
+                      >
+                        {s.imageUrl ? (
+                          <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-stone-100 shrink-0">
+                            <Image src={s.imageUrl} alt="" fill className="object-cover" sizes="48px" />
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-stone-100 flex items-center justify-center text-stone-400 text-lg shrink-0">
+                            🏭
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-stone-800">
+                            {s.name}
+                            {s.nameTh && <span className="text-stone-500 font-normal ml-1">({s.nameTh})</span>}
+                          </div>
+                          {(s.tel || s.email || s.website) && (
+                            <p className="text-xs text-stone-500 mt-0.5 truncate">
+                              {[s.tel && `📞 ${s.tel}`, s.email && `✉️ ${s.email}`, s.website].filter(Boolean).join(" · ")}
+                            </p>
+                          )}
+                          <p className="text-xs text-stone-400 mt-0.5">{s._count.products} สินค้า</p>
+                        </div>
+                        <span className="text-teal-600 text-sm font-medium group-hover:text-teal-700 shrink-0">
+                          {addingSupplierId === s.id ? "Adding..." : "+ Add"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>

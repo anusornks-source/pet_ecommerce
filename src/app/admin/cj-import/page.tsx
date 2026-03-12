@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { useShopAdmin } from "@/context/ShopAdminContext";
+import { useLocale } from "@/context/LocaleContext";
 
 interface CJItem {
   pid: string;
@@ -41,6 +42,7 @@ interface PetType { id: string; name: string; slug: string; icon: string | null 
 
 export default function CJImportPage() {
   const { activeShop, shops } = useShopAdmin();
+  const { t } = useLocale();
   const [selectedShopId, setSelectedShopId] = useState<string>("");
   const selectedShop = shops.find((s) => s.id === selectedShopId) ?? activeShop;
 
@@ -255,7 +257,7 @@ export default function CJImportPage() {
     <div>
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">นำเข้าสินค้าจาก CJ</h1>
+          <h1 className="text-2xl font-bold text-stone-800">{t("importCj", "adminPages")}</h1>
           {shops.length > 1 && (
             <div className="flex items-center gap-2 mt-1">
               <span className="text-xs text-stone-500">นำเข้าไปยัง:</span>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useShopAdmin } from "@/context/ShopAdminContext";
+import { useLocale } from "@/context/LocaleContext";
 import {
   AreaChart,
   Area,
@@ -113,6 +114,7 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
 
 export default function AnalyticsPage() {
   const { activeShop, shops, isAdmin } = useShopAdmin();
+  const { t } = useLocale();
   const [shopFilter, setShopFilter] = useState<string>("");
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -154,7 +156,7 @@ export default function AnalyticsPage() {
     <div>
       <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">Analytics</h1>
+          <h1 className="text-2xl font-bold text-stone-800">{t("analytics", "adminPages")}</h1>
           <p className="text-stone-500 text-sm mt-0.5">ข้อมูล 30 วันย้อนหลัง</p>
         </div>
         {(isAdmin || shops.length > 1) ? (

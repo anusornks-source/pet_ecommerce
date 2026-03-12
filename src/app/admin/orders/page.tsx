@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { PAYMENT_METHOD_LABEL } from "@/lib/utils";
+import { useLocale } from "@/context/LocaleContext";
 
 interface Order {
   id: string;
@@ -13,6 +14,7 @@ interface Order {
   address: string;
   city: string | null;
   province: string | null;
+  zipCode: string | null;
   note: string | null;
   statusHistory: { status: string; timestamp: string }[] | null;
   cjOrderId: string | null;
@@ -46,6 +48,7 @@ const orderStatusTabs = ["ทั้งหมด", "PENDING", "CONFIRMED", "SHIPP
 const paymentStatusTabs = ["ทั้งหมด", "PENDING", "PAID", "REFUNDED", "FAILED"];
 
 export default function AdminOrdersPage() {
+  const { t } = useLocale();
   const [orders, setOrders] = useState<Order[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -93,7 +96,7 @@ export default function AdminOrdersPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-stone-800">คำสั่งซื้อ</h1>
+        <h1 className="text-2xl font-bold text-stone-800">{t("orders", "adminPages")}</h1>
         <p className="text-stone-500 text-sm mt-1">{total.toLocaleString()} รายการ</p>
       </div>
 
@@ -198,7 +201,7 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-stone-100 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-stone-100 overflow-x-auto overflow-y-hidden">
         {loading ? (
           <div className="text-center py-16 text-stone-400 text-sm">กำลังโหลด...</div>
         ) : orders.length === 0 ? (
@@ -208,6 +211,7 @@ export default function AdminOrdersPage() {
             <thead>
               <tr className="border-b border-stone-100 bg-stone-50">
                 <th className="text-left px-4 py-3 text-stone-500 font-medium">ลูกค้า</th>
+                <th className="text-left px-4 py-3 text-stone-500 font-medium">ที่อยู่</th>
                 <th className="text-left px-4 py-3 text-stone-500 font-medium hidden sm:table-cell">สินค้า</th>
                 <th className="text-right px-4 py-3 text-stone-500 font-medium">ยอดรวม</th>
                 <th className="text-center px-4 py-3 text-stone-500 font-medium">สถานะ</th>
@@ -219,13 +223,40 @@ export default function AdminOrdersPage() {
             <tbody className="divide-y divide-stone-50">
               {orders.map((order) => (
                 <tr key={order.id} className="hover:bg-stone-50 transition-colors">
-                  <td className="px-4 py-3 min-w-36">
+                  <td className="px-4 py-3 min-w-32">
                     <p className="font-medium text-stone-800 text-sm">{order.user.name}</p>
                     <p className="text-xs text-stone-400">{order.user.email}</p>
-                    <p className="text-xs text-stone-500 mt-0.5">📞 {order.phone}</p>
-                    {order.province && <p className="text-xs text-stone-400">📍 {order.city ? `${order.city}, ` : ""}{order.province}</p>}
-                    {order.note && <p className="text-[10px] text-amber-600 mt-0.5 truncate max-w-36">📝 {order.note}</p>}
                     <p className="text-[10px] font-mono text-stone-300 select-all mt-0.5">#{order.id.slice(-8)}</p>
+                  </td>
+                  <td className="px-4 py-3 min-w-44 max-w-64 align-top">
+                    <div className="text-[11px] leading-snug text-stone-600 space-y-0.5">
+                      {(order.zipCode || order.address) ? (
+                        <a
+                          href={
+                            order.zipCode
+                              ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`รหัสไปรษณีย์ ${order.zipCode} ประเทศไทย`)}`
+                              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([order.address, order.city, order.province].filter(Boolean).join(" "))}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block hover:bg-stone-50 rounded px-1 -mx-1 py-0.5 -my-0.5 transition-colors cursor-pointer group"
+                          title="ดูแผนที่"
+                        >
+                          <p className="whitespace-pre-wrap break-words group-hover:text-orange-600">{order.address}</p>
+                          <p className="text-stone-500 group-hover:text-orange-500">
+                            {[order.city, order.province].filter(Boolean).join(" ")}
+                            {order.zipCode && ` ${order.zipCode}`}
+                          </p>
+                        </a>
+                      ) : (
+                        <>
+                          <p className="whitespace-pre-wrap break-words">{order.address}</p>
+                          <p className="text-stone-500">{[order.city, order.province].filter(Boolean).join(" ")}</p>
+                        </>
+                      )}
+                      <p>📞 {order.phone}</p>
+                      {order.note && <p className="text-amber-600">📝 {order.note}</p>}
+                    </div>
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell max-w-xs">
                     {(() => {

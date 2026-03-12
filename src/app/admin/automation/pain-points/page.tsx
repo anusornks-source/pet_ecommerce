@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { useShopAdmin } from "@/context/ShopAdminContext";
+import { useLocale } from "@/context/LocaleContext";
 
 interface NicheKeywordRef {
   id: string;
@@ -36,6 +37,7 @@ const SEVERITY_CFG: Record<string, { label: string; color: string }> = {
 
 export default function PainPointBankPage() {
   const { activeShop } = useShopAdmin();
+  const { t } = useLocale();
   const router = useRouter();
   const [items, setItems] = useState<PainPointBank[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,7 +105,7 @@ export default function PainPointBankPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">Pain Point Bank</h1>
+          <h1 className="text-2xl font-bold text-stone-800">{t("painPointBank", "adminPages")}</h1>
           <p className="text-sm text-stone-500 mt-1">{items.length} pain points</p>
         </div>
         <div className="flex gap-2">

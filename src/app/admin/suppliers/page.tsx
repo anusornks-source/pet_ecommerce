@@ -356,8 +356,18 @@ export default function AdminSuppliersPage() {
                     {s._count.supplierProducts} สินค้า Supplier · {s._count.products} Import แล้ว
                   </p>
                   {(s.tel || s.email || s.contact) && (
-                    <p className="text-xs text-stone-500 mt-1 truncate" title={[s.tel && `📞 ${s.tel}`, s.email && `✉️ ${s.email}`, s.contact].filter(Boolean).join(" · ")}>
-                      {[s.tel && `📞 ${s.tel}`, s.email && `✉️ ${s.email}`, s.contact].filter(Boolean).join(" · ")}
+                    <p className="text-xs text-stone-500 mt-1 flex flex-wrap gap-x-2 gap-y-0.5" title={[s.tel && `📞 ${s.tel}`, s.email && `✉️ ${s.email}`, s.contact].filter(Boolean).join(" · ")}>
+                      {s.tel && (
+                        <a href={`tel:${s.tel.replace(/\s/g, "")}`} className="text-teal-600 hover:text-teal-700 hover:underline">
+                          📞 {s.tel}
+                        </a>
+                      )}
+                      {s.email && (
+                        <a href={`mailto:${s.email}`} className="text-teal-600 hover:text-teal-700 hover:underline">
+                          ✉️ {s.email}
+                        </a>
+                      )}
+                      {s.contact && <span>{s.contact}</span>}
                     </p>
                   )}
                 </div>

@@ -81,13 +81,12 @@ export async function syncProductImagesToMarketingAssets(
   const results = await Promise.allSettled(
     toCreate.map(async (url) => {
       const meta = await fetchImageMetadata(url);
-      const filename = meta ? extractFilenameFromUrl(url) : null;
       return {
         url,
         type: MarketingAssetType.IMAGE,
         productId,
         shopId,
-        filename,
+        filename: null,
         contentType: meta?.contentType ?? null,
         sizeBytes: meta?.sizeBytes ?? null,
         width: meta?.width ?? null,

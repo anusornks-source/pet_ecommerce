@@ -12,16 +12,20 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { note } = body;
+  const { note, name } = body;
 
   const asset = await prisma.marketingAsset.findUnique({ where: { id } });
   if (!asset) {
     return NextResponse.json({ success: false, error: "Asset not found" }, { status: 404 });
   }
 
+  const data: { note?: string | null; name?: string | null } = {};
+  if (note !== undefined) data.note = note === "" ? null : String(note);
+  if (name !== undefined) data.name = name === "" ? null : String(name);
+
   const updated = await prisma.marketingAsset.update({
     where: { id },
-    data: { ...(note !== undefined && { note: note === "" ? null : String(note) }) },
+    data,
   });
   return NextResponse.json({ success: true, data: updated });
 }

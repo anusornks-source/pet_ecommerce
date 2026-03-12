@@ -26,6 +26,7 @@ interface MarketingAsset {
   id: string;
   url: string;
   type: string;
+  name: string | null;
   filename: string | null;
   contentType: string | null;
   sizeBytes: number | null;
@@ -84,19 +85,6 @@ function getExtensionFromUrl(url: string): string {
   }
 }
 
-function useDebouncedCallback<A extends unknown[]>(fn: (...args: A) => void, delay: number) {
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const fnRef = useRef(fn);
-  fnRef.current = fn;
-  return useCallback(
-    (...args: A) => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      timeoutRef.current = setTimeout(() => fnRef.current(...args), delay);
-    },
-    [delay]
-  );
-}
-
 const SortableAssetCard = memo(function SortableAssetCard({
   asset,
   productId,
@@ -111,7 +99,7 @@ const SortableAssetCard = memo(function SortableAssetCard({
   onRemoveFromProductVideos,
   onDelete,
   deletingId,
-  onNoteSave,
+  onSave,
   onAiGenClick,
 }: {
   asset: MarketingAsset;
@@ -127,7 +115,7 @@ const SortableAssetCard = memo(function SortableAssetCard({
   onRemoveFromProductVideos: (url: string) => void;
   onDelete: (id: string) => void;
   deletingId: string | null;
-  onNoteSave: (id: string, note: string) => void;
+  onSave: (id: string, name: string, note: string) => Promise<void>;
   onAiGenClick?: (imageUrl: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: asset.id });
@@ -139,16 +127,33 @@ const SortableAssetCard = memo(function SortableAssetCard({
     zIndex: isDragging ? 1 : undefined,
     contain: "layout",
   };
+  const [localName, setLocalName] = useState(asset.name ?? "");
   const [localNote, setLocalNote] = useState(asset.note ?? "");
-  const debouncedSave = useDebouncedCallback((id: string, note: string) => onNoteSave(id, note), 500);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    setLocalName(asset.name ?? "");
+  }, [asset.name]);
   useEffect(() => {
     setLocalNote(asset.note ?? "");
   }, [asset.note]);
 
-  const handleNoteChange = (value: string) => {
-    setLocalNote(value);
-    debouncedSave(asset.id, value);
+  const hasChanges = localName !== (asset.name ?? "") || localNote !== (asset.note ?? "");
+  const handleSave = async () => {
+    if (!hasChanges) return;
+    setSaving(true);
+    try {
+      await onSave(asset.id, localName, localNote);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+  const handleCancel = () => {
+    setLocalName(asset.name ?? "");
+    setLocalNote(asset.note ?? "");
+    setEditing(false);
   };
 
   return (
@@ -164,7 +169,7 @@ const SortableAssetCard = memo(function SortableAssetCard({
         title="ลากเพื่อจัดลำดับ"
       >
         {asset.type === "IMAGE" ? (
-          <Image src={asset.url} alt={asset.filename ?? ""} fill className="object-cover" sizes="200px" draggable={false} />
+          <Image src={asset.url} alt={asset.name ?? asset.filename ?? ""} fill className="object-cover" sizes="200px" draggable={false} />
         ) : asset.type === "VIDEO" ? (
           <video src={asset.url} className="w-full h-full object-cover" muted draggable={false} />
         ) : (
@@ -257,10 +262,53 @@ const SortableAssetCard = memo(function SortableAssetCard({
         {asset.type === "IMAGE" && asset.width != null && asset.height != null && (
           <p className="text-[10px] text-stone-400">{asset.width} × {asset.height}</p>
         )}
-        {((asset.filename ?? extractFilenameFromUrl(asset.url)) && (asset.contentType == null || asset.sizeBytes == null)) && (
-          <p className="text-[10px] text-stone-400 truncate" title={asset.filename ?? extractFilenameFromUrl(asset.url) ?? undefined}>
-            {asset.filename ?? extractFilenameFromUrl(asset.url)}
-          </p>
+        {editing ? (
+          <>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[10px] text-stone-500 font-medium">Name</label>
+              <input
+                type="text"
+                value={localName}
+                onChange={(e) => setLocalName(e.target.value)}
+                placeholder=""
+                className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 placeholder:text-stone-300 focus:outline-none focus:ring-1 focus:ring-orange-200 bg-white"
+              />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[10px] text-stone-500 font-medium">Note</label>
+              <textarea
+                value={localNote}
+                onChange={(e) => setLocalNote(e.target.value)}
+                placeholder=""
+                rows={3}
+                className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 placeholder:text-stone-300 focus:outline-none focus:ring-1 focus:ring-orange-200 bg-white resize-y min-h-[4rem]"
+              />
+            </div>
+            <div className="flex justify-end gap-1">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); handleCancel(); }}
+                disabled={saving}
+                className="text-[10px] px-2 py-1 rounded text-stone-500 hover:bg-stone-100 transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); handleSave(); }}
+                disabled={saving || !hasChanges}
+                className="text-[10px] px-2 py-1 rounded bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium transition-colors"
+              >
+                {saving ? "..." : "บันทึก"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="space-y-0.5">
+            {localName ? <p className="text-sm font-medium text-stone-800 truncate">{localName}</p> : null}
+            {localNote ? <p className="text-xs text-stone-500 whitespace-pre-wrap line-clamp-3">{localNote}</p> : null}
+            {!localName && !localNote ? <p className="text-xs text-stone-400">—</p> : null}
+          </div>
         )}
         {asset.productId && !productId && (
           <Link
@@ -285,16 +333,17 @@ const SortableAssetCard = memo(function SortableAssetCard({
             {asset.angle ?? (asset.prompt?.slice(0, 30) + "...")}
           </p>
         )}
-        <div className="flex flex-col gap-0.5">
-          <label className="text-[10px] text-stone-500 font-medium">Note</label>
-          <input
-            type="text"
-            value={localNote}
-            onChange={(e) => handleNoteChange(e.target.value)}
-            placeholder="เพิ่ม Note..."
-            className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 placeholder:text-stone-300 focus:outline-none focus:ring-1 focus:ring-orange-200 bg-white"
-          />
-        </div>
+        {!editing && (
+          <div className="flex justify-end pt-0.5">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setEditing(true); }}
+              className="text-[10px] text-orange-500 hover:text-orange-600 font-medium"
+            >
+              แก้ไข
+            </button>
+          </div>
+        )}
       </div>
       <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         {asset.type === "IMAGE" && onAiGenClick && (
@@ -309,7 +358,7 @@ const SortableAssetCard = memo(function SortableAssetCard({
         )}
         <a
           href={asset.url}
-          download={asset.filename ?? "asset"}
+          download={asset.filename ?? ""}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-black/60 hover:bg-black/80 text-white text-[10px]"
@@ -577,15 +626,17 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
     [shopId, productId, marketingPackId, page]
   );
 
-  const handleNoteChange = useCallback(async (id: string, note: string) => {
+  const handleSave = useCallback(async (id: string, name: string, note: string) => {
     const res = await fetch(`/api/admin/marketing-assets/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ note }),
+      body: JSON.stringify({ name: name || null, note: note || null }),
     });
-    if (!res.ok) {
+    if (res.ok) {
+      toast.success("บันทึกแล้ว");
+    } else {
       const data = await res.json();
-      toast.error(data.error ?? "บันทึก Note ไม่สำเร็จ");
+      toast.error(data.error ?? "บันทึกไม่สำเร็จ");
     }
   }, []);
 
@@ -680,7 +731,7 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
                   onRemoveFromProductVideos={handleRemoveFromProductVideos}
                   onDelete={handleDelete}
                   deletingId={deletingId}
-                  onNoteSave={handleNoteChange}
+                  onSave={handleSave}
                   onAiGenClick={productId ? (url) => setAiModalImageUrl(url) : undefined}
                 />
               ))}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -9,6 +9,8 @@ interface PackSummary {
   id: string;
   productId: string;
   productName: string;
+  name?: string | null;
+  note?: string | null;
   lang: string;
   hooks: string[];
   createdAt: string;
@@ -316,6 +318,191 @@ function ManualAddModal({
   );
 }
 
+// ─── Pack Card (editable name + note) ─────────────────────────────────────────
+
+function PackCard({
+  pack,
+  ver,
+  totalVer,
+  onSave,
+  onDelete,
+  onDuplicate,
+  deleting,
+  duplicating,
+  onClick,
+}: {
+  pack: PackSummary;
+  ver: number;
+  totalVer: number;
+  onSave: (id: string, name: string, note: string) => Promise<void>;
+  onDelete: (id: string) => void;
+  onDuplicate: (id: string) => void;
+  deleting: string | null;
+  duplicating: string | null;
+  onClick: () => void;
+}) {
+  const [localName, setLocalName] = useState(pack.name ?? "");
+  const [localNote, setLocalNote] = useState(pack.note ?? "");
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setLocalName(pack.name ?? "");
+  }, [pack.name]);
+  useEffect(() => {
+    setLocalNote(pack.note ?? "");
+  }, [pack.note]);
+
+  const hasChanges = localName !== (pack.name ?? "") || localNote !== (pack.note ?? "");
+  const handleSave = async () => {
+    if (!hasChanges) return;
+    setSaving(true);
+    try {
+      await onSave(pack.id, localName, localNote);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+  const handleCancel = () => {
+    setLocalName(pack.name ?? "");
+    setLocalNote(pack.note ?? "");
+    setEditing(false);
+  };
+
+  const img = pack.product.images?.[0];
+  const hook = Array.isArray(pack.hooks) ? pack.hooks[0] : null;
+  const date = new Date(pack.createdAt).toLocaleDateString("th-TH", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return (
+    <div
+      onClick={onClick}
+      className="bg-white border border-stone-200 rounded-2xl overflow-hidden cursor-pointer hover:shadow-md hover:border-orange-200 transition-all group flex flex-col"
+    >
+      <div className="relative w-full h-40 bg-stone-100 overflow-hidden">
+        {img
+          ? <Image src={img} alt={pack.productName} width={300} height={160} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          : <div className="w-full h-full flex items-center justify-center text-stone-300 text-3xl">📦</div>
+        }
+        {totalVer > 1 && (
+          <span className="absolute top-2 left-2 text-[10px] font-bold bg-black/60 text-white px-1.5 py-0.5 rounded-md">
+            v{ver}/{totalVer}
+          </span>
+        )}
+      </div>
+      <div className="flex-1 p-3 space-y-2">
+        <div>
+          {editing ? (
+            <>
+              <div className="flex items-center justify-between gap-2 mb-0.5">
+                <label className="text-[10px] text-stone-500 font-medium">Name</label>
+                <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${pack.lang === "en" ? "bg-blue-100 text-blue-600" : "bg-amber-100 text-amber-600"}`}>
+                  {pack.lang}
+                </span>
+              </div>
+              <input
+                value={localName}
+                onChange={(e) => setLocalName(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                placeholder=""
+                className="w-full font-semibold text-stone-800 text-sm border border-stone-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-300"
+              />
+            </>
+          ) : (
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                {localName ? <p className="font-semibold text-stone-800 text-sm truncate">{localName}</p> : <p className="text-xs text-stone-400">—</p>}
+              </div>
+              <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${pack.lang === "en" ? "bg-blue-100 text-blue-600" : "bg-amber-100 text-amber-600"}`}>
+                {pack.lang}
+              </span>
+            </div>
+          )}
+        </div>
+        {editing ? (
+          <>
+            <div>
+              <label className="block text-[10px] text-stone-500 font-medium mb-0.5">Note</label>
+              <textarea
+                value={localNote}
+                onChange={(e) => setLocalNote(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                placeholder=""
+                rows={3}
+                className="w-full text-xs text-stone-500 border border-stone-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-300 resize-y min-h-[4rem]"
+              />
+            </div>
+            <div className="flex justify-end gap-1">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); handleCancel(); }}
+                disabled={saving}
+                className="text-[10px] px-2 py-1 rounded text-stone-500 hover:bg-stone-100 transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); handleSave(); }}
+                disabled={saving || !hasChanges}
+                className="text-[10px] px-2 py-1 rounded bg-orange-500 hover:bg-orange-600 disabled:bg-stone-300 text-white font-medium transition-colors"
+              >
+                {saving ? "..." : "บันทึก"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>{localNote ? <p className="text-xs text-stone-500 whitespace-pre-wrap line-clamp-2">{localNote}</p> : null}</>
+        )}
+        {hook && (
+          <p className="text-xs text-stone-500 line-clamp-2">{hook}</p>
+        )}
+        <div className="flex items-center gap-2">
+          <p className="text-[10px] text-stone-400 font-mono">#{pack.id.slice(0, 8)}</p>
+          <a href={`/admin/products/${pack.productId}`} onClick={(e) => e.stopPropagation()}
+            className="text-[10px] text-stone-300 font-mono truncate hover:text-orange-500 transition-colors">pid:{pack.productId.slice(0, 8)}</a>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] text-stone-400">{date}</span>
+          <div className="flex items-center gap-2">
+            {!editing && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setEditing(true); }}
+                className="text-[11px] text-orange-500 hover:text-orange-600 font-medium"
+              >
+                แก้ไข
+              </button>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); onDuplicate(pack.id); }}
+                disabled={duplicating === pack.id}
+                className="text-[11px] text-stone-300 hover:text-violet-500 transition-colors"
+              >
+                {duplicating === pack.id ? "..." : "Dup"}
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(pack.id); }}
+                disabled={deleting === pack.id}
+                className="text-[11px] text-stone-300 hover:text-red-400 transition-colors"
+              >
+                {deleting === pack.id ? "..." : "ลบ"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function MarketingPacksPage() {
@@ -368,6 +555,21 @@ export default function MarketingPacksPage() {
     }
   };
 
+  const handleSave = useCallback(async (id: string, name: string, note: string) => {
+    const res = await fetch(`/api/admin/automation/marketing-packs/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name || null, note: note || null }),
+    });
+    if (res.ok) {
+      toast.success("บันทึกแล้ว");
+      setPacks((prev) => prev.map((p) => (p.id === id ? { ...p, name: name || null, note: note || null } : p)));
+    } else {
+      const data = await res.json();
+      toast.error(data.error ?? "บันทึกไม่สำเร็จ");
+    }
+  }, []);
+
   const handleDuplicate = async (id: string) => {
     setDuplicating(id);
     try {
@@ -412,6 +614,7 @@ export default function MarketingPacksPage() {
     const q = search.toLowerCase();
     return (
       p.productName.toLowerCase().includes(q) ||
+      (p.name ?? "").toLowerCase().includes(q) ||
       p.product.name.toLowerCase().includes(q) ||
       (p.product.name_th ?? "").toLowerCase().includes(q)
     );
@@ -506,80 +709,22 @@ export default function MarketingPacksPage() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {filteredByProduct.map((pack) => {
-              // version: count how many packs for same product, sorted by date
               const sibling = filteredByProduct.filter((p) => p.productId === pack.productId).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
               const ver = sibling.findIndex((p) => p.id === pack.id) + 1;
               const totalVer = sibling.length;
-              const img = pack.product.images?.[0];
-              const hook = Array.isArray(pack.hooks) ? pack.hooks[0] : null;
-              const date = new Date(pack.createdAt).toLocaleDateString("th-TH", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              });
               return (
-                <div
+                <PackCard
                   key={pack.id}
+                  pack={pack}
+                  ver={ver}
+                  totalVer={totalVer}
+                  onSave={handleSave}
+                  onDelete={handleDelete}
+                  onDuplicate={handleDuplicate}
+                  deleting={deleting}
+                  duplicating={duplicating}
                   onClick={() => router.push(`/admin/automation/marketing-packs/${pack.id}`)}
-                  className="bg-white border border-stone-200 rounded-2xl overflow-hidden cursor-pointer hover:shadow-md hover:border-orange-200 transition-all group flex flex-col"
-                >
-                  {/* Product image */}
-                  <div className="relative w-full h-40 bg-stone-100 overflow-hidden">
-                    {img
-                      ? <Image src={img} alt={pack.productName} width={300} height={160} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                      : <div className="w-full h-full flex items-center justify-center text-stone-300 text-3xl">📦</div>
-                    }
-                    {totalVer > 1 && (
-                      <span className="absolute top-2 left-2 text-[10px] font-bold bg-black/60 text-white px-1.5 py-0.5 rounded-md">
-                        v{ver}/{totalVer}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 p-3">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="min-w-0">
-                        <p className="font-semibold text-stone-800 text-sm truncate">{pack.productName}</p>
-                        {pack.product.name_th && pack.product.name_th !== pack.productName && (
-                          <p className="text-xs text-stone-400 truncate">{pack.product.name_th}</p>
-                        )}
-                      </div>
-                      <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${pack.lang === "en" ? "bg-blue-100 text-blue-600" : "bg-amber-100 text-amber-600"}`}>
-                        {pack.lang}
-                      </span>
-                    </div>
-                    {hook && (
-                      <p className="text-xs text-stone-500 mt-1.5 line-clamp-2">{hook}</p>
-                    )}
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <p className="text-[10px] text-stone-400 font-mono">#{pack.id.slice(0, 8)}</p>
-                      <a href={`/admin/products/${pack.productId}`} onClick={(e) => e.stopPropagation()}
-                        className="text-[10px] text-stone-300 font-mono truncate hover:text-orange-500 transition-colors">pid:{pack.productId.slice(0, 8)}</a>
-                    </div>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-[11px] text-stone-400">{date}</span>
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDuplicate(pack.id); }}
-                          disabled={duplicating === pack.id}
-                          className="text-[11px] text-stone-300 hover:text-violet-500 transition-colors"
-                        >
-                          {duplicating === pack.id ? "..." : "Dup"}
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDelete(pack.id); }}
-                          disabled={deleting === pack.id}
-                          className="text-[11px] text-stone-300 hover:text-red-400 transition-colors"
-                        >
-                          {deleting === pack.id ? "..." : "ลบ"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                />
               );
             })}
           </div>

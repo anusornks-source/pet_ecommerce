@@ -277,6 +277,8 @@ model ProductMarketingPack {
   product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   lang           String   @default("th")
   productName    String
+  name           String?  /// ชื่อที่แก้ไขได้ (แสดงแทน productName ถ้ามี)
+  note           String?  @db.Text
   hooks              Json
   captionFacebook    String?  @db.Text
   captionInstagram   String?  @db.Text
@@ -313,6 +315,7 @@ model MarketingAsset {
   id              String             @id @default(cuid())
   url             String
   type            MarketingAssetType
+  name            String?            /// ชื่อที่ user ตั้งเอง
   filename        String?
   contentType     String?
   sizeBytes       Int?

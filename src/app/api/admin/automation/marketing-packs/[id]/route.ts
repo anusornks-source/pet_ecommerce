@@ -43,6 +43,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const pack = await prisma.productMarketingPack.update({
     where: { id },
     data: {
+      ...(body.name !== undefined && { name: body.name || null }),
+      ...(body.note !== undefined && { note: body.note || null }),
       ...(body.hooks !== undefined && { hooks: body.hooks }),
       ...(body.captionFacebook !== undefined && { captionFacebook: body.captionFacebook }),
       ...(body.captionInstagram !== undefined && { captionInstagram: body.captionInstagram }),

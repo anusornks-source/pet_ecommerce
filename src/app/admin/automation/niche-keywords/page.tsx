@@ -32,6 +32,7 @@ const TYPE_CONFIG: Record<string, { label: string; color: string }> = {
 };
 
 export default function NicheKeywordsPage() {
+  const { t } = useLocale();
   const router = useRouter();
   const { activeShop } = useShopAdmin();
   const [keywords, setKeywords] = useState<NicheKeyword[]>([]);

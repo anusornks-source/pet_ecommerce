@@ -104,6 +104,7 @@ function SortableRow({
 // ─── Main Page ────────────────────────────────────────────────
 
 export default function AdminCategoriesPage() {
+  const { t } = useLocale();
   const [categories, setCategories] = useState<Category[]>([]);
   const [groups, setGroups] = useState<CategoryGroup[]>([]);
   const [loading, setLoading] = useState(true);

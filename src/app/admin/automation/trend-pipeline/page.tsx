@@ -57,6 +57,7 @@ function ScoreBadge({ label, value }: { label: string; value: number | null }) {
 }
 
 export default function TrendPipelinePage() {
+  const { t } = useLocale();
   const { activeShop } = useShopAdmin();
   const [grouped, setGrouped] = useState<Grouped>({ pending: [], scored: [], approved: [], enriched: [], imported: [], rejected: [] });
   const [loading, setLoading] = useState(true);

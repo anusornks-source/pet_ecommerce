@@ -69,6 +69,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 export default function ShopViewPage({ params }: { params: Promise<{ id: string }> }) {
+  const { t } = useLocale();
   const { id } = use(params);
   const [shop, setShop] = useState<ShopDetail | null>(null);
 

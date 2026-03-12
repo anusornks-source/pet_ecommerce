@@ -36,6 +36,7 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export default function ApiLogsPage() {
+  const { t } = useLocale();
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);

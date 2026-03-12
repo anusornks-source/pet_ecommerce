@@ -56,6 +56,31 @@ const PROMPTS: Record<string, (ctx: Record<string, string>) => string> = {
     description
       ? `Translate this badge to natural Thai: "${description}". Keep emojis. Reply with ONLY the Thai text.`
       : `Suggest a short badge text in Thai for a product shelf (max ~25 chars, emoji ok). Reply with ONLY the text.`,
+  // Supplier Product fields
+  sp_name: ({ name_th }) =>
+    name_th
+      ? `Translate this Thai product name to concise English: "${name_th}". Reply with ONLY the English text, nothing else.`
+      : `Suggest a short product name in English for pet ecommerce (max ~60 chars). Reply with ONLY the text.`,
+  sp_name_th: ({ name }) =>
+    name
+      ? `Translate this product name to natural Thai: "${name}". Reply with ONLY the Thai text, nothing else.`
+      : `Suggest a short product name in Thai for pet ecommerce (max ~50 chars). Reply with ONLY the text.`,
+  sp_description: ({ description_th, name, name_th }) =>
+    description_th
+      ? `Translate this Thai product description to natural English: "${description_th}". Reply with ONLY the English text, nothing else.`
+      : `Write a 2-3 sentence product description in English for this product: "${name || name_th || "pet product"}". Be specific to the product. Reply with ONLY the text.`,
+  sp_description_th: ({ description, name, name_th }) =>
+    description
+      ? `Translate this product description to natural Thai: "${description}". Reply with ONLY the Thai text, nothing else.`
+      : `Write a 2-3 sentence product description in Thai for this product: "${name || name_th || "pet product"}". Be specific to the product. Reply with ONLY the text.`,
+  sp_shortDescription: ({ shortDescription_th, name, name_th }) =>
+    shortDescription_th
+      ? `Translate this Thai short description to English: "${shortDescription_th}". Reply with ONLY the English text.`
+      : `Write a one-line short product description in English for: "${name || name_th || "pet product"}" (max ~120 chars). Be specific. Reply with ONLY the text.`,
+  sp_shortDescription_th: ({ shortDescription, name, name_th }) =>
+    shortDescription
+      ? `Translate this short description to Thai: "${shortDescription}". Reply with ONLY the Thai text.`
+      : `Write a one-line short product description in Thai for: "${name || name_th || "pet product"}" (max ~100 chars). Be specific. Reply with ONLY the text.`,
 };
 
 export async function POST(request: NextRequest) {
@@ -74,9 +99,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const longFields = ["sp_description", "sp_description_th"];
+    const maxTokens = longFields.includes(field) ? 200 : 50;
+
     const message = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 50,
+      max_tokens: maxTokens,
       messages: [{ role: "user", content: PROMPTS[field](ctx) }],
     });
 

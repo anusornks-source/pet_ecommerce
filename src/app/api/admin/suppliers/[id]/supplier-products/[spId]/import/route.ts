@@ -14,7 +14,7 @@ export async function POST(
   const { id: supplierId, spId } = await params;
   const sp = await prisma.supplierProduct.findFirst({
     where: { id: spId, supplierId },
-    include: { category: true, petType: true, supplier: { select: { name: true } } },
+    include: { category: true, supplier: { select: { name: true } } },
   });
   if (!sp) {
     return NextResponse.json({ success: false, error: "ไม่พบสินค้า" }, { status: 404 });
@@ -46,7 +46,7 @@ export async function POST(
       stock: sellStock,
       images: sp.images,
       categoryId,
-      petTypeId: petTypeId || sp.petTypeId,
+      petTypeId: petTypeId || null,
       costPrice: sp.supplierPrice,
       source: "SUPPLIER",
       sourceDescription: `จาก Supplier: ${sp.supplier?.name ?? supplierId}`,
@@ -77,7 +77,7 @@ export async function POST(
 
   await prisma.supplierProduct.update({
     where: { id: spId },
-    data: { productId: product.id },
+    data: { productId: product.id, isImported: true },
   });
 
   if (sp.images.length > 0) {

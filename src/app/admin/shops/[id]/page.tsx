@@ -51,6 +51,7 @@ interface ShopDetail {
 }
 
 export default function EditShopPage({ params }: { params: Promise<{ id: string }> }) {
+  const { t } = useLocale();
   const { id } = use(params);
   const router = useRouter();
   const [shop, setShop] = useState<ShopDetail | null>(null);

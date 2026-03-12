@@ -62,7 +62,7 @@ export default function AdminShelvesPage() {
   const [shelves, setShelves] = useState<Shelf[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: "", name_th: "", slug: "", description: "", description_th: "", color: "#0ea5e9", active: true, sourceType: "manual" as const, limit: 8 });
+  const [form, setForm] = useState<{ name: string; name_th: string; slug: string; description: string; description_th: string; color: string; active: boolean; sourceType: "manual" | "best_seller" | "featured"; limit: number }>({ name: "", name_th: "", slug: "", description: "", description_th: "", color: "#0ea5e9", active: true, sourceType: "manual", limit: 8 });
   const [submitting, setSubmitting] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiTarget, setAiTarget] = useState<string | null>(null);
@@ -141,7 +141,7 @@ export default function AdminShelvesPage() {
     const data = await res.json();
     if (data.success) {
       toast.success("สร้าง shelf สำเร็จ");
-      setForm({ name: "", slug: "", description: "", color: "#0ea5e9", active: true, sourceType: "manual", limit: 8 });
+      setForm({ name: "", name_th: "", slug: "", description: "", description_th: "", color: "#0ea5e9", active: true, sourceType: "manual", limit: 8 });
       setShowForm(false);
       fetchShelves();
     } else {

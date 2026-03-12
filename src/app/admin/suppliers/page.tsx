@@ -296,55 +296,59 @@ export default function AdminSuppliersPage() {
           {suppliers.map((s) => (
             <div
               key={s.id}
-              className="bg-white border border-stone-200 rounded-xl p-4 hover:border-stone-300 transition-colors"
+              className="relative bg-white border border-stone-200 rounded-xl p-4 hover:border-stone-300 transition-colors"
             >
-              <div className="flex items-center gap-4 justify-between">
-                <div className="min-w-0 flex-1 flex items-center gap-3">
-                  {s.imageUrl ? (
-                    <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-stone-100 shrink-0">
-                      <Image src={s.imageUrl} alt="" fill className="object-cover" sizes="48px" />
-                    </div>
-                  ) : (
-                    <div className="w-12 h-12 rounded-lg bg-stone-100 flex items-center justify-center text-stone-400 text-lg shrink-0">
-                      🏭
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-stone-800">{s.name}</span>
-                      {s.nameTh && (
-                        <span className="text-sm text-stone-500">({s.nameTh})</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-stone-400 mt-0.5">
-                      {s._count.products} สินค้า
-                    </p>
-                    {(s.tel || s.email || s.contact) && (
-                      <p className="text-xs text-stone-500 mt-1 truncate" title={[s.tel && `📞 ${s.tel}`, s.email && `✉️ ${s.email}`, s.contact].filter(Boolean).join(" · ")}>
-                        {[s.tel && `📞 ${s.tel}`, s.email && `✉️ ${s.email}`, s.contact].filter(Boolean).join(" · ")}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
+              <div className="absolute top-3 right-3 flex items-center gap-1">
+                <Link
+                  href={`/admin/suppliers/${s.id}/view`}
+                  className="text-[10px] px-2 py-0.5 rounded border border-stone-300 bg-stone-50 text-stone-600 hover:bg-stone-100 font-medium"
+                >
+                  ดู
+                </Link>
                 <Link
                   href={`/admin/suppliers/${s.id}`}
-                  className="text-sm px-3 py-1.5 rounded-lg bg-teal-50 text-teal-600 hover:bg-teal-100 font-medium"
+                  className="text-[10px] px-2 py-0.5 rounded border border-teal-300 bg-teal-50 text-teal-700 hover:bg-teal-100 font-medium"
                 >
                   จัดการสินค้า
                 </Link>
                 <button
                   onClick={() => startEdit(s)}
-                  className="text-sm px-3 py-1.5 rounded-lg text-stone-500 hover:bg-stone-100"
+                  className="text-[10px] px-2 py-0.5 rounded border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 font-medium"
                 >
                   แก้ไข
                 </button>
                 <button
                   onClick={() => handleDelete(s.id)}
-                  className="text-sm px-3 py-1.5 rounded-lg text-red-500 hover:bg-red-50"
+                  className="text-[10px] px-2 py-0.5 rounded border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 font-medium"
                 >
                   ลบ
                 </button>
+              </div>
+              <div className="flex items-center gap-3 pr-40">
+                {s.imageUrl ? (
+                  <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-stone-100 shrink-0">
+                    <Image src={s.imageUrl} alt="" fill className="object-cover" sizes="48px" />
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 rounded-lg bg-stone-100 flex items-center justify-center text-stone-400 text-lg shrink-0">
+                    🏭
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-stone-800">{s.name}</span>
+                    {s.nameTh && (
+                      <span className="text-sm text-stone-500">({s.nameTh})</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-stone-400 mt-0.5">
+                    {s._count.products} สินค้า
+                  </p>
+                  {(s.tel || s.email || s.contact) && (
+                    <p className="text-xs text-stone-500 mt-1 truncate" title={[s.tel && `📞 ${s.tel}`, s.email && `✉️ ${s.email}`, s.contact].filter(Boolean).join(" · ")}>
+                      {[s.tel && `📞 ${s.tel}`, s.email && `✉️ ${s.email}`, s.contact].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
                 </div>
               </div>
               {s.products && s.products.length > 0 && (

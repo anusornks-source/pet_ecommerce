@@ -6,8 +6,34 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (isNextResponse(auth)) return auth;
 
+  const { searchParams } = new URL(request.url);
+  const search = searchParams.get("search")?.trim();
+  const limit = Math.min(Number(searchParams.get("limit")) || 50, 100);
+  const minimal = searchParams.get("minimal") === "true"; // for select/search: id, name, nameTh, imageUrl only
+
+  const where = search
+    ? {
+        OR: [
+          { name: { contains: search, mode: "insensitive" as const } },
+          { nameTh: { contains: search, mode: "insensitive" as const } },
+        ],
+      }
+    : undefined;
+
+  if (minimal) {
+    const suppliers = await prisma.supplier.findMany({
+      where,
+      orderBy: { name: "asc" },
+      take: limit,
+      select: { id: true, name: true, nameTh: true, imageUrl: true },
+    });
+    return NextResponse.json({ success: true, data: suppliers });
+  }
+
   const suppliers = await prisma.supplier.findMany({
+    where,
     orderBy: { name: "asc" },
+    take: where ? limit : undefined,
     include: {
       _count: { select: { products: true } },
       products: {

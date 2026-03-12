@@ -56,6 +56,7 @@ function formatDate(iso: string) {
 }
 
 export default function AdminVariantsPage() {
+  const { t } = useLocale();
   const { activeShop, shops, isAdmin } = useShopAdmin();
   const [shopFilter, setShopFilter] = useState<string>("");
   const [variants, setVariants] = useState<Variant[]>([]);

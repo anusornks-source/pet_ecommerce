@@ -23,6 +23,7 @@ const ACTION_COLORS: Record<string, string> = {
 };
 
 export default function CjLogsPage() {
+  const { t } = useLocale();
   const [logs, setLogs] = useState<CjLog[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);

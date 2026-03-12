@@ -7,6 +7,7 @@ import { useShopAdmin } from "@/context/ShopAdminContext";
 import { useLocale } from "@/context/LocaleContext";
 
 export default function AdminSettingsPage() {
+  const { t } = useLocale();
   const { isAdmin } = useShopAdmin();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);

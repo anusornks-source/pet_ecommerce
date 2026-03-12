@@ -277,6 +277,7 @@ interface CreativeResult {
 }
 
 export default function CreativeStudioPage() {
+  const { t } = useLocale();
   const [search, setSearch] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [searching, setSearching] = useState(false);

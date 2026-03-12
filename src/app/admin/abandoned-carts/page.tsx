@@ -51,6 +51,7 @@ function formatPrice(n: number) {
 }
 
 export default function AbandonedCartsPage() {
+  const { t } = useLocale();
   const { activeShop, shops, isAdmin } = useShopAdmin();
   const [shopFilter, setShopFilter] = useState("");
   const [days, setDays] = useState(0);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
+import { ProductValidationStatus } from "@/generated/prisma/client";
 
 /** GET - List supplier products */
 export async function GET(
@@ -18,7 +19,7 @@ export async function GET(
 
   const list = await prisma.supplierProduct.findMany({
     where: { supplierId },
-    include: { category: true, petType: true, product: { select: { id: true, name: true } } },
+    include: { category: true, product: { select: { id: true, name: true } } },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json({ success: true, data: list });
@@ -51,13 +52,17 @@ export async function POST(
     supplierPrice,
     images,
     categoryId,
-    petTypeId,
+    remark,
+    validationStatus,
     note,
   } = body;
 
   if (!name || !description) {
     return NextResponse.json({ success: false, error: "กรุณากรอก name และ description" }, { status: 400 });
   }
+
+  const validStatuses = Object.values(ProductValidationStatus);
+  const status = validationStatus && validStatuses.includes(validationStatus as ProductValidationStatus) ? validationStatus : ProductValidationStatus.Lead;
 
   const sp = await prisma.supplierProduct.create({
     data: {
@@ -73,10 +78,11 @@ export async function POST(
       supplierPrice: supplierPrice != null ? parseFloat(supplierPrice) : null,
       images: Array.isArray(images) ? images : [],
       categoryId: categoryId || null,
-      petTypeId: petTypeId || null,
+      remark: remark?.trim() || null,
+      validationStatus: status,
       note: note?.trim() || null,
     },
-    include: { category: true, petType: true },
+    include: { category: true },
   });
   return NextResponse.json({ success: true, data: sp }, { status: 201 });
 }

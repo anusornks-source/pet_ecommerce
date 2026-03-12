@@ -32,7 +32,15 @@ const navEntries: NavEntry[] = [
       { href: "/admin/shop-categories", labelKey: "shopCategories", icon: "🏷️" },
       { href: "/admin/pet-types", labelKey: "petTypes", icon: "🐾" },
       { href: "/admin/tags", labelKey: "tags", icon: "🔖" },
+    ],
+  },
+  {
+    labelKey: "suppliers",
+    icon: "🏭",
+    minRole: "MANAGER",
+    items: [
       { href: "/admin/suppliers", labelKey: "suppliers", icon: "🏭" },
+      { href: "/admin/supplier-products", labelKey: "supplierProducts", icon: "📦" },
     ],
   },
   {
@@ -91,7 +99,7 @@ export default function AdminSidebar() {
   const { activeShop, shops, setActiveShopId, isAdmin, shopRole, loading } = useShopAdmin();
   const { t, lang, toggle } = useLocale();
   const getLabel = (key: string) => t(key, "adminMenu");
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(["products", "importProducts", "webContent", "marketingAuto"]));
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(["products", "suppliers", "importProducts", "webContent", "marketingAuto"]));
 
   useEffect(() => {
     navEntries.forEach((entry) => {

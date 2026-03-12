@@ -34,6 +34,7 @@ const emptyForm = {
 };
 
 export default function AdminStoresPage() {
+  const { t } = useLocale();
   const { activeShop, shops, isAdmin } = useShopAdmin();
   const searchParams = useSearchParams();
   const urlShopId = searchParams.get("shopId") || "";

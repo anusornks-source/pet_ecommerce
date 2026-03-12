@@ -16,6 +16,7 @@ interface PetType {
 const empty = { name: "", name_th: "", slug: "", icon: "", order: 0 };
 
 export default function AdminPetTypesPage() {
+  const { t } = useLocale();
   const [petTypes, setPetTypes] = useState<PetType[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);

@@ -268,6 +268,8 @@ interface Pack {
     name: string;
     name_th: string | null;
     images: string[];
+    videos?: string[];
+    mediaOrder?: string[];
     price: number;
     normalPrice?: number | null;
     stock?: number;
@@ -809,7 +811,7 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
           productId={pack.productId}
           productImages={pack.product?.images ?? []}
           productVideos={pack.product?.videos ?? []}
-          productMediaOrder={(pack.product as { mediaOrder?: string[] })?.mediaOrder}
+          productMediaOrder={pack.product?.mediaOrder}
           productName={pack.lang === "th" ? (pack.product?.name_th || pack.product?.name || pack.productName) : (pack.product?.name || pack.productName)}
           productContext={pack.product ? {
             name: pack.product.name,

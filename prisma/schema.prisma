@@ -159,28 +159,30 @@ model CategoryGroup {
 }
 
 model Category {
-  id             String         @id @default(cuid())
-  name           String         @unique
-  name_th        String?
-  slug           String         @unique
-  icon           String?
-  order          Int            @default(0)
-  groupId        String?
-  group          CategoryGroup? @relation(fields: [groupId], references: [id])
-  products       Product[]
-  shopCategories ShopCategory[]
+  id               String           @id @default(cuid())
+  name             String           @unique
+  name_th          String?
+  slug             String           @unique
+  icon             String?
+  order            Int              @default(0)
+  groupId          String?
+  group            CategoryGroup?   @relation(fields: [groupId], references: [id])
+  products         Product[]
+  shopCategories   ShopCategory[]
+  supplierProducts SupplierProduct[]
 
   @@map("categories")
 }
 
 model PetType {
-  id       String    @id @default(cuid())
-  name     String    @unique
-  name_th  String?
-  slug     String    @unique
-  icon     String?
-  order    Int       @default(0)
-  products Product[]
+  id               String            @id @default(cuid())
+  name             String            @unique
+  name_th          String?
+  slug             String            @unique
+  icon             String?
+  order            Int               @default(0)
+  products         Product[]
+  supplierProducts SupplierProduct[]
 
   @@map("pet_types")
 }
@@ -200,9 +202,42 @@ model Supplier {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  products ProductSupplier[]
+  products         ProductSupplier[]
+  supplierProducts SupplierProduct[]
 
   @@map("suppliers")
+}
+
+/// สินค้าจาก supplier (ยังไม่ import เป็น Product) — เก็บข้อมูลสินค้าไว้ก่อน import
+model SupplierProduct {
+  id                  String   @id @default(cuid())
+  supplierId           String
+  name                String
+  name_th             String?
+  description         String   @db.Text
+  description_th      String?  @db.Text
+  shortDescription    String?  @db.Text
+  shortDescription_th String?  @db.Text
+  supplierSku         String?
+  supplierUrl         String?
+  supplierPrice       Float?
+  images              String[] @default([])
+  categoryId          String?
+  petTypeId           String?
+  /// เมื่อ import เป็น Product แล้ว
+  productId           String?   @unique
+  note                String?  @db.Text
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  petType  PetType?  @relation(fields: [petTypeId], references: [id], onDelete: SetNull)
+  product  Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([supplierId])
+  @@index([productId])
+  @@map("supplier_products")
 }
 
 model ProductSupplier {
@@ -272,7 +307,8 @@ model Product {
   marketingAssets  MarketingAsset[]
   /// ลำดับ marketing assets เมื่อดูที่หน้าสินค้า (asset IDs)
   marketingAssetOrder String[] @default([])
-  suppliers       ProductSupplier[]
+  suppliers        ProductSupplier[]
+  supplierProduct  SupplierProduct?
 
   @@index([shopId])
   @@index([shopId, active])
@@ -757,14 +793,20 @@ model EmailVerificationToken {
 }
 
 model Shelf {
-  id          String      @id @default(cuid())
-  shopId      String
-  name        String
-  slug        String      @unique
-  description String?
+  id            String      @id @default(cuid())
+  shopId        String
+  name          String      // EN
+  name_th       String?
+  slug          String      @unique
+  description   String?     // EN
+  description_th String?
   color       String      @default("#0ea5e9")
   active      Boolean     @default(true)
   order       Int         @default(0)
+  /// manual = เลือกสินค้าเอง, best_seller = สินค้าขายดี, featured = สินค้าแนะนำ
+  sourceType  String      @default("manual")
+  /// จำนวนสินค้าสูงสุด (ใช้กับ best_seller, featured)
+  limit       Int         @default(8)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   items       ShelfItem[]

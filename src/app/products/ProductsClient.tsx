@@ -45,6 +45,7 @@ export default function ProductsClient({
   const petType = searchParams.get("petType") || "";
   const search = searchParams.get("search") || "";
   const featured = searchParams.get("featured") || "";
+  const shelf = searchParams.get("shelf") || "";
   const minPrice = searchParams.get("minPrice") || "";
   const maxPrice = searchParams.get("maxPrice") || "";
   const sort = searchParams.get("sort") || "newest";
@@ -59,6 +60,7 @@ export default function ProductsClient({
     if (petType) params.set("petType", petType);
     if (search) params.set("search", search);
     if (featured) params.set("featured", featured);
+    if (shelf) params.set("shelf", shelf);
     if (minPrice) params.set("minPrice", minPrice);
     if (maxPrice) params.set("maxPrice", maxPrice);
     if (sort !== "newest") params.set("sort", sort);
@@ -72,7 +74,7 @@ export default function ProductsClient({
       setTotal(data.pagination.total);
     }
     setLoading(false);
-  }, [category, petType, search, featured, minPrice, maxPrice, sort, page]);
+  }, [category, petType, search, featured, shelf, minPrice, maxPrice, sort, page]);
 
   useEffect(() => {
     const catUrl = shopSlug ? `/api/categories?shopSlug=${shopSlug}` : "/api/categories";
@@ -150,7 +152,7 @@ export default function ProductsClient({
     router.push(`/products?${params}`, { scroll: false });
   };
 
-  const hasFilters = category || petType || search || featured || minPrice || maxPrice || sort !== "newest";
+  const hasFilters = category || petType || search || featured || shelf || minPrice || maxPrice || sort !== "newest";
   const headingTitle = title ?? t("allProducts", "product");
 
   return (
@@ -387,6 +389,7 @@ export default function ProductsClient({
               style={{ padding: "0.4rem 0.75rem", width: "auto" }}
             >
               <option value="newest">{lang === "th" ? "ใหม่ล่าสุด" : "Newest"}</option>
+              <option value="best_seller">{lang === "th" ? "ขายดี" : "Best Sellers"}</option>
               <option value="oldest">{lang === "th" ? "เก่าสุด" : "Oldest"}</option>
               <option value="price_asc">{lang === "th" ? "ราคา: ต่ำ → สูง" : "Price: Low → High"}</option>
               <option value="price_desc">{lang === "th" ? "ราคา: สูง → ต่ำ" : "Price: High → Low"}</option>

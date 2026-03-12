@@ -51,6 +51,41 @@ export async function GET(request: NextRequest) {
   const PAGE_SIZE = 50;
 
   const sort = searchParams.get("sort") || "newest";
+  const isBestSeller = sort === "best_seller";
+
+  if (isBestSeller) {
+    const productIds = await prisma.product.findMany({
+      where,
+      select: { id: true },
+    });
+    const ids = productIds.map((p) => p.id);
+    if (ids.length === 0) {
+      return NextResponse.json({ success: true, data: [], total: 0, page, pageSize: PAGE_SIZE });
+    }
+    const shopWhere = shopId === "all" ? {} : { order: { shopId } };
+    const soldByProduct = await prisma.orderItem.groupBy({
+      by: ["productId"],
+      where: { productId: { in: ids }, ...shopWhere },
+      _sum: { quantity: true },
+    });
+    const soldMap = new Map(soldByProduct.map((r) => [r.productId, r._sum.quantity ?? 0]));
+    const sortedIds = [...ids].sort((a, b) => (soldMap.get(b) ?? 0) - (soldMap.get(a) ?? 0));
+    const pageIds = sortedIds.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    const products = await prisma.product.findMany({
+      where: { id: { in: pageIds } },
+      include: { category: true, petType: true, tags: true, shop: includeShop, variants: { select: { id: true, sku: true, cjVid: true, size: true, color: true, price: true, stock: true, variantImage: true } }, _count: { select: { marketingPacks: true } } },
+    });
+    const productsOrdered = pageIds.map((id) => products.find((p) => p.id === id)!).filter(Boolean);
+    const soldCounts = pageIds.map((id) => soldMap.get(id) ?? 0);
+    return NextResponse.json({
+      success: true,
+      data: productsOrdered.map((p, i) => ({ ...p, soldCount: soldCounts[i] })),
+      total: ids.length,
+      page,
+      pageSize: PAGE_SIZE,
+    });
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const orderBy: any =
     sort === "oldest"    ? { createdAt: "asc" } :

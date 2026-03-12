@@ -12,11 +12,15 @@ import { useLocale } from "@/context/LocaleContext";
 interface Shelf {
   id: string;
   name: string;
+  name_th: string | null;
   slug: string;
   description: string | null;
+  description_th: string | null;
   color: string;
   active: boolean;
   order: number;
+  sourceType: string;
+  limit: number;
   _count: { items: number };
 }
 
@@ -58,10 +62,34 @@ export default function AdminShelvesPage() {
   const [shelves, setShelves] = useState<Shelf[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: "", slug: "", description: "", color: "#0ea5e9", active: true });
+  const [form, setForm] = useState({ name: "", name_th: "", slug: "", description: "", description_th: "", color: "#0ea5e9", active: true, sourceType: "manual" as const, limit: 8 });
   const [submitting, setSubmitting] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiTarget, setAiTarget] = useState<string | null>(null);
+
+  const suggestField = async (field: string, ctx: Record<string, string>, setter: (v: string) => void) => {
+    setAiTarget(field);
+    try {
+      const res = await fetch("/api/admin/ai/suggest-field", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ field, ...ctx }),
+      });
+      const data = await res.json();
+      if (data.success && data.value) {
+        setter(data.value);
+        toast.success("AI ช่วยเติมแล้ว");
+      } else {
+        toast.error(data.error || "AI ช่วยไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("เรียก AI ไม่สำเร็จ");
+    } finally {
+      setAiTarget(null);
+    }
+  };
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", slug: "", description: "", color: "#0ea5e9", active: true });
+  const [editForm, setEditForm] = useState({ name: "", name_th: "", slug: "", description: "", description_th: "", color: "#0ea5e9", active: true, sourceType: "manual" as string, limit: 8 });
 
   // Product items per shelf + expand state (default: all expanded)
   const [shelfItems, setShelfItems] = useState<Record<string, ShelfProduct[]>>({});
@@ -102,7 +130,7 @@ export default function AdminShelvesPage() {
 
   // ── Create ────────────────────────────────────────────────────────────────
   const handleCreate = async () => {
-    if (!form.name || !form.slug) return toast.error("กรุณากรอก name และ slug");
+    if (!form.name || !form.slug) return toast.error("กรุณากรอก name (EN) และ slug");
     setSubmitting(true);
     const createUrl = shopFilter && shopFilter !== "all" ? `/api/admin/shelves?shopId=${shopFilter}` : "/api/admin/shelves";
     const res = await fetch(createUrl, {
@@ -113,7 +141,7 @@ export default function AdminShelvesPage() {
     const data = await res.json();
     if (data.success) {
       toast.success("สร้าง shelf สำเร็จ");
-      setForm({ name: "", slug: "", description: "", color: "#0ea5e9", active: true });
+      setForm({ name: "", slug: "", description: "", color: "#0ea5e9", active: true, sourceType: "manual", limit: 8 });
       setShowForm(false);
       fetchShelves();
     } else {
@@ -269,35 +297,144 @@ export default function AdminShelvesPage() {
       {/* Create Form */}
       {showForm && (
         <div className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
-          <h2 className="font-semibold text-stone-800">สร้าง Shelf ใหม่</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-stone-800">สร้าง Shelf ใหม่</h2>
+            <button
+              type="button"
+              disabled={aiLoading}
+              onClick={async () => {
+                setAiLoading(true);
+                try {
+                  const res = await fetch("/api/admin/ai/suggest-shelf", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ sourceType: form.sourceType }),
+                  });
+                  const data = await res.json();
+                  if (data.success && data.data) {
+                    setForm((f) => ({
+                      ...f,
+                      name: data.data.name || f.name,
+                      name_th: data.data.name_th ?? f.name_th,
+                      slug: data.data.slug || toSlug(data.data.name || f.name),
+                      description: data.data.description ?? f.description,
+                      description_th: data.data.description_th ?? f.description_th,
+                    }));
+                    toast.success("AI ช่วยเติมข้อมูลแล้ว");
+                  } else {
+                    toast.error(data.error || "AI ช่วยไม่สำเร็จ");
+                  }
+                } catch {
+                  toast.error("เรียก AI ไม่สำเร็จ");
+                } finally {
+                  setAiLoading(false);
+                }
+              }}
+              className="shrink-0 px-3 py-1.5 rounded-xl border border-violet-200 bg-violet-50 text-violet-600 text-sm font-medium hover:bg-violet-100 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+            >
+              {aiLoading ? (
+                <>
+                  <span className="animate-spin">⏳</span>
+                  AI กำลังคิด...
+                </>
+              ) : (
+                <>
+                  <span>✨</span>
+                  AI ช่วยเติมทั้งหมด
+                </>
+              )}
+            </button>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs text-stone-500 mb-1 block">ชื่อ Shelf *</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs text-stone-500">ชื่อ Shelf (EN) *</label>
+                <button type="button" disabled={!!aiTarget} onClick={() => suggestField("shelf_name", { name_th: form.name_th, sourceType: form.sourceType }, (v) => setForm((f) => ({ ...f, name: v, slug: toSlug(v) })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "shelf_name" ? "…" : "✨ AI"}</button>
+              </div>
               <input
                 className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-400"
-                placeholder="เช่น สินค้าแนะนำ"
+                placeholder="e.g. Best Sellers"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value, slug: toSlug(e.target.value) })}
               />
             </div>
             <div>
-              <label className="text-xs text-stone-500 mb-1 block">Slug *</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs text-stone-500">ชื่อ Shelf (TH)</label>
+                <button type="button" disabled={!!aiTarget} onClick={() => suggestField("shelf_name_th", { name: form.name, sourceType: form.sourceType }, (v) => setForm((f) => ({ ...f, name_th: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "shelf_name_th" ? "…" : "✨ AI"}</button>
+              </div>
+              <input
+                className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-400"
+                placeholder="เช่น สินค้าขายดี"
+                value={form.name_th}
+                onChange={(e) => setForm({ ...form, name_th: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs text-stone-500">Slug *</label>
+                <button type="button" disabled={!!aiTarget} onClick={() => suggestField("shelf_slug", { name: form.name, name_th: form.name_th }, (v) => setForm((f) => ({ ...f, slug: toSlug(v) })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "shelf_slug" ? "…" : "✨ AI"}</button>
+              </div>
               <input
                 className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:border-orange-400"
-                placeholder="เช่น recommended"
+                placeholder="เช่น best-sellers"
                 value={form.slug}
                 onChange={(e) => setForm({ ...form, slug: toSlug(e.target.value) })}
               />
             </div>
           </div>
-          <div>
-            <label className="text-xs text-stone-500 mb-1 block">คำอธิบาย (badge ใต้ชื่อ)</label>
-            <input
-              className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-400"
-              placeholder="เช่น ✨ คัดสรรพิเศษ"
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs text-stone-500">คำอธิบาย badge (EN)</label>
+                <button type="button" disabled={!!aiTarget} onClick={() => suggestField("shelf_description", { description_th: form.description_th }, (v) => setForm((f) => ({ ...f, description: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "shelf_description" ? "…" : "✨ AI"}</button>
+              </div>
+              <input
+                className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-400"
+                placeholder="e.g. ✨ Special picks"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs text-stone-500">คำอธิบาย badge (TH)</label>
+                <button type="button" disabled={!!aiTarget} onClick={() => suggestField("shelf_description_th", { description: form.description }, (v) => setForm((f) => ({ ...f, description_th: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "shelf_description_th" ? "…" : "✨ AI"}</button>
+              </div>
+              <input
+                className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-400"
+                placeholder="เช่น ✨ คัดสรรพิเศษ"
+                value={form.description_th}
+                onChange={(e) => setForm({ ...form, description_th: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-stone-500 mb-1 block">ประเภทสินค้า</label>
+              <select
+                className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-400"
+                value={form.sourceType}
+                onChange={(e) => setForm({ ...form, sourceType: e.target.value as "manual" | "best_seller" | "featured" })}
+              >
+                <option value="manual">เลือกสินค้าเอง</option>
+                <option value="best_seller">🔥 สินค้าขายดี (อัตโนมัติ)</option>
+                <option value="featured">⭐ สินค้าแนะนำ (อัตโนมัติ)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-stone-500 mb-1 block">จำนวนสูงสุด (best_seller/featured)</label>
+              <input
+                type="number"
+                min={1}
+                max={20}
+                className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-400"
+                value={form.limit}
+                onChange={(e) => setForm({ ...form, limit: Math.min(20, Math.max(1, parseInt(e.target.value) || 8)) })}
+              />
+            </div>
           </div>
           <div>
             <label className="text-xs text-stone-500 mb-2 block">สีพื้นหลัง</label>
@@ -307,7 +444,7 @@ export default function AdminShelvesPage() {
             className="h-12 rounded-xl flex items-center px-4"
             style={{ background: `linear-gradient(135deg, ${form.color}ee, ${form.color}99)` }}
           >
-            <span className="text-white text-sm font-semibold">{form.name || "ตัวอย่าง Shelf"}</span>
+            <span className="text-white text-sm font-semibold">{form.name_th || form.name || "ตัวอย่าง Shelf"}</span>
           </div>
           <div className="flex gap-3 pt-1">
             <button
@@ -337,9 +474,50 @@ export default function AdminShelvesPage() {
                 {editingId === shelf.id ? (
                   /* Inline edit form */
                   <div className="p-5 space-y-4 bg-stone-50">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-stone-500">แก้ไข Shelf</span>
+                      <button
+                        type="button"
+                        disabled={aiLoading}
+                        onClick={async () => {
+                          setAiLoading(true);
+                          try {
+                            const res = await fetch("/api/admin/ai/suggest-shelf", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ sourceType: editForm.sourceType }),
+                            });
+                            const data = await res.json();
+                            if (data.success && data.data) {
+                              setEditForm((f) => ({
+                                ...f,
+                                name: data.data.name || f.name,
+                                name_th: data.data.name_th ?? f.name_th,
+                                slug: data.data.slug || toSlug(data.data.name || f.name),
+                                description: data.data.description ?? f.description,
+                                description_th: data.data.description_th ?? f.description_th,
+                              }));
+                              toast.success("AI ช่วยเติมข้อมูลแล้ว");
+                            } else {
+                              toast.error(data.error || "AI ช่วยไม่สำเร็จ");
+                            }
+                          } catch {
+                            toast.error("เรียก AI ไม่สำเร็จ");
+                          } finally {
+                            setAiLoading(false);
+                          }
+                        }}
+                        className="shrink-0 px-2 py-1 rounded-lg border border-violet-200 bg-violet-50 text-violet-600 text-xs font-medium hover:bg-violet-100 disabled:opacity-50"
+                      >
+                        {aiLoading ? "…" : "✨ AI ช่วยเติมทั้งหมด"}
+                      </button>
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-xs text-stone-500 mb-1 block">ชื่อ</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs text-stone-500">ชื่อ (EN)</label>
+                          <button type="button" disabled={!!aiTarget} onClick={() => suggestField("shelf_name", { name_th: editForm.name_th, sourceType: editForm.sourceType }, (v) => setEditForm((f) => ({ ...f, name: v, slug: toSlug(v) })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "shelf_name" ? "…" : "✨ AI"}</button>
+                        </div>
                         <input
                           className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm"
                           value={editForm.name}
@@ -347,7 +525,23 @@ export default function AdminShelvesPage() {
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-stone-500 mb-1 block">Slug</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs text-stone-500">ชื่อ (TH)</label>
+                          <button type="button" disabled={!!aiTarget} onClick={() => suggestField("shelf_name_th", { name: editForm.name, sourceType: editForm.sourceType }, (v) => setEditForm((f) => ({ ...f, name_th: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "shelf_name_th" ? "…" : "✨ AI"}</button>
+                        </div>
+                        <input
+                          className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm"
+                          value={editForm.name_th}
+                          onChange={(e) => setEditForm({ ...editForm, name_th: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs text-stone-500">Slug</label>
+                          <button type="button" disabled={!!aiTarget} onClick={() => suggestField("shelf_slug", { name: editForm.name, name_th: editForm.name_th }, (v) => setEditForm((f) => ({ ...f, slug: toSlug(v) })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "shelf_slug" ? "…" : "✨ AI"}</button>
+                        </div>
                         <input
                           className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm font-mono"
                           value={editForm.slug}
@@ -355,13 +549,54 @@ export default function AdminShelvesPage() {
                         />
                       </div>
                     </div>
-                    <div>
-                      <label className="text-xs text-stone-500 mb-1 block">คำอธิบาย</label>
-                      <input
-                        className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm"
-                        value={editForm.description}
-                        onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs text-stone-500">คำอธิบาย (EN)</label>
+                          <button type="button" disabled={!!aiTarget} onClick={() => suggestField("shelf_description", { description_th: editForm.description_th }, (v) => setEditForm((f) => ({ ...f, description: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "shelf_description" ? "…" : "✨ AI"}</button>
+                        </div>
+                        <input
+                          className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm"
+                          value={editForm.description}
+                          onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs text-stone-500">คำอธิบาย (TH)</label>
+                          <button type="button" disabled={!!aiTarget} onClick={() => suggestField("shelf_description_th", { description: editForm.description }, (v) => setEditForm((f) => ({ ...f, description_th: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "shelf_description_th" ? "…" : "✨ AI"}</button>
+                        </div>
+                        <input
+                          className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm"
+                          value={editForm.description_th}
+                          onChange={(e) => setEditForm({ ...editForm, description_th: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs text-stone-500 mb-1 block">ประเภทสินค้า</label>
+                        <select
+                          className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm"
+                          value={editForm.sourceType}
+                          onChange={(e) => setEditForm({ ...editForm, sourceType: e.target.value })}
+                        >
+                          <option value="manual">เลือกสินค้าเอง</option>
+                          <option value="best_seller">🔥 สินค้าขายดี</option>
+                          <option value="featured">⭐ สินค้าแนะนำ</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-stone-500 mb-1 block">จำนวนสูงสุด</label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={20}
+                          className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm"
+                          value={editForm.limit}
+                          onChange={(e) => setEditForm({ ...editForm, limit: Math.min(20, Math.max(1, parseInt(e.target.value) || 8)) })}
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="text-xs text-stone-500 mb-2 block">สีพื้นหลัง</label>
@@ -371,7 +606,7 @@ export default function AdminShelvesPage() {
                       className="h-10 rounded-xl flex items-center px-4"
                       style={{ background: `linear-gradient(135deg, ${editForm.color}ee, ${editForm.color}99)` }}
                     >
-                      <span className="text-white text-sm font-semibold">{editForm.name}</span>
+                      <span className="text-white text-sm font-semibold">{editForm.name_th || editForm.name}</span>
                     </div>
                     <div className="flex gap-3">
                       <button
@@ -401,11 +636,11 @@ export default function AdminShelvesPage() {
                       <span className="text-stone-300 cursor-grab text-lg select-none shrink-0">⠿</span>
                       <div className="w-4 h-4 rounded-full shrink-0 border border-stone-200" style={{ backgroundColor: shelf.color }} />
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-stone-800 text-sm">{shelf.name}</p>
+                        <p className="font-semibold text-stone-800 text-sm">{shelf.name_th || shelf.name}</p>
                         <p className="text-xs text-stone-400 font-mono">{shelf.slug}</p>
                       </div>
                       <span className="shrink-0 text-xs bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">
-                        {shelf._count.items} สินค้า
+                        {shelf.sourceType === "best_seller" ? "🔥 อัตโนมัติ" : shelf.sourceType === "featured" ? "⭐ อัตโนมัติ" : `${shelf._count.items} สินค้า`}
                       </span>
                       <button
                         onClick={() => handleToggle(shelf)}
@@ -413,16 +648,22 @@ export default function AdminShelvesPage() {
                       >
                         {shelf.active ? "แสดง" : "ซ่อน"}
                       </button>
-                      <Link
-                        href={`/admin/shelves/${shelf.id}`}
-                        className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                      >
-                        จัดการสินค้า
-                      </Link>
+                      {shelf.sourceType !== "best_seller" && shelf.sourceType !== "featured" ? (
+                        <Link
+                          href={`/admin/shelves/${shelf.id}`}
+                          className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                        >
+                          จัดการสินค้า
+                        </Link>
+                      ) : (
+                        <span className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-stone-50 text-stone-400">
+                          ไม่ต้องจัดสินค้า
+                        </span>
+                      )}
                       <button
                         onClick={() => {
                           setEditingId(shelf.id);
-                          setEditForm({ name: shelf.name, slug: shelf.slug, description: shelf.description || "", color: shelf.color, active: shelf.active });
+                            setEditForm({ name: shelf.name, name_th: shelf.name_th || "", slug: shelf.slug, description: shelf.description || "", description_th: shelf.description_th || "", color: shelf.color, active: shelf.active, sourceType: shelf.sourceType || "manual", limit: shelf.limit ?? 8 });
                         }}
                         className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-stone-50 text-stone-600 hover:bg-stone-100 transition-colors"
                       >
@@ -445,22 +686,22 @@ export default function AdminShelvesPage() {
                     {/* Product cards */}
                     <div className={`px-5 pb-4 ${collapsedIds.has(shelf.id) ? "hidden" : ""}`}>
                       {loading || !shelfItems[shelf.id] ? (
-                        <div className="flex gap-3">
-                          {Array.from({ length: 4 }).map((_, i) => (
-                            <div key={i} className="shrink-0 w-36 h-32 rounded-xl bg-stone-100 animate-pulse" />
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                          {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="h-40 rounded-xl bg-stone-100 animate-pulse" />
                           ))}
                         </div>
                       ) : shelfItems[shelf.id].length === 0 ? (
                         <p className="text-xs text-stone-300 py-2">ยังไม่มีสินค้า</p>
                       ) : (
-                        <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-thin">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                           {shelfItems[shelf.id].map((item, idx) => {
                             const img = item.product.images?.[0] || `https://placehold.co/200x150/fff7ed/f97316?text=${encodeURIComponent(item.product.name)}`;
                             const isPlaceholder = !item.product.images?.[0];
                             return (
-                              <div key={item.id} className="shrink-0 w-36 rounded-xl border border-stone-100 overflow-hidden hover:shadow-sm transition-shadow bg-white">
-                                <div className="relative h-24 bg-orange-50">
-                                  <Image src={img} alt={item.product.name} fill className="object-cover" sizes="144px" unoptimized={isPlaceholder} />
+                              <div key={item.id} className="rounded-xl border border-stone-100 overflow-hidden hover:shadow-sm transition-shadow bg-white">
+                                <div className="relative aspect-square bg-orange-50">
+                                  <Image src={img} alt={item.product.name} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" unoptimized={isPlaceholder} />
                                   <div
                                     className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white shadow"
                                     style={{ backgroundColor: shelf.color }}

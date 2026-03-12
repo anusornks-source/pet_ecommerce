@@ -37,6 +37,25 @@ const PROMPTS: Record<string, (ctx: Record<string, string>) => string> = {
     `Translate this call-to-action button label to natural Thai (short): "${ctaLabel}". Keep emojis. Reply with ONLY the Thai text, nothing else.`,
   secondaryCtaLabel_th: ({ secondaryCtaLabel }) =>
     `Translate this secondary button label to natural Thai (short): "${secondaryCtaLabel}". Keep emojis. Reply with ONLY the Thai text, nothing else.`,
+  // Shelf fields
+  shelf_name: ({ name_th, sourceType }) =>
+    name_th
+      ? `Translate this Thai shelf name to concise English: "${name_th}". Reply with ONLY the English text, nothing else.`
+      : `Suggest a short catchy English name for a product shelf (pet ecommerce). Type: ${sourceType || "manual"}. Max ~25 chars, emoji ok. Reply with ONLY the text.`,
+  shelf_name_th: ({ name, sourceType }) =>
+    name
+      ? `Translate this shelf name to natural Thai (short): "${name}". Reply with ONLY the Thai text, nothing else.`
+      : `Suggest a short catchy Thai name for a product shelf (pet ecommerce). Type: ${sourceType || "manual"}. Max ~20 chars, emoji ok. Reply with ONLY the text.`,
+  shelf_slug: ({ name, name_th }) =>
+    `Generate a URL-friendly slug for: "${name || name_th || "shelf"}". Rules: lowercase, hyphens only, no spaces. Reply with ONLY the slug.`,
+  shelf_description: ({ description_th }) =>
+    description_th
+      ? `Translate this Thai badge to natural English: "${description_th}". Keep emojis. Reply with ONLY the English text.`
+      : `Suggest a short badge text in English for a product shelf (max ~25 chars, emoji ok). Reply with ONLY the text.`,
+  shelf_description_th: ({ description }) =>
+    description
+      ? `Translate this badge to natural Thai: "${description}". Keep emojis. Reply with ONLY the Thai text.`
+      : `Suggest a short badge text in Thai for a product shelf (max ~25 chars, emoji ok). Reply with ONLY the text.`,
 };
 
 export async function POST(request: NextRequest) {

@@ -25,8 +25,10 @@ interface ShelfItem {
 interface Shelf {
   id: string;
   name: string;
+  name_th: string | null;
   slug: string;
   description: string | null;
+  description_th: string | null;
   color: string;
   active: boolean;
   shop: { id: string; name: string } | null;
@@ -157,7 +159,7 @@ export default function ShelfDetailPage({ params }: { params: Promise<{ id: stri
         {shelf && (
           <div className="flex items-center gap-2 flex-wrap">
             <div className="w-4 h-4 rounded-full border border-stone-200" style={{ backgroundColor: shelf.color }} />
-            <h1 className="text-xl font-bold text-stone-800">{shelf.name}</h1>
+            <h1 className="text-xl font-bold text-stone-800">{shelf.name_th || shelf.name}</h1>
             <span className="text-xs text-stone-400 font-mono">/{shelf.slug}</span>
             {shelf.shop && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 font-medium">
@@ -174,9 +176,9 @@ export default function ShelfDetailPage({ params }: { params: Promise<{ id: stri
           className="h-10 rounded-2xl flex items-center px-5"
           style={{ background: `linear-gradient(135deg, ${shelf.color}ee, ${shelf.color}99)` }}
         >
-          <span className="text-white text-sm font-semibold">{shelf.name}</span>
-          {shelf.description && (
-            <span className="ml-3 text-white/70 text-xs">{shelf.description}</span>
+          <span className="text-white text-sm font-semibold">{shelf.name_th || shelf.name}</span>
+          {(shelf.description_th || shelf.description) && (
+            <span className="ml-3 text-white/70 text-xs">{shelf.description_th || shelf.description}</span>
           )}
         </div>
       )}

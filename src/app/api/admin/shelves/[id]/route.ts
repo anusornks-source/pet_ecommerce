@@ -12,7 +12,7 @@ export async function PUT(
 
   const { id } = await params;
   const body = await request.json();
-  const { name, slug, description, color, active, order } = body;
+  const { name, name_th, slug, description, description_th, color, active, order, sourceType, limit } = body;
 
   // Verify shelf belongs to this shop
   const existingShelf = await prisma.shelf.findFirst({ where: { id, shopId } });
@@ -28,15 +28,22 @@ export async function PUT(
     }
   }
 
+  const validSource = sourceType && ["manual", "best_seller", "featured"].includes(sourceType) ? sourceType : undefined;
+  const shelfLimit = typeof limit === "number" ? Math.min(20, Math.max(1, limit)) : undefined;
+
   const shelf = await prisma.shelf.update({
     where: { id },
     data: {
       ...(name !== undefined && { name }),
+      ...(name_th !== undefined && { name_th: name_th || null }),
       ...(slug !== undefined && { slug }),
       ...(description !== undefined && { description: description || null }),
+      ...(description_th !== undefined && { description_th: description_th || null }),
       ...(color !== undefined && { color }),
       ...(active !== undefined && { active }),
       ...(order !== undefined && { order }),
+      ...(validSource !== undefined && { sourceType: validSource }),
+      ...(shelfLimit !== undefined && { limit: shelfLimit }),
     },
     include: { _count: { select: { items: true } } },
   });

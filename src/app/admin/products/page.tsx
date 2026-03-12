@@ -82,6 +82,7 @@ interface Product {
   shop: { id: string; name: string } | null;
   tags: Tag[];
   _count: { marketingPacks: number };
+  soldCount?: number;
 }
 
 interface Category {
@@ -439,6 +440,7 @@ export default function AdminProductsPage() {
             className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
           >
             <option value="newest">เรียง: ใหม่ก่อน</option>
+            <option value="best_seller">เรียง: ขายดี</option>
             <option value="oldest">เรียง: เก่าก่อน</option>
             <option value="price_asc">ราคา: น้อย → มาก</option>
             <option value="price_desc">ราคา: มาก → น้อย</option>
@@ -508,6 +510,11 @@ export default function AdminProductsPage() {
                 <th className="text-right px-4 py-3 text-stone-500 font-medium">
                   ราคา
                 </th>
+                {sort === "best_seller" && (
+                  <th className="text-right px-4 py-3 text-stone-500 font-medium hidden sm:table-cell">
+                    ขายแล้ว
+                  </th>
+                )}
                 <th className="text-right px-4 py-3 text-stone-500 font-medium hidden sm:table-cell">
                   สต็อก
                 </th>
@@ -679,6 +686,11 @@ export default function AdminProductsPage() {
                   <td className="px-4 py-3 text-right font-medium text-stone-800">
                     ฿{product.price.toLocaleString("th-TH")}
                   </td>
+                  {sort === "best_seller" && (
+                    <td className="px-4 py-3 text-right text-stone-600 hidden sm:table-cell font-medium">
+                      {product.soldCount ?? 0}
+                    </td>
+                  )}
                   <td className="px-4 py-3 text-right text-stone-500 hidden sm:table-cell">
                     {product.stock}
                   </td>

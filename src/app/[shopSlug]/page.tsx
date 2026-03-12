@@ -53,44 +53,84 @@ export default async function ShopPage({
   const p = (th: string | null | undefined, en: string | null | undefined) =>
     pickLang(th, en, lang);
 
-  const [banners, shelves, featuredProducts, categories, petTypes] =
-    await Promise.all([
-      prisma.heroBanner.findMany({
-        where: { shopId: shop.id, active: true },
-        orderBy: { order: "asc" },
-      }),
-      prisma.shelf.findMany({
-        where: { shopId: shop.id, active: true },
-        orderBy: { order: "asc" },
-        include: {
-          items: {
-            orderBy: { order: "asc" },
-            where: { product: { active: true } },
-            include: {
-              product: {
-                include: { category: true, petType: true, tags: true, variants: true },
-              },
+  const productInclude = {
+    category: true,
+    petType: true,
+    tags: true,
+    variants: true,
+  } as const;
+
+  const [banners, shelves, categories, petTypes] = await Promise.all([
+    prisma.heroBanner.findMany({
+      where: { shopId: shop.id, active: true },
+      orderBy: { order: "asc" },
+    }),
+    prisma.shelf.findMany({
+      where: { shopId: shop.id, active: true },
+      orderBy: { order: "asc" },
+      include: {
+        items: {
+          orderBy: { order: "asc" },
+          where: { product: { active: true } },
+          include: {
+            product: {
+              include: productInclude,
             },
           },
         },
-      }),
-      prisma.product.findMany({
-        where: { shopId: shop.id, featured: true, active: true },
-        include: { category: true, petType: true, tags: true, variants: true },
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.category.findMany({
-        where: { products: { some: { shopId: shop.id, active: true } } },
-        include: {
-          _count: { select: { products: { where: { shopId: shop.id, active: true } } } },
-        },
-      }),
-      shop.usePetType
-        ? prisma.petType.findMany({ orderBy: { order: "asc" } })
-        : Promise.resolve([]),
-    ]);
+      },
+    }),
+    prisma.category.findMany({
+      where: { products: { some: { shopId: shop.id, active: true } } },
+      include: {
+        _count: { select: { products: { where: { shopId: shop.id, active: true } } } },
+      },
+    }),
+    shop.usePetType
+      ? prisma.petType.findMany({ orderBy: { order: "asc" } })
+      : Promise.resolve([]),
+  ]);
 
-  const activeShelves = shelves.filter((s) => s.items.length > 0);
+  // Resolve products per shelf by sourceType
+  const shelvesWithProducts = await Promise.all(
+    shelves.map(async (shelf) => {
+      const limit = Math.min(20, Math.max(1, shelf.limit ?? 8));
+      let products: Awaited<ReturnType<typeof prisma.product.findMany>> = [];
+
+      if (shelf.sourceType === "best_seller") {
+        const sold = await prisma.orderItem.groupBy({
+          by: ["productId"],
+          where: { order: { shopId: shop.id } },
+          _sum: { quantity: true },
+          orderBy: { _sum: { quantity: "desc" } },
+          take: limit,
+        });
+        const ids = sold.map((r) => r.productId);
+        if (ids.length > 0) {
+          products = await prisma.product.findMany({
+            where: { id: { in: ids }, active: true },
+            include: productInclude,
+          });
+          products = ids.map((id) => products.find((p) => p.id === id)!).filter(Boolean);
+        }
+      } else if (shelf.sourceType === "featured") {
+        products = await prisma.product.findMany({
+          where: { shopId: shop.id, featured: true, active: true },
+          include: productInclude,
+          orderBy: { createdAt: "desc" },
+          take: limit,
+        });
+      } else {
+        products = shelf.items.map((i) => i.product);
+      }
+
+      return { ...shelf, resolvedProducts: products };
+    })
+  );
+
+  const activeShelves = shelvesWithProducts.filter(
+    (s) => s.resolvedProducts.length > 0
+  );
   const shopFilter = `shopSlug=${shopSlug}`;
 
   return (
@@ -167,64 +207,46 @@ export default async function ShopPage({
         </section>
       )}
 
-      {/* Dynamic Shelves */}
-      {activeShelves.map((shelf) => (
-        <section
-          key={shelf.id}
-          className="py-12"
-          style={{ background: `linear-gradient(135deg, ${shelf.color}ee, ${shelf.color}88)` }}
-        >
-          <div className="max-w-6xl mx-auto px-4">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                {shelf.description && (
-                  <span className="inline-flex items-center bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full mb-2">
-                    {shelf.description}
-                  </span>
-                )}
-                <h2 className="text-2xl font-bold text-white">{shelf.name}</h2>
-              </div>
-              <Link
-                href={`/products?${shopFilter}&shelf=${shelf.slug}`}
-                className="text-white/80 hover:text-white text-sm font-medium transition-colors"
-              >
-                {p("ดูทั้งหมด", "View All")} →
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {shelf.items.map(({ product }) => (
-                <ProductCard key={product.id} product={product as unknown as Product} />
-              ))}
-            </div>
-          </div>
-        </section>
-      ))}
-
-      {/* Featured Products */}
-      <section className="max-w-6xl mx-auto px-4 py-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-stone-800">
-            {p("สินค้าแนะนำ ⭐", "Featured Products ⭐")}
-          </h2>
-          <Link
-            href={`/products?${shopFilter}&featured=true`}
-            className="shop-view-all text-sm font-medium transition-colors"
+      {/* Dynamic Shelves (manual, best_seller, featured) */}
+      {activeShelves.map((shelf) => {
+        const viewAllHref =
+          shelf.sourceType === "best_seller"
+            ? `/products?${shopFilter}&sort=best_seller`
+            : shelf.sourceType === "featured"
+              ? `/products?${shopFilter}&featured=true`
+              : `/products?${shopFilter}&shelf=${shelf.slug}`;
+        return (
+          <section
+            key={shelf.id}
+            className="py-12"
+            style={{ background: `linear-gradient(135deg, ${shelf.color}ee, ${shelf.color}88)` }}
           >
-            {p("ดูทั้งหมด", "View All")} →
-          </Link>
-        </div>
-        {featuredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {(featuredProducts as unknown as Product[]).map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 text-stone-400">
-            {p("ยังไม่มีสินค้าแนะนำ", "No featured products yet")}
-          </div>
-        )}
-      </section>
+            <div className="max-w-6xl mx-auto px-4">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  {(shelf.description_th || shelf.description) && (
+                    <span className="inline-flex items-center bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full mb-2">
+                      {p(shelf.description_th ?? null, shelf.description ?? null)}
+                    </span>
+                  )}
+                  <h2 className="text-2xl font-bold text-white">{p(shelf.name_th ?? null, shelf.name)}</h2>
+                </div>
+                <Link
+                  href={viewAllHref}
+                  className="text-white/80 hover:text-white text-sm font-medium transition-colors"
+                >
+                  {p("ดูทั้งหมด", "View All")} →
+                </Link>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {shelf.resolvedProducts.map((product) => (
+                  <ProductCard key={product.id} product={product as unknown as Product} />
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      })}
 
       {/* Promo Banner */}
       <section className="max-w-6xl mx-auto px-4 pb-12">

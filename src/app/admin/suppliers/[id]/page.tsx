@@ -568,7 +568,7 @@ export default function SupplierDetailPage({
                 <input value={spForm.name_th} onChange={(e) => setSpForm((f) => ({ ...f, name_th: e.target.value }))} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="ชื่อสินค้า" />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-semibold text-stone-600">คำอธิบาย (EN) *</label>
@@ -584,7 +584,7 @@ export default function SupplierDetailPage({
                 <textarea value={spForm.description_th} onChange={(e) => setSpForm((f) => ({ ...f, description_th: e.target.value }))} rows={4} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="คำอธิบายสินค้า" />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-semibold text-stone-600">คำอธิบายสั้น (EN)</label>
@@ -1044,7 +1044,7 @@ export default function SupplierDetailPage({
                   <input value={editSpForm.name_th} onChange={(e) => setEditSpForm((f) => ({ ...f, name_th: e.target.value }))} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="ชื่อสินค้า" />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-xs font-semibold text-stone-600">คำอธิบาย (EN) *</label>
@@ -1060,7 +1060,7 @@ export default function SupplierDetailPage({
                   <textarea value={editSpForm.description_th} onChange={(e) => setEditSpForm((f) => ({ ...f, description_th: e.target.value }))} rows={4} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="คำอธิบายสินค้า" />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-xs font-semibold text-stone-600">คำอธิบายสั้น (EN)</label>
@@ -1116,13 +1116,40 @@ export default function SupplierDetailPage({
                 <textarea value={editSpForm.remark} onChange={(e) => setEditSpForm((f) => ({ ...f, remark: e.target.value }))} rows={2} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="หมายเหตุเพิ่มเติม" />
               </div>
               </div>
-              <div className="flex gap-2 pt-4 shrink-0 border-t border-stone-100 mt-4">
-                <button type="submit" disabled={savingEditSp} className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium disabled:opacity-50">
-                  {savingEditSp ? "กำลังบันทึก..." : "บันทึก"}
+              <div className="flex gap-2 pt-4 shrink-0 border-t border-stone-100 mt-4 justify-between">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!editSpModal || !confirm("ต้องการลบ Supplier Product นี้?")) return;
+                    setDeletingSpId(editSpModal.id);
+                    try {
+                      const supplierId = editSpModal.supplierId ?? id;
+                      const res = await fetch(`/api/admin/suppliers/${supplierId}/supplier-products/${editSpModal.id}`, { method: "DELETE" });
+                      const data = await res.json();
+                      if (data.success) {
+                        toast.success("ลบแล้ว");
+                        setEditSpModal(null);
+                        loadSupplierProducts();
+                      } else {
+                        toast.error(data.error || "ลบไม่สำเร็จ");
+                      }
+                    } finally {
+                      setDeletingSpId(null);
+                    }
+                  }}
+                  disabled={savingEditSp || deletingSpId === editSpModal?.id}
+                  className="px-4 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-sm disabled:opacity-50"
+                >
+                  {deletingSpId === editSpModal?.id ? "กำลังลบ..." : "ลบ"}
                 </button>
-                <button type="button" onClick={() => setEditSpModal(null)} disabled={savingEditSp} className="px-4 py-2 rounded-lg border border-stone-200 text-stone-600 text-sm">
-                  ยกเลิก
-                </button>
+                <div className="flex gap-2">
+                  <button type="submit" disabled={savingEditSp} className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium disabled:opacity-50">
+                    {savingEditSp ? "กำลังบันทึก..." : "บันทึก"}
+                  </button>
+                  <button type="button" onClick={() => setEditSpModal(null)} disabled={savingEditSp} className="px-4 py-2 rounded-lg border border-stone-200 text-stone-600 text-sm">
+                    ยกเลิก
+                  </button>
+                </div>
               </div>
             </form>
           </div>

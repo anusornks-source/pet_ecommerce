@@ -836,8 +836,8 @@ export default function AdminSupplierProductsPage() {
             }
           }}
         >
-          <div
-            className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+            <div
+              className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
@@ -886,46 +886,48 @@ export default function AdminSupplierProductsPage() {
                   />
                 </div>
               </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-stone-600">คำอธิบาย (EN) *</label>
-                  <div className="flex items-center gap-1">
-                    <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description", { description_th: addForm.description_th, name: addForm.name, name_th: addForm.name_th }, (v) => setAddForm((f) => ({ ...f, description: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description" ? "…" : "✨ AI"}</button>
-                    <button type="button" onClick={() => setAddDescPreview((v) => !v)} className="text-[10px] text-stone-400 hover:text-orange-500 transition-colors">{addDescPreview ? "✏️ แก้ไข" : "👁 HTML"}</button>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-stone-600">คำอธิบาย (EN) *</label>
+                    <div className="flex items-center gap-1">
+                      <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description", { description_th: addForm.description_th, name: addForm.name, name_th: addForm.name_th }, (v) => setAddForm((f) => ({ ...f, description: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description" ? "…" : "✨ AI"}</button>
+                      <button type="button" onClick={() => setAddDescPreview((v) => !v)} className="text-[10px] text-stone-400 hover:text-orange-500 transition-colors">{addDescPreview ? "✏️ แก้ไข" : "👁 HTML"}</button>
+                    </div>
                   </div>
+                  {addDescPreview ? (
+                    <div className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm min-h-24 prose prose-sm max-w-none overflow-auto" dangerouslySetInnerHTML={{ __html: addForm.description }} />
+                  ) : (
+                    <textarea
+                      value={addForm.description}
+                      onChange={(e) => setAddForm((f) => ({ ...f, description: e.target.value }))}
+                      rows={3}
+                      className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Description (รองรับ HTML)"
+                      required
+                    />
+                  )}
                 </div>
-                {addDescPreview ? (
-                  <div className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm min-h-24 prose prose-sm max-w-none overflow-auto" dangerouslySetInnerHTML={{ __html: addForm.description }} />
-                ) : (
-                  <textarea
-                    value={addForm.description}
-                    onChange={(e) => setAddForm((f) => ({ ...f, description: e.target.value }))}
-                    rows={3}
-                    className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
-                    placeholder="Description (รองรับ HTML)"
-                    required
-                  />
-                )}
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-stone-600">คำอธิบาย (TH)</label>
-                  <div className="flex items-center gap-1">
-                    <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description_th", { description: addForm.description, name: addForm.name, name_th: addForm.name_th }, (v) => setAddForm((f) => ({ ...f, description_th: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description_th" ? "…" : "✨ AI"}</button>
-                    <button type="button" onClick={() => setAddDescPreviewTh((v) => !v)} className="text-[10px] text-stone-400 hover:text-orange-500 transition-colors">{addDescPreviewTh ? "✏️ แก้ไข" : "👁 HTML"}</button>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-stone-600">คำอธิบาย (TH)</label>
+                    <div className="flex items-center gap-1">
+                      <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description_th", { description: addForm.description, name: addForm.name, name_th: addForm.name_th }, (v) => setAddForm((f) => ({ ...f, description_th: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description_th" ? "…" : "✨ AI"}</button>
+                      <button type="button" onClick={() => setAddDescPreviewTh((v) => !v)} className="text-[10px] text-stone-400 hover:text-orange-500 transition-colors">{addDescPreviewTh ? "✏️ แก้ไข" : "👁 HTML"}</button>
+                    </div>
                   </div>
+                  {addDescPreviewTh ? (
+                    <div className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm min-h-24 prose prose-sm max-w-none overflow-auto" dangerouslySetInnerHTML={{ __html: addForm.description_th }} />
+                  ) : (
+                    <textarea
+                      value={addForm.description_th}
+                      onChange={(e) => setAddForm((f) => ({ ...f, description_th: e.target.value }))}
+                      rows={3}
+                      className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
+                      placeholder="คำอธิบายสินค้า (รองรับ HTML)"
+                    />
+                  )}
                 </div>
-                {addDescPreviewTh ? (
-                  <div className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm min-h-24 prose prose-sm max-w-none overflow-auto" dangerouslySetInnerHTML={{ __html: addForm.description_th }} />
-                ) : (
-                  <textarea
-                    value={addForm.description_th}
-                    onChange={(e) => setAddForm((f) => ({ ...f, description_th: e.target.value }))}
-                    rows={3}
-                    className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
-                    placeholder="คำอธิบายสินค้า (รองรับ HTML)"
-                  />
-                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1068,33 +1070,35 @@ export default function AdminSupplierProductsPage() {
                     <input value={editSpForm.name_th} onChange={(e) => setEditSpForm((f) => ({ ...f, name_th: e.target.value }))} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="ชื่อสินค้า" />
                   </div>
                 </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-semibold text-stone-600">คำอธิบาย (EN) *</label>
-                    <div className="flex items-center gap-1">
-                      <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description", { description_th: editSpForm.description_th, name: editSpForm.name, name_th: editSpForm.name_th }, (v) => setEditSpForm((f) => ({ ...f, description: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description" ? "…" : "✨ AI"}</button>
-                      <button type="button" onClick={() => setEditDescPreview((v) => !v)} className="text-[10px] text-stone-400 hover:text-orange-500 transition-colors">{editDescPreview ? "✏️ แก้ไข" : "👁 HTML"}</button>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-semibold text-stone-600">คำอธิบาย (EN) *</label>
+                      <div className="flex items-center gap-1">
+                        <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description", { description_th: editSpForm.description_th, name: editSpForm.name, name_th: editSpForm.name_th }, (v) => setEditSpForm((f) => ({ ...f, description: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description" ? "…" : "✨ AI"}</button>
+                        <button type="button" onClick={() => setEditDescPreview((v) => !v)} className="text-[10px] text-stone-400 hover:text-orange-500 transition-colors">{editDescPreview ? "✏️ แก้ไข" : "👁 HTML"}</button>
+                      </div>
                     </div>
+                    {editDescPreview ? (
+                      <div className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm min-h-24 prose prose-sm max-w-none overflow-auto" dangerouslySetInnerHTML={{ __html: editSpForm.description }} />
+                    ) : (
+                      <textarea value={editSpForm.description} onChange={(e) => setEditSpForm((f) => ({ ...f, description: e.target.value }))} rows={3} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" required />
+                    )}
                   </div>
-                  {editDescPreview ? (
-                    <div className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm min-h-24 prose prose-sm max-w-none overflow-auto" dangerouslySetInnerHTML={{ __html: editSpForm.description }} />
-                  ) : (
-                    <textarea value={editSpForm.description} onChange={(e) => setEditSpForm((f) => ({ ...f, description: e.target.value }))} rows={3} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" required />
-                  )}
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-semibold text-stone-600">คำอธิบาย (TH)</label>
-                    <div className="flex items-center gap-1">
-                      <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description_th", { description: editSpForm.description, name: editSpForm.name, name_th: editSpForm.name_th }, (v) => setEditSpForm((f) => ({ ...f, description_th: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description_th" ? "…" : "✨ AI"}</button>
-                      <button type="button" onClick={() => setEditDescPreviewTh((v) => !v)} className="text-[10px] text-stone-400 hover:text-orange-500 transition-colors">{editDescPreviewTh ? "✏️ แก้ไข" : "👁 HTML"}</button>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-semibold text-stone-600">คำอธิบาย (TH)</label>
+                      <div className="flex items-center gap-1">
+                        <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description_th", { description: editSpForm.description, name: editSpForm.name, name_th: editSpForm.name_th }, (v) => setEditSpForm((f) => ({ ...f, description_th: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description_th" ? "…" : "✨ AI"}</button>
+                        <button type="button" onClick={() => setEditDescPreviewTh((v) => !v)} className="text-[10px] text-stone-400 hover:text-orange-500 transition-colors">{editDescPreviewTh ? "✏️ แก้ไข" : "👁 HTML"}</button>
+                      </div>
                     </div>
+                    {editDescPreviewTh ? (
+                      <div className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm min-h-24 prose prose-sm max-w-none overflow-auto" dangerouslySetInnerHTML={{ __html: editSpForm.description_th }} />
+                    ) : (
+                      <textarea value={editSpForm.description_th} onChange={(e) => setEditSpForm((f) => ({ ...f, description_th: e.target.value }))} rows={3} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" />
+                    )}
                   </div>
-                  {editDescPreviewTh ? (
-                    <div className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm min-h-24 prose prose-sm max-w-none overflow-auto" dangerouslySetInnerHTML={{ __html: editSpForm.description_th }} />
-                  ) : (
-                    <textarea value={editSpForm.description_th} onChange={(e) => setEditSpForm((f) => ({ ...f, description_th: e.target.value }))} rows={3} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" />
-                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>

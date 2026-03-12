@@ -46,7 +46,12 @@ export default function Navbar({ storeName = "CartNova", logoUrl, shopId, shopSl
         <Link href={shopSlug ? `/${shopSlug}` : "/"} className="flex items-center gap-2 font-bold text-xl text-orange-500">
           {logoUrl ? (
             <div className="relative w-8 h-8 shrink-0">
-              <Image src={logoUrl} alt={storeName} fill className="object-contain" sizes="32px" />
+              {logoUrl.includes("blob.vercel-storage.com") ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt={storeName} className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+              ) : (
+                <Image src={logoUrl} alt={storeName} fill className="object-contain" sizes="32px" />
+              )}
             </div>
           ) : (
             <span className="text-2xl">{storeName === "CartNova" ? "🛒" : "🐾"}</span>

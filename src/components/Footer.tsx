@@ -32,13 +32,12 @@ export default function Footer({
           <div className="flex items-center gap-2 text-white font-bold text-xl mb-3">
             {logoUrl ? (
               <div className="relative w-8 h-8 shrink-0 rounded-md overflow-hidden bg-white">
-                <Image
-                  src={logoUrl}
-                  alt={storeName}
-                  fill
-                  className="object-contain"
-                  sizes="32px"
-                />
+                {logoUrl.includes("blob.vercel-storage.com") ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={logoUrl} alt={storeName} className="w-full h-full object-contain" />
+                ) : (
+                  <Image src={logoUrl} alt={storeName} fill className="object-contain" sizes="32px" />
+                )}
               </div>
             ) : (
               <span className="text-2xl">{storeName === "CartNova" ? "🛒" : "🐾"}</span>

@@ -21,6 +21,11 @@ export async function GET(request: NextRequest) {
       if (res.ok) {
         data = await res.json();
       } else {
+        // Blob ถูกลบแล้ว — ลบ URL ออกจาก DB เพื่อใช้ static ครั้งถัดไป
+        await prisma.siteSettings.update({
+          where: { id: "default" },
+          data: { thaiAddressBlobUrl: null },
+        });
         throw new Error("Blob fetch failed");
       }
     } else {

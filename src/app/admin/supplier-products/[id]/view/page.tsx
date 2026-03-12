@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import {
@@ -93,9 +94,11 @@ interface SupplierProductDetail {
 
 export default function SupplierProductViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const [sp, setSp] = useState<SupplierProductDetail | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [reorderingImages, setReorderingImages] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchProduct = () => {
     fetch(`/api/admin/supplier-products/${id}`)
@@ -144,6 +147,25 @@ export default function SupplierProductViewPage({ params }: { params: Promise<{ 
     }
   };
 
+  const handleDelete = async () => {
+    if (!sp || !confirm("ต้องการลบ Supplier Product นี้?")) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/suppliers/${sp.supplier.id}/supplier-products/${sp.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("ลบแล้ว");
+        router.push(`/admin/suppliers/${sp.supplier.id}`);
+      } else {
+        toast.error(data.error ?? "ลบไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("เกิดข้อผิดพลาด");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (!sp) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -185,6 +207,13 @@ export default function SupplierProductViewPage({ params }: { params: Promise<{ 
               ✓ ดู Product
             </Link>
           )}
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="text-sm px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50"
+          >
+            {deleting ? "กำลังลบ..." : "ลบ"}
+          </button>
         </div>
       </div>
 

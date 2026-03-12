@@ -112,13 +112,82 @@ interface ProductDetail {
   _count?: { marketingAssets: number };
 }
 
+interface SupplierLink {
+  id: string;
+  supplierPrice: number | null;
+  supplier: {
+    id: string;
+    name: string;
+    nameTh: string | null;
+    imageUrl: string | null;
+    tel: string | null;
+    email: string | null;
+    contact: string | null;
+  };
+}
+
+interface PackSummary {
+  id: string;
+  lang: string;
+  hooks: string[];
+  createdAt: string;
+}
+
 export default function ProductViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { t } = useLocale();
   const [product, setProduct] = useState<ProductDetail | null>(null);
+  const [supplierLinks, setSupplierLinks] = useState<SupplierLink[]>([]);
+  const [packs, setPacks] = useState<PackSummary[]>([]);
+  const [packsLoading, setPacksLoading] = useState(true);
   const [addingAll, setAddingAll] = useState(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
   const [marketingAssetsRefreshKey, setMarketingAssetsRefreshKey] = useState(0);
+  const [editingPriceLinkId, setEditingPriceLinkId] = useState<string | null>(null);
+  const [editPriceValue, setEditPriceValue] = useState("");
+  const [hiddenSections, setHiddenSections] = useState<Set<string>>(new Set());
+
+  const toggleSection = (sectionId: string) => {
+    setHiddenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) next.delete(sectionId);
+      else next.add(sectionId);
+      return next;
+    });
+  };
+
+  const CollapsibleSection = ({
+    id,
+    title,
+    children,
+    actions,
+  }: {
+    id: string;
+    title: string;
+    children: React.ReactNode;
+    actions?: React.ReactNode;
+  }) => {
+    const isHidden = hiddenSections.has(id);
+    return (
+      <div id={id} className="bg-white rounded-2xl border border-stone-100 overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-stone-100">
+          <h3 className="font-semibold text-stone-800">{title}</h3>
+          <div className="flex items-center gap-2">
+            {actions}
+            <button
+              type="button"
+              onClick={() => toggleSection(id)}
+              title={isHidden ? "แสดง" : "ซ่อน"}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-stone-500 hover:bg-stone-100 hover:text-stone-700 transition-transform"
+            >
+              <span className={`text-sm ${isHidden ? "" : "rotate-180"}`}>▼</span>
+            </button>
+          </div>
+        </div>
+        {!isHidden && <div className="p-5">{children}</div>}
+      </div>
+    );
+  };
 
   const fetchProduct = () => {
     fetch(`/api/admin/products/${id}`, { cache: "no-store" })
@@ -132,8 +201,50 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
   }, [id]);
 
   useEffect(() => {
+    fetch(`/api/admin/product-suppliers?productId=${id}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setSupplierLinks(d.data); });
+  }, [id]);
+
+  useEffect(() => {
+    fetch(`/api/admin/automation/marketing-packs?productId=${id}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setPacks(d.data); })
+      .finally(() => setPacksLoading(false));
+  }, [id]);
+
+  useEffect(() => {
     setSelectedMediaIndex(0);
   }, [product?.id]);
+
+  const startEditSupplierPrice = (link: SupplierLink) => {
+    setEditingPriceLinkId(link.id);
+    setEditPriceValue(link.supplierPrice != null ? String(link.supplierPrice) : "");
+  };
+
+  const handleSaveSupplierPrice = async (supplierId: string) => {
+    try {
+      const res = await fetch(`/api/admin/suppliers/${supplierId}/products/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ supplierPrice: editPriceValue === "" ? null : Number(editPriceValue) }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const newPrice = data.data?.supplierPrice ?? (editPriceValue === "" ? null : Number(editPriceValue));
+        setSupplierLinks((prev) =>
+          prev.map((l) => (l.supplier.id === supplierId ? { ...l, supplierPrice: newPrice } : l))
+        );
+        setEditingPriceLinkId(null);
+        setEditPriceValue("");
+        toast.success("บันทึกราคาแล้ว");
+      } else {
+        toast.error(data.error ?? "บันทึกไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("บันทึกไม่สำเร็จ");
+    }
+  };
 
   const handleAddAllToMarketingAssets = async () => {
     setAddingAll(true);
@@ -234,6 +345,15 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
             แก้ไข
           </Link>
           <h1 className="text-2xl font-bold text-stone-800">{t("productDetail", "adminPages")}: {product.name_th ?? product.name}</h1>
+          {hiddenSections.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setHiddenSections(new Set())}
+              className="text-xs text-stone-500 hover:text-stone-700"
+            >
+              แสดงทั้งหมด
+            </button>
+          )}
         </div>
         <button
           onClick={handleAddAllToMarketingAssets}
@@ -317,8 +437,7 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
 
       {/* Variant images gallery */}
       {product.variants.some((v) => v.variantImage) && (
-        <div className="bg-white rounded-2xl border border-stone-100 p-5">
-          <h3 className="font-semibold text-stone-800 mb-3">รูปตัวเลือกสินค้า</h3>
+        <CollapsibleSection id="variant-images" title="รูปตัวเลือกสินค้า">
           <div className="flex flex-wrap gap-3">
             {product.variants
               .filter((v) => v.variantImage)
@@ -333,13 +452,61 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
                 </div>
               ))}
           </div>
-        </div>
+        </CollapsibleSection>
       )}
+
+      {/* Marketing Packs */}
+      <CollapsibleSection
+        id="marketing-packs"
+        title="Marketing Packs"
+        actions={
+          <div className="flex gap-2">
+            <Link
+              href={`/admin/automation/marketing-packs?productId=${id}`}
+              className="text-xs px-3 py-1.5 rounded-lg border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors font-medium"
+            >
+              + Manual Add
+            </Link>
+            <Link
+              href="/admin/automation/creative"
+              className="text-xs px-3 py-1.5 rounded-lg border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors font-medium"
+            >
+              ✨ AI Generate
+            </Link>
+          </div>
+        }
+      >
+        {packsLoading ? (
+          <p className="text-xs text-stone-400">กำลังโหลด...</p>
+        ) : packs.length === 0 ? (
+          <p className="text-sm text-stone-400">ยังไม่มี Marketing Pack — สร้างใหม่ได้เลย</p>
+        ) : (
+          <div className="space-y-2">
+            {packs.map((pack) => (
+              <Link
+                key={pack.id}
+                href={`/admin/automation/marketing-packs/${pack.id}`}
+                className="flex items-center gap-3 p-3 rounded-xl border border-stone-100 hover:border-orange-200 hover:bg-orange-50/50 transition-colors group"
+              >
+                <span className="text-xs font-bold uppercase px-2 py-0.5 rounded bg-stone-100 text-stone-500 group-hover:bg-orange-100 group-hover:text-orange-600">
+                  {pack.lang}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-stone-600 truncate">{pack.hooks?.[0] ?? "—"}</p>
+                </div>
+                <span className="text-[11px] text-stone-400 shrink-0">
+                  {new Date(pack.createdAt).toLocaleDateString("th-TH", { day: "2-digit", month: "2-digit", year: "2-digit" })}
+                </span>
+                <span className="text-stone-300 group-hover:text-orange-400 text-xs">→</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </CollapsibleSection>
 
       {/* Variants */}
       {product.variants.length > 0 && (
-        <div className="bg-white rounded-2xl border border-stone-100 p-5">
-          <h3 className="font-semibold text-stone-800 mb-3">ตัวเลือกสินค้า ({product.variants.length} รายการ)</h3>
+        <CollapsibleSection id="variants" title={`ตัวเลือกสินค้า (${product.variants.length} รายการ)`}>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -402,37 +569,152 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
               </tbody>
             </table>
           </div>
-        </div>
+        </CollapsibleSection>
       )}
+
+      {/* Suppliers */}
+      <CollapsibleSection
+        id="suppliers"
+        title="Suppliers"
+        actions={
+          <Link
+            href={`/admin/products/${id}`}
+            className="text-xs text-teal-600 hover:text-teal-700 font-medium"
+          >
+            แก้ไข →
+          </Link>
+        }
+      >
+        {supplierLinks.length === 0 ? (
+          <p className="text-sm text-stone-400">ยังไม่มี supplier</p>
+        ) : (
+          <div className="space-y-2">
+            {supplierLinks.map((link) => (
+              <div
+                key={link.id}
+                className="flex flex-wrap items-center gap-3 p-3 rounded-xl border border-stone-100 hover:border-teal-200 hover:bg-teal-50/50 transition-colors group"
+              >
+                {link.supplier.imageUrl ? (
+                  <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-stone-100 shrink-0">
+                    <Image src={link.supplier.imageUrl} alt="" fill className="object-cover" sizes="32px" />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center text-stone-400 text-sm shrink-0">
+                    🏭
+                  </div>
+                )}
+                <Link
+                  href={`/admin/suppliers/${link.supplier.id}`}
+                  className="flex-1 min-w-0 flex flex-col gap-0.5"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-stone-700">
+                      {link.supplier.name}
+                      {link.supplier.nameTh && (
+                        <span className="text-stone-400 ml-1">({link.supplier.nameTh})</span>
+                      )}
+                    </span>
+                    <span className="text-stone-300 group-hover:text-teal-400 text-xs">→</span>
+                  </div>
+                  {(link.supplier.tel || link.supplier.email || link.supplier.contact) && (
+                    <span className="text-xs text-stone-500">
+                      {[
+                        link.supplier.tel && `📞 ${link.supplier.tel}`,
+                        link.supplier.email && `✉️ ${link.supplier.email}`,
+                        link.supplier.contact,
+                      ].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
+                </Link>
+                <div className="shrink-0 flex items-center gap-2">
+                  <span className="text-xs text-stone-400">ราคา Supplier:</span>
+                  {editingPriceLinkId === link.id ? (
+                    <span className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        value={editPriceValue}
+                        onChange={(e) => setEditPriceValue(e.target.value)}
+                        className="w-20 text-sm border border-stone-200 rounded px-2 py-1"
+                        placeholder="0"
+                        step="0.01"
+                        min="0"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveSupplierPrice(link.supplier.id)}
+                        className="text-xs px-2 py-1 rounded bg-teal-500 text-white hover:bg-teal-600"
+                      >
+                        บันทึก
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setEditingPriceLinkId(null); setEditPriceValue(""); }}
+                        className="text-xs text-stone-500 hover:text-stone-700"
+                      >
+                        ยกเลิก
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="text-sm font-medium text-stone-600">
+                      {link.supplierPrice != null ? (
+                        <>
+                          ฿{link.supplierPrice.toLocaleString()}
+                          <button
+                            type="button"
+                            onClick={() => startEditSupplierPrice(link)}
+                            className="ml-1 text-teal-500 hover:text-teal-600 text-xs"
+                          >
+                            แก้ไข
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => startEditSupplierPrice(link)}
+                          className="text-teal-500 hover:text-teal-600 text-xs"
+                        >
+                          + ใส่ราคา
+                        </button>
+                      )}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CollapsibleSection>
 
       {/* Description */}
       {product.description && (
-        <div className="bg-white rounded-2xl border border-stone-100 p-5">
-          <h3 className="font-semibold text-stone-800 mb-2">รายละเอียด</h3>
+        <CollapsibleSection id="description" title="รายละเอียด">
           <div className="text-sm text-stone-600 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: product.description }} />
-        </div>
+        </CollapsibleSection>
       )}
 
       {/* Marketing Assets */}
-      <MarketingAssetsSection
-        productId={id}
-        productImages={product.images}
-        productVideos={product.videos ?? []}
-        productMediaOrder={
-          (product.mediaOrder && product.mediaOrder.length > 0 ? product.mediaOrder : [...(product.images ?? []), ...(product.videos ?? [])]) as string[]
-        }
-        onDisplayChange={fetchProduct}
-        refreshKey={marketingAssetsRefreshKey}
-        count={product._count?.marketingAssets}
-        productName={product.name_th ?? product.name}
-        productContext={{
-          name: product.name,
-          name_th: product.name_th ?? undefined,
-          price: product.price,
-          normalPrice: product.normalPrice ?? undefined,
-          shortDescription: product.shortDescription ?? undefined,
-        }}
-      />
+      <CollapsibleSection id="marketing-assets" title="Marketing Assets">
+        <MarketingAssetsSection
+          productId={id}
+          productImages={product.images}
+          productVideos={product.videos ?? []}
+          productMediaOrder={
+            (product.mediaOrder && product.mediaOrder.length > 0 ? product.mediaOrder : [...(product.images ?? []), ...(product.videos ?? [])]) as string[]
+          }
+          onDisplayChange={fetchProduct}
+          refreshKey={marketingAssetsRefreshKey}
+          count={product._count?.marketingAssets}
+          productName={product.name_th ?? product.name}
+          productContext={{
+            name: product.name,
+            name_th: product.name_th ?? undefined,
+            price: product.price,
+            normalPrice: product.normalPrice ?? undefined,
+            shortDescription: product.shortDescription ?? undefined,
+          }}
+        />
+      </CollapsibleSection>
     </div>
   );
 }

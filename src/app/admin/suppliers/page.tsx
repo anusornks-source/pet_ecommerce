@@ -61,17 +61,20 @@ export default function AdminSuppliersPage() {
     try {
       const url = editId ? `/api/admin/suppliers/${editId}` : "/api/admin/suppliers";
       const method = editId ? "PATCH" : "POST";
+      const payload = {
+        name: form.name.trim(),
+        nameTh: form.nameTh.trim() || null,
+        imageUrl: form.imageUrl.trim() || null,
+        tel: form.tel.trim() || null,
+        email: form.email.trim() || null,
+        contact: form.contact.trim() || null,
+        website: form.website.trim() || null,
+        note: form.note.trim() || null,
+      };
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          nameTh: form.nameTh.trim() || null,
-          imageUrl: form.imageUrl.trim() || null,
-          contact: form.contact.trim() || null,
-          website: form.website.trim() || null,
-          note: form.note.trim() || null,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.success) {
@@ -306,7 +309,7 @@ export default function AdminSuppliersPage() {
                       🏭
                     </div>
                   )}
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-stone-800">{s.name}</span>
                       {s.nameTh && (
@@ -316,6 +319,11 @@ export default function AdminSuppliersPage() {
                     <p className="text-xs text-stone-400 mt-0.5">
                       {s._count.products} สินค้า
                     </p>
+                    {(s.tel || s.email || s.contact) && (
+                      <p className="text-xs text-stone-500 mt-1 truncate" title={[s.tel && `📞 ${s.tel}`, s.email && `✉️ ${s.email}`, s.contact].filter(Boolean).join(" · ")}>
+                        {[s.tel && `📞 ${s.tel}`, s.email && `✉️ ${s.email}`, s.contact].filter(Boolean).join(" · ")}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">

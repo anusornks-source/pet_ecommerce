@@ -59,14 +59,14 @@ export async function PATCH(
   const updated = await prisma.supplier.update({
     where: { id },
     data: {
-      ...(name !== undefined && { name: name?.trim() || supplier.name }),
-      ...(nameTh !== undefined && { nameTh: nameTh?.trim() || null }),
-      ...(imageUrl !== undefined && { imageUrl: imageUrl?.trim() || null }),
-      ...(tel !== undefined && { tel: tel?.trim() || null }),
-      ...(email !== undefined && { email: email?.trim() || null }),
-      ...(contact !== undefined && { contact: contact?.trim() || null }),
-      ...(website !== undefined && { website: website?.trim() || null }),
-      ...(note !== undefined && { note: note?.trim() || null }),
+      name: (name?.trim() || supplier.name),
+      nameTh: nameTh?.trim() || null,
+      imageUrl: imageUrl?.trim() || null,
+      tel: tel?.trim() || null,
+      email: email?.trim() || null,
+      contact: contact?.trim() || null,
+      website: website?.trim() || null,
+      note: note?.trim() || null,
     },
   });
   return NextResponse.json({ success: true, data: updated });

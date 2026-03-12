@@ -89,13 +89,15 @@ export default function EditProductPage({
   const [addingAll, setAddingAll] = useState(false);
   const [packs, setPacks] = useState<PackSummary[]>([]);
   const [packsLoading, setPacksLoading] = useState(true);
-  const [supplierLinks, setSupplierLinks] = useState<{ id: string; supplier: { id: string; name: string; nameTh: string | null; imageUrl: string | null; tel: string | null; email: string | null; contact: string | null } }[]>([]);
+  const [supplierLinks, setSupplierLinks] = useState<{ id: string; supplierPrice: number | null; supplier: { id: string; name: string; nameTh: string | null; imageUrl: string | null; tel: string | null; email: string | null; contact: string | null } }[]>([]);
   const [suppliersLoading, setSuppliersLoading] = useState(true);
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [allSuppliers, setAllSuppliers] = useState<SupplierForAdd[]>([]);
   const [addSupplierSearch, setAddSupplierSearch] = useState("");
   const [addingSupplierId, setAddingSupplierId] = useState<string | null>(null);
   const [removingSupplierId, setRemovingSupplierId] = useState<string | null>(null);
+  const [editingPriceLinkId, setEditingPriceLinkId] = useState<string | null>(null);
+  const [editPriceValue, setEditPriceValue] = useState("");
 
   const handleDuplicate = async () => {
     if (!product) return;
@@ -259,6 +261,35 @@ export default function EditProductPage({
       toast.error("ลบไม่สำเร็จ");
     } finally {
       setRemovingSupplierId(null);
+    }
+  };
+
+  const startEditSupplierPrice = (link: { id: string; supplierPrice: number | null; supplier: { id: string } }) => {
+    setEditingPriceLinkId(link.id);
+    setEditPriceValue(link.supplierPrice != null ? String(link.supplierPrice) : "");
+  };
+
+  const handleSaveSupplierPrice = async (supplierId: string) => {
+    try {
+      const res = await fetch(`/api/admin/suppliers/${supplierId}/products/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ supplierPrice: editPriceValue === "" ? null : Number(editPriceValue) }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const newPrice = data.data?.supplierPrice ?? (editPriceValue === "" ? null : Number(editPriceValue));
+        setSupplierLinks((prev) =>
+          prev.map((l) => (l.supplier.id === supplierId ? { ...l, supplierPrice: newPrice } : l))
+        );
+        setEditingPriceLinkId(null);
+        setEditPriceValue("");
+        toast.success("บันทึกราคาแล้ว");
+      } else {
+        toast.error(data.error ?? "บันทึกไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("บันทึกไม่สำเร็จ");
     }
   };
 
@@ -426,7 +457,7 @@ export default function EditProductPage({
             {supplierLinks.map((link) => (
               <div
                 key={link.id}
-                className="flex items-center gap-3 p-3 rounded-xl border border-stone-100 hover:border-teal-200 hover:bg-teal-50 transition-colors group"
+                className="flex flex-wrap items-center gap-3 p-3 rounded-xl border border-stone-100 hover:border-teal-200 hover:bg-teal-50 transition-colors group"
               >
                 {link.supplier.imageUrl ? (
                   <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-stone-100 shrink-0">
@@ -450,12 +481,70 @@ export default function EditProductPage({
                     </span>
                     <span className="text-stone-300 group-hover:text-teal-400 text-xs">→</span>
                   </div>
-                  {(link.supplier.tel || link.supplier.email) && (
+                  {(link.supplier.tel || link.supplier.email || link.supplier.contact) && (
                     <span className="text-xs text-stone-500">
-                      {[link.supplier.tel && `📞 ${link.supplier.tel}`, link.supplier.email && `✉️ ${link.supplier.email}`].filter(Boolean).join(" · ")}
+                      {[
+                        link.supplier.tel && `📞 ${link.supplier.tel}`,
+                        link.supplier.email && `✉️ ${link.supplier.email}`,
+                        link.supplier.contact,
+                      ].filter(Boolean).join(" · ")}
                     </span>
                   )}
                 </Link>
+                <div className="shrink-0 flex items-center gap-2">
+                  <span className="text-xs text-stone-400">ราคา Supplier:</span>
+                  {editingPriceLinkId === link.id ? (
+                    <span className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        value={editPriceValue}
+                        onChange={(e) => setEditPriceValue(e.target.value)}
+                        className="w-20 text-sm border border-stone-200 rounded px-2 py-1"
+                        placeholder="0"
+                        step="0.01"
+                        min="0"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveSupplierPrice(link.supplier.id)}
+                        className="text-xs px-2 py-1 rounded bg-teal-500 text-white hover:bg-teal-600"
+                      >
+                        บันทึก
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setEditingPriceLinkId(null); setEditPriceValue(""); }}
+                        className="text-xs text-stone-500 hover:text-stone-700"
+                      >
+                        ยกเลิก
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="text-sm font-medium text-stone-600">
+                      {link.supplierPrice != null ? (
+                        <>
+                          ฿{link.supplierPrice.toLocaleString()}
+                          <button
+                            type="button"
+                            onClick={() => startEditSupplierPrice(link)}
+                            className="ml-1 text-teal-500 hover:text-teal-600 text-xs"
+                          >
+                            แก้ไข
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => startEditSupplierPrice(link)}
+                          className="text-teal-500 hover:text-teal-600 text-xs"
+                        >
+                          + ใส่ราคา
+                        </button>
+                      )}
+                    </span>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={(e) => { e.preventDefault(); handleRemoveSupplier(link.supplier.id, link.supplier.nameTh ?? link.supplier.name); }}

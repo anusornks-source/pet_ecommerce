@@ -423,6 +423,16 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
     day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
 
+  // รวมรูปสินค้าจาก images ปกติและรูปของ variants เพื่อใช้แสดงใน Product card
+  const baseImages = Array.isArray(pack.product.images) ? pack.product.images : [];
+  const variantImages = Array.isArray(pack.product.variants)
+    ? pack.product.variants
+        .map((v) => v.variantImage)
+        .filter((u): u is string => !!u && u.trim().length > 0)
+    : [];
+  const galleryImages = Array.from(new Set([...baseImages, ...variantImages]));
+  const mainImage = activeImg ?? galleryImages[0] ?? null;
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-4">
       {/* Header */}
@@ -537,16 +547,28 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
           </div>
         </div>
         <div className="p-5 flex gap-6">
-          {pack.product.images?.length > 0 && (
+          {galleryImages.length > 0 && (
             <div className="shrink-0 flex flex-col gap-2 w-48">
               <div className="relative w-48 h-48 rounded-xl overflow-hidden bg-stone-100 border border-stone-100">
-                <img src={activeImg ?? pack.product.images[0]} alt="" className="w-full h-full object-cover" />
+                {mainImage ? (
+                  <img src={mainImage} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-stone-300 text-3xl">📦</div>
+                )}
               </div>
-              {pack.product.images.length > 1 && (
+              {galleryImages.length > 1 && (
                 <div className="flex flex-wrap gap-1.5">
-                  {pack.product.images.slice(0, 8).map((img, i) => (
-                    <button key={i} type="button" onClick={() => setActiveImg(img)}
-                      className={`relative w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors ${(activeImg ?? pack.product.images[0]) === img ? "border-orange-400" : "border-transparent"}`}>
+                  {galleryImages.slice(0, 12).map((img, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setActiveImg(img)}
+                      className={`relative w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors shrink-0 ${
+                        (mainImage ?? galleryImages[0]) === img
+                          ? "border-orange-400"
+                          : "border-stone-200 hover:border-stone-400"
+                      }`}
+                    >
                       <img src={img} alt="" className="w-full h-full object-cover" />
                     </button>
                   ))}
@@ -556,9 +578,15 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
           )}
           <div className="flex-1 min-w-0 space-y-3">
             <div>
-              <h2 className="text-base font-bold text-stone-800 leading-snug">
-                {pack.lang === "th" ? (pack.product.name_th || pack.product.name) : pack.product.name}
-              </h2>
+              <button
+                type="button"
+                onClick={() => router.push(`/admin/products/${pack.productId}/view`)}
+                className="text-left"
+              >
+                <h2 className="text-base font-bold text-stone-800 leading-snug hover:text-orange-600 transition-colors">
+                  {pack.lang === "th" ? (pack.product.name_th || pack.product.name) : pack.product.name}
+                </h2>
+              </button>
               {pack.lang === "th"
                 ? pack.product.name && pack.product.name_th && <p className="text-sm text-stone-400 mt-0.5">{pack.product.name}</p>
                 : pack.product.name_th && <p className="text-sm text-stone-400 mt-0.5">{pack.product.name_th}</p>}

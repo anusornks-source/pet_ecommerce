@@ -238,7 +238,7 @@ export default async function ShopPage({
                   {p("ดูทั้งหมด", "View All")} →
                 </Link>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {shelf.resolvedProducts.map((product) => (
                   <ProductCard key={product.id} product={product as unknown as Product} />
                 ))}

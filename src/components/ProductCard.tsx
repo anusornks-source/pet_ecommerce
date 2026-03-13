@@ -71,7 +71,7 @@ export default function ProductCard({ product, showShopLabel = false }: Props) {
     <Link href={`/products/${product.id}`}>
       <div className="card group hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer">
         {/* Image */}
-        <div className="relative h-52 overflow-hidden bg-orange-50">
+        <div className="relative h-44 md:h-48 overflow-hidden bg-orange-50">
           <Image
             src={image}
             alt={product.name}
@@ -118,18 +118,14 @@ export default function ProductCard({ product, showShopLabel = false }: Props) {
         </div>
 
         {/* Info */}
-        <div className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs text-orange-500 font-medium bg-orange-50 px-2 py-0.5 rounded-full">
-              {product.category.icon} {pick(product.category.name_th, product.category.name)}
+        <div className="pt-2 pb-3 px-3 md:pt-3 md:pb-4 md:px-4">
+          <div className="mb-0.5">
+            <span className="inline-flex items-center max-w-full text-[11px] font-medium text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+              <span className="mr-1 shrink-0">{product.category.icon}</span>
+              <span className="truncate">{pick(product.category.name_th, product.category.name)}</span>
             </span>
-            {product.petType && (
-              <span className="text-xs text-stone-500 bg-stone-50 px-2 py-0.5 rounded-full">
-                {product.petType.icon} {pick(product.petType.name_th, product.petType.name)}
-              </span>
-            )}
           </div>
-          <h3 className="font-semibold text-stone-800 mt-1 line-clamp-2 group-hover:text-orange-500 transition-colors">
+          <h3 className="font-semibold text-stone-800 mt-0.5 text-sm md:text-base leading-snug line-clamp-2 group-hover:text-orange-500 transition-colors">
             {pick(product.name_th, product.name)}
           </h3>
           {showShopLabel && product.shop && (
@@ -141,12 +137,12 @@ export default function ProductCard({ product, showShopLabel = false }: Props) {
             </p>
           )}
           {(product.shortDescription || product.shortDescription_th) && (
-            <p className="text-sm text-stone-500 mt-1 line-clamp-3">
+            <p className="text-xs md:text-[13px] text-stone-500 mt-1 leading-snug line-clamp-2">
               {pick(product.shortDescription_th, product.shortDescription)}
             </p>
           )}
 
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-stone-50">
+          <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-stone-50">
             <div>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-lg font-bold text-orange-500">{formatPrice(product.price)}</span>

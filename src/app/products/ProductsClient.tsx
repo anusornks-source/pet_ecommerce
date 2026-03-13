@@ -157,15 +157,34 @@ export default function ProductsClient({
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-stone-800">{headingTitle}</h1>
-        <p className="text-stone-500 mt-1">
-          {loading ? t("loading") : `${total} ${lang === "th" ? "รายการ" : "items"}`}
-        </p>
+      {/* Header + Sort */}
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-stone-800">{headingTitle}</h1>
+          <p className="text-stone-500 mt-1">
+            {loading ? t("loading") : `${total} ${lang === "th" ? "รายการ" : "items"}`}
+          </p>
+        </div>
+        {/* Sort Bar (moved to top-right) */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <span className="text-sm text-stone-500">{t("sortBy", "product")}</span>
+          <select
+            value={sort}
+            onChange={(e) => setFilter("sort", e.target.value === "newest" ? "" : e.target.value)}
+            className="input text-sm"
+            style={{ padding: "0.4rem 0.75rem", width: "auto" }}
+          >
+            <option value="newest">{lang === "th" ? "ใหม่ล่าสุด" : "Newest"}</option>
+            <option value="best_seller">{lang === "th" ? "ขายดี" : "Best Sellers"}</option>
+            <option value="oldest">{lang === "th" ? "เก่าสุด" : "Oldest"}</option>
+            <option value="price_asc">{lang === "th" ? "ราคา: ต่ำ → สูง" : "Price: Low → High"}</option>
+            <option value="price_desc">{lang === "th" ? "ราคา: สูง → ต่ำ" : "Price: High → Low"}</option>
+            <option value="name_asc">{lang === "th" ? "ชื่อ ก → ฮ" : "Name A → Z"}</option>
+          </select>
+        </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex flex-col lg:flex-row gap-4">
         {/* Sidebar Filters */}
         <aside className="lg:w-60 shrink-0">
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-100 sticky top-20">
@@ -379,25 +398,8 @@ export default function ProductsClient({
 
         {/* Products Grid */}
         <div className="flex-1">
-          {/* Sort Bar */}
-          <div className="flex items-center justify-end mb-4 gap-2">
-            <span className="text-sm text-stone-500">{t("sortBy", "product")}</span>
-            <select
-              value={sort}
-              onChange={(e) => setFilter("sort", e.target.value === "newest" ? "" : e.target.value)}
-              className="input text-sm"
-              style={{ padding: "0.4rem 0.75rem", width: "auto" }}
-            >
-              <option value="newest">{lang === "th" ? "ใหม่ล่าสุด" : "Newest"}</option>
-              <option value="best_seller">{lang === "th" ? "ขายดี" : "Best Sellers"}</option>
-              <option value="oldest">{lang === "th" ? "เก่าสุด" : "Oldest"}</option>
-              <option value="price_asc">{lang === "th" ? "ราคา: ต่ำ → สูง" : "Price: Low → High"}</option>
-              <option value="price_desc">{lang === "th" ? "ราคา: สูง → ต่ำ" : "Price: High → Low"}</option>
-              <option value="name_asc">{lang === "th" ? "ชื่อ ก → ฮ" : "Name A → Z"}</option>
-            </select>
-          </div>
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="card animate-pulse">
                   <div className="h-52 bg-stone-100" />
@@ -411,7 +413,7 @@ export default function ProductsClient({
             </div>
           ) : products.length > 0 ? (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3">
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}

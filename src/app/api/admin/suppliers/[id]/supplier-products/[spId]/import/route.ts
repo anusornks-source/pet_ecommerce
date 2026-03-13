@@ -49,8 +49,22 @@ export async function POST(
       petTypeId: petTypeId || null,
       costPrice: sp.supplierPrice,
       source: "SUPPLIER",
-      sourceDescription: `จาก Supplier: ${sp.supplier?.name ?? supplierId}`,
-      sourceData: { supplierProductId: sp.id, supplierId },
+      // ใช้ sourceDescription ต้นฉบับจาก supplier product ถ้ามี
+      // ถ้าไม่มี ให้ fallback เป็นข้อความสั้น ๆ เดิม
+      sourceDescription:
+        sp.sourceDescription ??
+        `จาก Supplier: ${sp.supplier?.name ?? supplierId}`,
+      // เก็บ metadata จาก SupplierProduct ไว้ใน Product.sourceData
+      sourceData: {
+        supplierProductId: sp.id,
+        supplierId,
+        supplierName: sp.supplier?.name,
+        supplierSku: sp.supplierSku,
+        supplierUrl: sp.supplierUrl,
+        supplierPrice: sp.supplierPrice,
+        remark: sp.remark,
+        validationStatus: sp.validationStatus,
+      },
     },
     include: { category: true, petType: true, variants: true },
   });

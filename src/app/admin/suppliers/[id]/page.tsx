@@ -499,6 +499,9 @@ export default function SupplierDetailPage({
             </div>
           )}
           <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-stone-400 mb-0.5">
+              Edit Supplier & Supplier Products
+            </p>
             <h1 className="text-xl font-bold text-stone-800">{supplier.name}</h1>
             {supplier.nameTh && (
               <p className="text-sm text-stone-500 mt-0.5">{supplier.nameTh}</p>

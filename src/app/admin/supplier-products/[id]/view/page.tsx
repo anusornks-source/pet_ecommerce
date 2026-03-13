@@ -194,9 +194,14 @@ export default function SupplierProductViewPage({ params }: { params: Promise<{ 
           >
             แก้ไขที่หน้า Supplier
           </Link>
-          <h1 className="text-xl font-bold text-stone-800 truncate max-w-md">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-stone-400">
+              View Supplier Product
+            </span>
+            <h1 className="text-xl font-bold text-stone-800 truncate max-w-md">
             {sp.name_th ?? sp.name}
-          </h1>
+            </h1>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {sp.productId && (

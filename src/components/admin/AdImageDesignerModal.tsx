@@ -1,6 +1,6 @@
-\"use client\";
+"use client";
 
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { toPng } from "html-to-image";
 
 type Lang = "th" | "en";
@@ -35,7 +35,7 @@ type AiField = "ad_title" | "ad_subtitle" | "ad_badge";
 export const AdImageDesignerModal: React.FC<Props> = ({ open, onClose, product, context, onSaved }) => {
   const [lang, setLang] = useState<Lang>("th");
   const [aspect, setAspect] = useState<Aspect>("1:1");
-  const [bgStyle, setBgStyle] = useState<"brand" | "light">("brand");
+  const [bgPreset, setBgPreset] = useState<"brand" | "pink" | "blue" | "green" | "white" | "dark">("brand");
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [badge, setBadge] = useState("");
@@ -47,6 +47,12 @@ export const AdImageDesignerModal: React.FC<Props> = ({ open, onClose, product, 
   const [error, setError] = useState<string | null>(null);
 
   const [activeImage, setActiveImage] = useState<string | null>(null);
+  const [layout, setLayout] = useState<"split" | "overlay">("split");
+  const [textColor, setTextColor] = useState<"light" | "dark">("light");
+  const [imageScale, setImageScale] = useState(1);
+  const [imageOffset, setImageOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
+  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const canvasRef = useRef<HTMLDivElement | null>(null);
 
@@ -64,6 +70,18 @@ export const AdImageDesignerModal: React.FC<Props> = ({ open, onClose, product, 
     }
     return product.name || product.name_th || "";
   }, [lang, product.name, product.name_th]);
+
+  const [eyebrowCustom, setEyebrowCustom] = useState<string>("");
+
+  const defaultEyebrow = useMemo(
+    () => (lang === "th" ? "ดีลพิเศษสำหรับสัตว์เลี้ยง" : "Special deal for pets"),
+    [lang]
+  );
+
+  const eyebrowText = useMemo(
+    () => (eyebrowCustom.trim().length > 0 ? eyebrowCustom : defaultEyebrow),
+    [defaultEyebrow, eyebrowCustom]
+  );
 
   const defaultSubtitle = useMemo(() => {
     if (lang === "th") {
@@ -91,6 +109,34 @@ export const AdImageDesignerModal: React.FC<Props> = ({ open, onClose, product, 
         return "aspect-square";
     }
   }, [aspect]);
+
+  const bgClass = useMemo(() => {
+    switch (bgPreset) {
+      case "brand":
+        return "bg-linear-to-br from-orange-500 via-orange-400 to-amber-300";
+      case "pink":
+        return "bg-linear-to-br from-fuchsia-500 via-pink-500 to-rose-400";
+      case "blue":
+        return "bg-linear-to-br from-sky-500 via-blue-500 to-indigo-500";
+      case "green":
+        return "bg-linear-to-br from-emerald-500 via-lime-500 to-amber-300";
+      case "white":
+        return "bg-white";
+      case "dark":
+        return "bg-stone-900";
+      default:
+        return "bg-linear-to-br from-orange-500 via-orange-400 to-amber-300";
+    }
+  }, [bgPreset]);
+
+  const eyebrowColorClass =
+    textColor === "dark" ? "text-stone-600" : "text-white/80";
+  const headingColorClass =
+    textColor === "dark" ? "text-stone-900" : "text-white";
+  const bodyColorClass =
+    textColor === "dark" ? "text-stone-800" : "text-white/90";
+  const priceColorClass =
+    textColor === "dark" ? "text-stone-900" : "text-white";
 
   const handleClose = () => {
     if (saving) return;
@@ -204,6 +250,39 @@ export const AdImageDesignerModal: React.FC<Props> = ({ open, onClose, product, 
     [aspect, context?.marketingPackId, lang, onSaved, product.id, saving]
   );
 
+  const handleImageMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingImage(true);
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handleImageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDraggingImage || !dragStartRef.current) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    setImageOffset((prev) => {
+      let nextX = prev.x + dx;
+      let nextY = prev.y + dy;
+
+      // ใน layout split ไม่ให้รูปเลื่อนทับฝั่ง text (ห้ามเลื่อนไปทางซ้าย)
+      if (layout === "split" && nextX < 0) nextX = 0;
+
+      return { x: nextX, y: nextY };
+    });
+  };
+
+  const handleImageMouseUp = () => {
+    setIsDraggingImage(false);
+    dragStartRef.current = null;
+  };
+
+  // รีเซ็ต offset/scale เมื่อเปลี่ยนรูปหลัก
+  useEffect(() => {
+    setImageOffset({ x: 0, y: 0 });
+    setImageScale(1);
+  }, [primaryImage]);
+
   if (!open) return null;
 
   return (
@@ -283,69 +362,154 @@ export const AdImageDesignerModal: React.FC<Props> = ({ open, onClose, product, 
 
             <div
               ref={canvasRef}
-              className={`relative w-full max-w-[420px] mx-auto ${aspectClass} rounded-[28px] overflow-hidden shadow-xl ${
-                bgStyle === "brand" ? "bg-linear-to-br from-orange-500 via-orange-400 to-amber-300" : "bg-white"
-              }`}
+              className={`relative w-full max-w-[420px] mx-auto ${aspectClass} rounded-[28px] overflow-hidden shadow-xl ${bgClass}`}
+              onMouseMove={handleImageMouseMove}
+              onMouseUp={handleImageMouseUp}
+              onMouseLeave={handleImageMouseUp}
             >
-              <div className="absolute inset-0 p-4 flex flex-col">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex flex-col gap-1 max-w-[68%]">
-                    <div className="text-[11px] uppercase tracking-wide text-white/80 font-semibold">
-                      {lang === "th" ? "ดีลพิเศษสำหรับสัตว์เลี้ยง" : "Special deal for pets"}
+              {layout === "overlay" ? (
+                <>
+                  {primaryImage && (
+                    <div
+                      className="absolute inset-0 cursor-move z-0"
+                      onMouseDown={handleImageMouseDown}
+                      style={{
+                        transform: `translate(${imageOffset.x}px, ${imageOffset.y}px) scale(${imageScale})`,
+                        transformOrigin: "center",
+                      }}
+                    >
+                      <img src={primaryImage} alt="" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/35" />
                     </div>
-                    <div className="text-white font-extrabold text-lg leading-snug line-clamp-3 drop-shadow-sm">
-                      {title || displayName || (lang === "th" ? "ชื่อสินค้า" : "Product name")}
+                  )}
+                  <div className="relative z-20 inset-0 p-4 flex flex-col">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex flex-col gap-1 max-w-[80%]">
+                      <div
+                        className={`text-[11px] uppercase tracking-wide font-semibold ${eyebrowColorClass}`}
+                      >
+                        {eyebrowText}
+                      </div>
+                        <div
+                          className={`font-extrabold text-lg leading-snug line-clamp-3 drop-shadow ${headingColorClass}`}
+                        >
+                          {title || displayName || (lang === "th" ? "ชื่อสินค้า" : "Product name")}
+                        </div>
+                        <div
+                          className={`text-[11px] leading-snug line-clamp-3 mt-0.5 ${bodyColorClass}`}
+                        >
+                          {subtitle ||
+                            defaultSubtitle ||
+                            (lang === "th"
+                              ? "ข้อความสั้น ๆ เกี่ยวกับ benefit ของสินค้า"
+                              : "Short line about the main benefits")}
+                        </div>
+                      </div>
+                      {showLogo && product.shopLogoUrl && (
+                        <div className="shrink-0">
+                          <img
+                            src={product.shopLogoUrl}
+                            alt="logo"
+                            className="w-10 h-10 rounded-full border border-white/70 shadow-sm object-cover bg-white/80"
+                          />
+                        </div>
+                      )}
                     </div>
-                    <div className="text-[11px] leading-snug text-white/90 line-clamp-3 mt-0.5">
-                      {subtitle || defaultSubtitle || (lang === "th" ? "ข้อความสั้น ๆ เกี่ยวกับ benefit ของสินค้า" : "Short line about the main benefits")}
+
+                    <div className="mt-auto flex items-end justify-between gap-2 pr-16">
+                      <div className="flex flex-col gap-1">
+                        {badge && (
+                          <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/92 text-[11px] font-semibold text-orange-600 shadow-sm max-w-[80%]">
+                            {badge}
+                          </div>
+                        )}
+                        {showPrice && priceText && (
+                          <div
+                            className={`mt-1 font-extrabold text-xl drop-shadow ${priceColorClass}`}
+                          >
+                            {priceText}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  {showLogo && product.shopLogoUrl && (
-                    <div className="shrink-0">
-                      <img
-                        src={product.shopLogoUrl}
-                        alt="logo"
-                        className="w-10 h-10 rounded-full border border-white/70 shadow-sm object-cover bg-white/80"
-                      />
+                </>
+              ) : (
+                <div className="absolute inset-0 p-4 flex flex-col z-20">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex flex-col gap-1 max-w-[68%]">
+                      <div
+                        className={`text-[11px] uppercase tracking-wide font-semibold ${eyebrowColorClass}`}
+                      >
+                        {eyebrowText}
+                      </div>
+                      <div
+                        className={`font-extrabold text-lg leading-snug line-clamp-3 drop-shadow-sm ${headingColorClass}`}
+                      >
+                        {title || displayName || (lang === "th" ? "ชื่อสินค้า" : "Product name")}
+                      </div>
+                      <div
+                        className={`text-[11px] leading-snug line-clamp-3 mt-0.5 ${bodyColorClass}`}
+                      >
+                        {subtitle ||
+                          defaultSubtitle ||
+                          (lang === "th"
+                            ? "ข้อความสั้น ๆ เกี่ยวกับ benefit ของสินค้า"
+                            : "Short line about the main benefits")}
+                      </div>
+                    </div>
+                    {showLogo && product.shopLogoUrl && (
+                      <div className="shrink-0">
+                        <img
+                          src={product.shopLogoUrl}
+                          alt="logo"
+                          className="w-10 h-10 rounded-full border border-white/70 shadow-sm object-cover bg-white/80"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-auto flex items-end justify-between gap-2 pr-16">
+                    <div className="flex flex-col gap-1">
+                      {badge && (
+                        <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/90 text-[11px] font-semibold text-orange-600 shadow-sm max-w-[80%]">
+                          {badge}
+                        </div>
+                      )}
+                      {showPrice && priceText && (
+                        <div
+                          className={`mt-1 font-extrabold text-xl drop-shadow-sm ${priceColorClass}`}
+                        >
+                          {priceText}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {primaryImage && (
+                    <div
+                      className="absolute right-0 inset-y-8 w-[52%] flex items-center justify-center cursor-move z-0"
+                      onMouseDown={handleImageMouseDown}
+                      style={{
+                        transform: `translate(${imageOffset.x}px, ${imageOffset.y}px) scale(${imageScale})`,
+                        transformOrigin: "center",
+                      }}
+                    >
+                      <div className="relative w-full drop-shadow-xl pointer-events-none">
+                        <div className="absolute inset-4 bg-black/10 blur-2xl rounded-full" />
+                        <img src={primaryImage} alt="" className="relative w-full h-auto object-contain" />
+                      </div>
                     </div>
                   )}
                 </div>
+              )}
 
-                <div className="mt-auto flex items-end justify-between gap-2">
-                  <div className="flex flex-col gap-1">
-                    {badge && (
-                      <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/90 text-[11px] font-semibold text-orange-600 shadow-sm max-w-[80%]">
-                        {badge}
-                      </div>
-                    )}
-                    {showPrice && priceText && (
-                      <div className="mt-1 text-white font-extrabold text-xl drop-shadow-sm">
-                        {priceText}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {ctaText && (
-                      <div className="inline-flex items-center px-3.5 py-1.5 rounded-full bg-black/80 text-white text-[11px] font-semibold shadow-md">
-                        {ctaText}
-                      </div>
-                    )}
+              {ctaText && (
+                <div className="pointer-events-none absolute right-4 bottom-4 z-30">
+                  <div className="inline-flex items-center px-3.5 py-1.5 rounded-full bg-black/85 text-white text-[11px] font-semibold shadow-md">
+                    {ctaText}
                   </div>
                 </div>
-
-                {primaryImage && (
-                  <div className="absolute -right-2 bottom-0 w-[52%] pointer-events-none">
-                    <div className="relative drop-shadow-xl">
-                      <div className="absolute inset-4 bg-black/10 blur-2xl rounded-full" />
-                      <img
-                        src={primaryImage}
-                        alt=""
-                        className="relative w-full h-auto object-contain"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
 
             {images.length > 1 && (
@@ -375,6 +539,21 @@ export const AdImageDesignerModal: React.FC<Props> = ({ open, onClose, product, 
                 {error}
               </div>
             )}
+
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-xs font-semibold text-stone-600 mb-1">
+                  Eyebrow / บรรทัดบนเล็ก ๆ
+                </label>
+                <input
+                  type="text"
+                  value={eyebrowCustom}
+                  onChange={(e) => setEyebrowCustom(e.target.value)}
+                  placeholder={defaultEyebrow}
+                  className="input input-sm w-full"
+                />
+              </div>
+            </div>
 
             <div className="flex gap-3">
               <div className="flex-1">
@@ -459,6 +638,94 @@ export const AdImageDesignerModal: React.FC<Props> = ({ open, onClose, product, 
             </div>
 
             <div className="flex gap-3 items-center">
+              <span className="text-xs font-semibold text-stone-600">Layout</span>
+              <button
+                type="button"
+                onClick={() => setLayout("split")}
+                className={`px-2.5 py-1 rounded-full text-[11px] border ${
+                  layout === "split"
+                    ? "bg-white text-stone-900 border-stone-400 shadow"
+                    : "bg-white text-stone-600 border-stone-300"
+                }`}
+              >
+                รูปขวา + ตัวหนังสือซ้าย
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLayout("overlay");
+                  setImageOffset({ x: 0, y: 0 });
+                }}
+                className={`px-2.5 py-1 rounded-full text-[11px] border ${
+                  layout === "overlay"
+                    ? "bg-stone-900 text-white border-stone-900 shadow"
+                    : "bg-white text-stone-700 border-stone-300"
+                }`}
+              >
+                รูปเต็ม + Text overlay
+              </button>
+            </div>
+
+            <div className="flex gap-3 items-center">
+              <span className="text-xs font-semibold text-stone-600 whitespace-nowrap">สีตัวหนังสือ</span>
+              <button
+                type="button"
+                onClick={() => setTextColor("light")}
+                className={`px-2.5 py-1 rounded-full text-[11px] border ${
+                  textColor === "light"
+                    ? "bg-stone-900 text-white border-stone-900 shadow"
+                    : "bg-white text-stone-700 border-stone-300"
+                }`}
+              >
+                ขาว (สำหรับพื้นเข้ม)
+              </button>
+              <button
+                type="button"
+                onClick={() => setTextColor("dark")}
+                className={`px-2.5 py-1 rounded-full text-[11px] border ${
+                  textColor === "dark"
+                    ? "bg-white text-stone-900 border-stone-400 shadow"
+                    : "bg-white text-stone-600 border-stone-300"
+                }`}
+              >
+                ดำ (สำหรับพื้นอ่อน)
+              </button>
+            </div>
+
+            <div className="flex gap-3 items-center">
+              <span className="text-xs font-semibold text-stone-600 whitespace-nowrap">ขนาดรูป</span>
+              <input
+                type="range"
+                min={80}
+                max={140}
+                value={Math.round(imageScale * 100)}
+                onChange={(e) => setImageScale(Number(e.target.value) / 100)}
+                className="flex-1 accent-orange-500"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setImageOffset({ x: 0, y: 0 });
+                  setImageScale(1);
+                }}
+                className="text-[11px] px-2 py-1 rounded-full border border-stone-300 text-stone-600 hover:bg-stone-50"
+              >
+                รีเซ็ต
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLayout("overlay");
+                  setImageOffset({ x: 0, y: 0 });
+                  setImageScale(1.1);
+                }}
+                className="text-[11px] px-2 py-1 rounded-full border border-orange-300 text-orange-700 bg-orange-50 hover:bg-orange-100"
+              >
+                เต็มพื้น
+              </button>
+            </div>
+
+            <div className="flex gap-3 items-center">
               <label className="inline-flex items-center gap-1.5 text-xs text-stone-700">
                 <input
                   type="checkbox"
@@ -480,30 +747,68 @@ export const AdImageDesignerModal: React.FC<Props> = ({ open, onClose, product, 
               </label>
             </div>
 
-            <div className="flex gap-3 items-center">
+            <div className="flex flex-wrap gap-3 items-center">
               <span className="text-xs font-semibold text-stone-600">Background</span>
-              <button
-                type="button"
-                onClick={() => setBgStyle("brand")}
-                className={`px-2.5 py-1 rounded-full text-[11px] border ${
-                  bgStyle === "brand"
-                    ? "bg-orange-500 text-white border-orange-500 shadow"
-                    : "bg-white text-stone-700 border-stone-300"
-                }`}
-              >
-                โทนส้ม CartNova
-              </button>
-              <button
-                type="button"
-                onClick={() => setBgStyle("light")}
-                className={`px-2.5 py-1 rounded-full text-[11px] border ${
-                  bgStyle === "light"
-                    ? "bg-stone-900 text-white border-stone-900 shadow"
-                    : "bg-white text-stone-700 border-stone-300"
-                }`}
-              >
-                ขาว/ดำ มินิมอล
-              </button>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setBgPreset("brand")}
+                  className={`px-2.5 py-1 rounded-full text-[11px] border bg-linear-to-r from-orange-500 to-amber-400 text-white ${
+                    bgPreset === "brand" ? "shadow border-orange-600" : "border-transparent opacity-80"
+                  }`}
+                >
+                  ส้ม CartNova
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBgPreset("pink")}
+                  className={`px-2.5 py-1 rounded-full text-[11px] border bg-linear-to-r from-fuchsia-500 to-rose-400 text-white ${
+                    bgPreset === "pink" ? "shadow border-fuchsia-600" : "border-transparent opacity-80"
+                  }`}
+                >
+                  ชมพู
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBgPreset("blue")}
+                  className={`px-2.5 py-1 rounded-full text-[11px] border bg-linear-to-r from-sky-500 to-indigo-500 text-white ${
+                    bgPreset === "blue" ? "shadow border-sky-700" : "border-transparent opacity-80"
+                  }`}
+                >
+                  ฟ้า
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBgPreset("green")}
+                  className={`px-2.5 py-1 rounded-full text-[11px] border bg-linear-to-r from-emerald-500 to-lime-400 text-white ${
+                    bgPreset === "green" ? "shadow border-emerald-700" : "border-transparent opacity-80"
+                  }`}
+                >
+                  เขียว
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBgPreset("white")}
+                  className={`px-2.5 py-1 rounded-full text-[11px] border ${
+                    bgPreset === "white"
+                      ? "bg-white text-stone-900 border-stone-400 shadow"
+                      : "bg-white text-stone-600 border-stone-300"
+                  }`}
+                >
+                  ขาว
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBgPreset("dark")}
+                  className={`px-2.5 py-1 rounded-full text-[11px] border ${
+                    bgPreset === "dark"
+                      ? "bg-stone-900 text-white border-stone-900 shadow"
+                      : "bg-stone-900 text-white border-stone-700 opacity-80"
+                  }`}
+                >
+                  ดำ
+                </button>
+              </div>
             </div>
           </div>
         </div>

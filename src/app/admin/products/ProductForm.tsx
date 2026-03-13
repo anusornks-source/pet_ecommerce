@@ -630,7 +630,7 @@ export default function ProductForm({ productId, productShopId, initialData }: P
         </div>
         {descPreview ? (
           <div
-            className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm min-h-40 prose prose-sm max-w-none overflow-auto"
+            className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm min-h-40 prose prose-sm desc-html max-w-none overflow-auto"
             dangerouslySetInnerHTML={{ __html: form.description }}
           />
         ) : (
@@ -678,7 +678,7 @@ export default function ProductForm({ productId, productShopId, initialData }: P
           </div>
           {descPreviewTh ? (
             <div
-              className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm min-h-40 prose prose-sm max-w-none overflow-auto"
+              className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm min-h-40 prose prose-sm desc-html max-w-none overflow-auto"
               dangerouslySetInnerHTML={{ __html: form.description_th }}
             />
           ) : (

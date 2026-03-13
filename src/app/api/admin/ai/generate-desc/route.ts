@@ -31,14 +31,17 @@ export async function POST(request: NextRequest) {
 Product name: ${name || "N/A"}
 Product details (source): ${cleanDesc || "N/A"}
 
-Write a full English product description for the product detail page.
+Write a rich, detailed English product description for the product detail page.
 Rules:
 - English only
-- Use HTML (<b>, <br>, <ul>, <li>, <p>) but not <html>/<body>
-- Start with an introductory paragraph
-- Include a bullet-point list of key features or specs (<ul><li>)
-- Engaging, concise, informative
-- No advertising sales pitch`
+- Output HTML ONLY (no markdown, no plain text)
+- Use <p> for paragraphs and <ul><li> for bullet lists (no <html>/<body>)
+- Start with 1–2 introductory paragraphs (total 3–6 sentences)
+- Then include a detailed bullet-point list of key features or specs (<ul><li>) with at least 6–10 bullets
+- At the START of each <li>, add ONE short relevant emoji icon (e.g. ✅, 🐶, ✂️, 💡) that matches the meaning of that bullet
+- Be faithful to the source details (do not invent new technical facts)
+- Engaging, informative, but not too short
+- No aggressive advertising sales pitch`
     : `คุณเป็นนักเขียนคอนเทนต์ร้านขายของออนไลน์ภาษาไทย
 
 ชื่อสินค้า: ${name || "ไม่ระบุ"}
@@ -47,24 +50,30 @@ Rules:
 เขียนคำอธิบายสินค้าภาษาไทยแบบเต็ม สำหรับหน้ารายละเอียดสินค้า
 กฎ:
 - เป็นภาษาไทยทั้งหมด
-- ใช้ HTML ได้ (<b>, <br>, <ul>, <li>, <p>) แต่ไม่ต้องมี <html>/<body>
-- เริ่มด้วย paragraph แนะนำสินค้า
-- มีรายการจุดเด่นหรือสเปก (ใช้ <ul><li>)
-- เขียนให้น่าดึงดูด กระชับ ได้ใจความ
-- ไม่ต้องมีวลีเชิญชวนซื้อแบบโฆษณา`;
+- แสดงผลเป็น HTML เท่านั้น (ไม่ใช้ markdown / plain text)
+- ใช้ <p> สำหรับย่อหน้า และ <ul><li> สำหรับ bullet list (ไม่ต้องมี <html>/<body>)
+- เริ่มด้วย 1–2 ย่อหน้าแนะนำสินค้า (รวมประมาณ 3–6 ประโยค) โดยเล่าให้เห็นภาพการใช้งานจริง
+- จากนั้นทำรายการจุดเด่นหรือสเปกสินค้าเป็น bullet list (ใช้ <ul><li>) อย่างละเอียด อย่างน้อย 6–10 bullet ครอบคลุมคุณสมบัติ การใช้งาน วัสดุ ขนาด การดูแลรักษา ฯลฯ
+- ที่จุดเริ่มต้นของแต่ละ <li> ให้ใส่อีโมจิ 1 ตัวที่สื่อความหมายของ bullet นั้น (เช่น ✅, 🐶, ✂️, 💡 ฯลฯ)
+- เขียนให้ใกล้เคียงข้อมูลต้นฉบับมากที่สุด (ไม่แต่งเรื่องใหม่เกินจริง)
+- ให้ความยาวรวมของคำอธิบายค่อนข้างยาวและละเอียด ไม่ควรสรุปสั้น ๆ แค่ไม่กี่บรรทัด
+- ไม่นำเสนอแบบโฆษณาจัดหนัก`;
 
   try {
     const message = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 600,
+      max_tokens: 1100,
       messages: [{ role: "user", content: prompt }],
     });
 
-    const text = message.content
+    let text = message.content
       .filter((b) => b.type === "text")
       .map((b) => b.text)
       .join("")
       .trim();
+
+    // บางครั้งโมเดลจะห่อผลลัพธ์ด้วย ```html … ``` ให้ลอก wrapper ออก
+    text = text.replace(/^```(?:html|json)?\s*/i, "").replace(/```$/i, "").trim();
 
     return NextResponse.json({ success: true, description: text });
   } catch (err) {

@@ -1,102 +1,76 @@
 /**
- * Debug script: fetch product page and trace bullet extraction
+ * Debug parse-url: ตรวจว่า intro/รายละเอียด อยู่ที่ไหนในหน้า (all-mate.com etc.)
  * Run: npx tsx scripts/debug-parse-url.ts
  */
 const TARGET_URL =
-  "http://www.all-mate.com/product/8344/dog-and-cat-house-%E0%B9%80%E0%B8%9A%E0%B8%B2%E0%B8%B0%E0%B8%A3%E8%AD%E0%B8%87%E0%B8%99%E0%B8%AD%E0%B8%99%E0%B8%AA%E0%B8%B3%E0%B8%AB%E0%B8%A3%E0%B8%B1%E0%B8%9A%E0%B8%AA%E0%B8%B1%E0%B8%95%E0%B8%A7%E0%B9%8C%E0%B9%80%E0%B8%A5%E0%B8%B5%E0%B9%89%E0%B8%A2%E0%B8%87";
+  "http://www.all-mate.com/product/7018/dooda-%E0%B8%9B%E0%B8%A5%E0%B8%AD%E0%B8%81%E0%B8%84%E0%B8%AD%E0%B9%84%E0%B8%A5%E0%B9%88%E0%B9%80%E0%B8%AB%E0%B9%87%E0%B8%9B-%E0%B8%AB%E0%B8%A1%E0%B8%B1%E0%B8%94-%E0%B9%84%E0%B8%A3-%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%A2%E0%B8%B8%E0%B8%87-%E0%B8%AA%E0%B8%B5%E0%B8%AA%E0%B9%89%E0%B8%A1-%E0%B8%AA%E0%B8%B3%E0%B8%AB%E0%B8%A3%E0%B8%B1%E0%B8%9A%E0%B9%81%E0%B8%A1%E0%B8%A7%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%AA%E0%B8%B8%E0%B8%99%E0%B8%B1%E0%B8%82";
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 async function main() {
-  console.log("Fetching...");
+  console.log("Fetching:", TARGET_URL);
   const res = await fetch(TARGET_URL, {
-    headers: { "User-Agent": "Mozilla/5.0 Chrome/120.0", Accept: "text/html" },
+    headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0", Accept: "text/html" },
   });
   const html = await res.text();
   console.log("HTML length:", html.length);
 
-  const paneIdx = html.indexOf("short_description_pane");
-  console.log("short_description_pane index:", paneIdx);
+  const introMarker = "คุณกำลังจะซื้อ";
+  const idxRaw = html.indexOf(introMarker);
+  console.log("\n=== 1. ใน HTML ดิบ ===");
+  console.log('indexOf("คุณกำลังจะซื้อ"):', idxRaw >= 0 ? idxRaw : "ไม่พบ");
+  if (idxRaw >= 0) {
+    const snippet = html.slice(Math.max(0, idxRaw - 100), idxRaw + 500);
+    const inScript = snippet.includes("<script") || (idxRaw > 0 && html.lastIndexOf("<script", idxRaw) > html.lastIndexOf("</script>", idxRaw));
+    console.log("อยู่ใน <script>?:", inScript);
+    console.log("Snippet (500 chars):", snippet.replace(/\s+/g, " ").slice(0, 500));
+  }
 
-  if (paneIdx >= 0) {
-    const paneChunk = html.slice(paneIdx, paneIdx + 3500);
-    console.log("\n=== paneChunk (first 500 chars) ===");
-    console.log(paneChunk.slice(0, 500));
-
-    const divMatches = [...paneChunk.matchAll(/<div[^>]*>\s*([-–−][^<]*?)<\/div>/gi)];
-    console.log("\n=== div matches (regex 1) ===");
-    console.log("Count:", divMatches.length);
-    divMatches.forEach((m, i) => {
-      const text = m[1].replace(/<[^>]+>/g, "").trim();
-      const bullet = text.replace(/^[-–−]\s*/, "").trim();
-      console.log(`${i + 1}. [${bullet.length} chars]`, bullet.slice(0, 60) + (bullet.length > 60 ? "..." : ""));
-    });
-
-    const allDivMatches = [...html.matchAll(/<div[^>]*>\s*([-–−][^<]*?)<\/div>/gi)];
-    console.log("\n=== div matches in FULL html ===");
-    console.log("Count:", allDivMatches.length);
-    const bulletDivs = allDivMatches.filter((m) => {
-      const b = m[1].replace(/^[-–−]\s*/, "").trim();
-      return b.length > 20 && /[\u0E00-\u0E7F]/.test(b);
-    });
-    console.log("Filtered (Thai, >20 chars):", bulletDivs.length);
-    bulletDivs.slice(0, 10).forEach((m, i) => {
-      const bullet = m[1].replace(/^[-–−]\s*/, "").trim();
-      console.log(`${i + 1}.`, bullet.slice(0, 60) + "...");
-    });
+  const textContent = stripHtml(html);
+  const idxText = textContent.indexOf(introMarker);
+  console.log("\n=== 2. หลัง stripHtml (ที่ส่งให้ AI) ===");
+  console.log("textContent length:", textContent.length);
+  console.log('indexOf("คุณกำลังจะซื้อ"):', idxText >= 0 ? idxText : "ไม่พบ");
+  if (idxText >= 0) {
+    console.log("Snippet (400 chars):", textContent.slice(idxText, idxText + 400));
   } else {
-    console.log("short_description_pane NOT FOUND");
-    const lower = html.toLowerCase();
-    if (lower.includes("short_description")) return console.log("But 'short_description' exists");
-    if (lower.includes("shortdescription")) return console.log("But 'shortdescription' exists");
+    console.log("(intro ไม่อยู่ใน textContent → AI ไม่เห็นข้อความนี้)");
+    console.log("First 600 chars of textContent:", textContent.slice(0, 600));
   }
 
-  // ตรวจสอบ ข้อมูล + รายละเอียดสินค้า (แถวตาราง)
-  const tableRegex = /<tr[^>]*>[\s\S]*?<t[hd][^>]*>([^<]*)<\/t[hd]>[\s\S]*?<t[hd][^>]*>([\s\S]*?)<\/t[hd]>[\s\S]*?(?:<t[hd][^>]*>([\s\S]*?)<\/t[hd]>[\s\S]*?)?<\/tr>/gi;
-  let m;
-  const dataRows: string[] = [];
-  const detailRows: string[] = [];
-  while ((m = tableRegex.exec(html)) !== null) {
-    const label = m[1].replace(/<[^>]+>/g, "").trim();
-    const val = (m[3] && m[3].trim().length > 20 ? m[3] : m[2]).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    if (/^ข้อมูล$/i.test(label)) dataRows.push(val.slice(0, 200));
-    if (/รายละเอียดสินค้า/i.test(label)) detailRows.push(val.slice(0, 300));
+  // ถ้าอยู่ใน script ให้ลองดึงจาก JSON/__NUXT_DATA__
+  if (idxRaw >= 0 && idxText < 0) {
+    console.log("\n=== 3. Intro อยู่ใน script - หาใน JSON ===");
+    const scriptMatch = html.match(/<script[^>]*>([\s\S]*?)<\/script>/gi);
+    if (scriptMatch) {
+      for (let i = 0; i < scriptMatch.length; i++) {
+        if (scriptMatch[i].includes(introMarker)) {
+          console.log("พบใน script block ที่", i);
+          const start = scriptMatch[i].indexOf(introMarker);
+          console.log("Snippet:", scriptMatch[i].slice(start, start + 300));
+          break;
+        }
+      }
+    }
   }
-  console.log("\n=== แถวตาราง ข้อมูล ===");
-  console.log("Count:", dataRows.length);
-  dataRows.forEach((r, i) => console.log(`${i + 1}.`, r));
-  // แสดง raw HTML ของแถว ข้อมูล (500 chars)
-  const dataTrMatch = html.match(/<tr[^>]*class=["']detailTR["'][^>]*>[\s\S]*?<td[^>]*>ข้อมูล<\/t[hd]>[\s\S]*?<\/tr>/i);
-  if (dataTrMatch) {
-    console.log("\nRaw ข้อมูล row (first 600 chars):");
-    console.log(dataTrMatch[0].slice(0, 600));
+
+  console.log("\n=== 4. สรุป ===");
+  if (idxText >= 0) {
+    console.log("OK: intro อยู่ใน textContent → AI น่าจะดึงได้ (หรือใช้ fallback ใน API)");
+  } else if (idxRaw >= 0) {
+    console.log("ปัญหา: intro อยู่ใน HTML แต่ถูกลบไปกับ <script> → ต้องดึงจาก script/JSON แยก");
+  } else {
+    console.log("ปัญหา: ไม่พบ intro ในหน้านี้ (อาจโหลดแบบ dynamic อื่น)");
   }
-  // ดึงจาก __NUXT_DATA__ หรือ JSON ในหน้า (น้ำหนัก, ลงสินค้า, อัพเดท)
-  const nuxtMatch = html.match(/<script[^>]*id=["']__NUXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
-  const hasNuxt = !!nuxtMatch;
-  console.log("\n=== __NUXT_DATA__ ===", hasNuxt ? "พบ" : "ไม่พบ");
-  if (nuxtMatch) {
-    const raw = nuxtMatch[1].trim().startsWith("%") ? decodeURIComponent(nuxtMatch[1].trim()) : nuxtMatch[1].trim();
-    const weightM = raw.match(/"weight"\s*:\s*"?([^"]+)"?/i) ?? raw.match(/weight["\s:]+(\d+[\s]*กรัม|[\d.]+\s*kg)/i);
-    const createdM = raw.match(/"created_at"\s*:\s*"([^"]+)"/i) ?? raw.match(/created_at["\s:]+"([^"]+)"/i);
-    const updatedM = raw.match(/"updated_at"\s*:\s*"([^"]+)"/i) ?? raw.match(/updated_at["\s:]+"([^"]+)"/i);
-    console.log("weight:", weightM?.[1] ?? "ไม่พบ");
-    console.log("created:", createdM?.[1] ?? "ไม่พบ");
-    console.log("updated:", updatedM?.[1] ?? "ไม่พบ");
-  }
-  // หา น้ำหนัก / 300 / กรัม ใน HTML
-  console.log("\n=== ค้นหา น้ำหนัก/300/กรัม ===");
-  const idx300 = html.indexOf("300");
-  if (idx300 >= 0) console.log("near 300:", html.slice(Math.max(0, idx300 - 40), idx300 + 60));
-  const idxGram = html.indexOf("กรัม");
-  if (idxGram >= 0) console.log("near กรัม:", html.slice(Math.max(0, idxGram - 50), idxGram + 20));
-  const weightRe = /["']weight["']\s*:\s*["']?([^"',}\s]+)/;
-  const wm = html.match(weightRe);
-  if (wm) console.log("weight in JSON:", wm[0]);
-  const gramRe = /(\d+)\s*กรัม/;
-  const gm = html.match(gramRe);
-  if (gm) console.log("กรัม pattern:", gm[0]);
-  console.log("\n=== แถวตาราง รายละเอียดสินค้า ===");
-  console.log("Count:", detailRows.length);
-  detailRows.forEach((r, i) => console.log(`${i + 1}.`, r));
+  console.log("\nเรียก API ด้วย debug: true เพื่อดู AI response และ final description:");
+  console.log('  fetch("/api/admin/supplier-products/parse-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: "...", debug: true }) })');
 }
 
 main().catch(console.error);

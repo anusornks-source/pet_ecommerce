@@ -163,6 +163,7 @@ export default function AdminSuppliersPage() {
           description_th: d.description_th || null,
           shortDescription: d.shortDescription || null,
           shortDescription_th: d.shortDescription_th || null,
+          sourceDescription: d.description || d.description_th || null,
           supplierSku: d.supplierSku || null,
           supplierUrl: d.supplierUrl || null,
           supplierPrice: d.supplierPrice ?? null,
@@ -376,7 +377,7 @@ export default function AdminSuppliersPage() {
                 </button>
                 <Link
                   href={`/admin/suppliers/${s.id}/view`}
-                  className="text-[10px] px-2 py-0.5 rounded border border-stone-300 bg-stone-50 text-stone-600 hover:bg-stone-100 font-medium"
+                  className="text-[10px] px-3 py-0.5 rounded border border-stone-300 bg-stone-50 text-stone-600 hover:bg-stone-100 font-medium"
                 >
                   ดู
                 </Link>

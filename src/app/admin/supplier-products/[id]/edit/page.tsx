@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { ProductValidationStatus } from "@/generated/prisma/enums";
 import { SupplierProductImageField } from "@/components/admin/SupplierProductImageField";
+import { SupplierSelect } from "@/components/admin/SupplierSelect";
 
 type ValidationStatus = "Lead" | "Qualified" | "Approved" | "Rejected";
 
@@ -26,6 +27,7 @@ interface SupplierSummary {
   id: string;
   name: string;
   nameTh: string | null;
+  imageUrl?: string | null;
 }
 
 interface SupplierProductDetail {
@@ -37,6 +39,7 @@ interface SupplierProductDetail {
   description_th: string | null;
   shortDescription: string | null;
   shortDescription_th: string | null;
+  sourceDescription: string | null;
   supplierSku: string | null;
   supplierUrl: string | null;
   supplierPrice: number | null;
@@ -55,15 +58,18 @@ export default function EditSupplierProductPage({ params }: { params: Promise<{ 
   const [sp, setSp] = useState<SupplierProductDetail | null>(null);
   const [descPreview, setDescPreview] = useState(false);
   const [descPreviewTh, setDescPreviewTh] = useState(false);
+  const [showSourceDesc, setShowSourceDesc] = useState(false);
   const [aiTarget, setAiTarget] = useState<string | null>(null);
 
   const [form, setForm] = useState<{
+    supplierId: string;
     name: string;
     name_th: string;
     description: string;
     description_th: string;
     shortDescription: string;
     shortDescription_th: string;
+    sourceDescription: string;
     supplierSku: string;
     supplierUrl: string;
     supplierPrice: string;
@@ -72,12 +78,14 @@ export default function EditSupplierProductPage({ params }: { params: Promise<{ 
     remark: string;
     validationStatus: ValidationStatus;
   }>({
+    supplierId: "",
     name: "",
     name_th: "",
     description: "",
     description_th: "",
     shortDescription: "",
     shortDescription_th: "",
+      sourceDescription: "",
     supplierSku: "",
     supplierUrl: "",
     supplierPrice: "",
@@ -99,12 +107,14 @@ export default function EditSupplierProductPage({ params }: { params: Promise<{ 
         const data = d.data as SupplierProductDetail;
         setSp(data);
         setForm({
+          supplierId: data.supplierId ?? data.supplier.id,
           name: data.name,
           name_th: data.name_th ?? "",
           description: data.description ?? "",
           description_th: data.description_th ?? "",
           shortDescription: data.shortDescription ?? "",
           shortDescription_th: data.shortDescription_th ?? "",
+          sourceDescription: data.sourceDescription ?? "",
           supplierSku: data.supplierSku ?? "",
           supplierUrl: data.supplierUrl ?? "",
           supplierPrice: data.supplierPrice != null ? String(data.supplierPrice) : "",
@@ -136,12 +146,14 @@ export default function EditSupplierProductPage({ params }: { params: Promise<{ 
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          supplierId: form.supplierId || (sp.supplierId ?? sp.supplier.id),
           name: form.name,
           name_th: form.name_th || null,
           description: form.description,
           description_th: form.description_th || null,
           shortDescription: form.shortDescription || null,
           shortDescription_th: form.shortDescription_th || null,
+          sourceDescription: form.sourceDescription || null,
           supplierSku: form.supplierSku || null,
           supplierUrl: form.supplierUrl || null,
           supplierPrice: form.supplierPrice ? parseFloat(form.supplierPrice) : null,
@@ -213,6 +225,33 @@ export default function EditSupplierProductPage({ params }: { params: Promise<{ 
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white border border-stone-200 rounded-2xl p-6 space-y-4">
+        <div>
+          <label className="block text-xs font-semibold text-stone-600 mb-1">Supplier</label>
+          <SupplierSelect
+            value={form.supplierId || sp.supplier.id}
+            onChange={(supplierId, supplier) => {
+              setForm((f) => ({ ...f, supplierId }));
+              setSp((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      supplierId,
+                      supplier: {
+                        ...prev.supplier,
+                        id: supplierId,
+                        name: supplier?.name ?? prev.supplier.name,
+                        nameTh: supplier?.nameTh ?? prev.supplier.nameTh,
+                        imageUrl: supplier?.imageUrl ?? prev.supplier.imageUrl,
+                      },
+                    }
+                  : prev
+              );
+            }}
+            detailLink={`/admin/suppliers/${form.supplierId || sp.supplier.id}`}
+            className="mt-1"
+          />
+        </div>
+
         {/* รูปภาพสินค้า ด้านบนสุด */}
         <SupplierProductImageField
           value={form.imagesText}
@@ -273,6 +312,31 @@ export default function EditSupplierProductPage({ params }: { params: Promise<{ 
           </div>
         </div>
 
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-semibold text-stone-600">แหล่งที่มา (sourceDescription)</label>
+            <button
+              type="button"
+              className="text-[10px] text-stone-400 hover:text-orange-500 transition-colors"
+              onClick={() => setShowSourceDesc((v) => !v)}
+            >
+              {showSourceDesc ? "ซ่อนต้นฉบับ" : "ดู HTML ต้นฉบับ"}
+            </button>
+          </div>
+          {showSourceDesc && (
+            sp.sourceDescription ? (
+              <div
+                className="w-full border border-dashed border-stone-200 rounded-lg px-3 py-2 text-[11px] text-stone-700 bg-stone-50 max-h-56 overflow-auto prose prose-sm desc-html"
+                dangerouslySetInnerHTML={{ __html: sp.sourceDescription }}
+              />
+            ) : (
+              <div className="w-full border border-dashed border-stone-200 rounded-lg px-3 py-2 text-[11px] text-stone-400 bg-stone-50">
+                ไม่มี sourceDescription จากต้นฉบับ
+              </div>
+            )
+          )}
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -282,11 +346,16 @@ export default function EditSupplierProductPage({ params }: { params: Promise<{ 
                   type="button"
                   disabled={!!aiTarget}
                   onClick={() =>
-                    suggestField(
-                      "sp_description",
-                      { description_th: form.description_th, name: form.name, name_th: form.name_th },
-                      (v) => setForm((f) => ({ ...f, description: v }))
-                    )
+                  suggestField(
+                    "sp_description",
+                    {
+                      description_th: form.description_th,
+                      name: form.name,
+                      name_th: form.name_th,
+                      sourceDescription: form.sourceDescription,
+                    },
+                    (v) => setForm((f) => ({ ...f, description: v }))
+                  )
                   }
                   className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50"
                 >
@@ -303,7 +372,7 @@ export default function EditSupplierProductPage({ params }: { params: Promise<{ 
             </div>
             {descPreview ? (
               <div
-                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm min-h-24 prose prose-sm max-w-none overflow-auto"
+                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm min-h-24 prose prose-sm desc-html max-w-none overflow-auto"
                 dangerouslySetInnerHTML={{ __html: form.description }}
               />
             ) : (
@@ -324,11 +393,16 @@ export default function EditSupplierProductPage({ params }: { params: Promise<{ 
                   type="button"
                   disabled={!!aiTarget}
                   onClick={() =>
-                    suggestField(
-                      "sp_description_th",
-                      { description: form.description, name: form.name, name_th: form.name_th },
-                      (v) => setForm((f) => ({ ...f, description_th: v }))
-                    )
+                  suggestField(
+                    "sp_description_th",
+                    {
+                      description: form.description,
+                      name: form.name,
+                      name_th: form.name_th,
+                      sourceDescription: form.sourceDescription,
+                    },
+                    (v) => setForm((f) => ({ ...f, description_th: v }))
+                  )
                   }
                   className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50"
                 >
@@ -345,7 +419,7 @@ export default function EditSupplierProductPage({ params }: { params: Promise<{ 
             </div>
             {descPreviewTh ? (
               <div
-                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm min-h-24 prose prose-sm max-w-none overflow-auto"
+                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm min-h-24 prose prose-sm desc-html max-w-none overflow-auto"
                 dangerouslySetInnerHTML={{ __html: form.description_th }}
               />
             ) : (
@@ -369,7 +443,12 @@ export default function EditSupplierProductPage({ params }: { params: Promise<{ 
                 onClick={() =>
                   suggestField(
                     "sp_shortDescription",
-                    { shortDescription_th: form.shortDescription_th, name: form.name, name_th: form.name_th },
+                    {
+                      shortDescription_th: form.shortDescription_th,
+                      name: form.name,
+                      name_th: form.name_th,
+                      sourceDescription: form.sourceDescription,
+                    },
                     (v) => setForm((f) => ({ ...f, shortDescription: v }))
                   )
                 }
@@ -394,7 +473,12 @@ export default function EditSupplierProductPage({ params }: { params: Promise<{ 
                 onClick={() =>
                   suggestField(
                     "sp_shortDescription_th",
-                    { shortDescription: form.shortDescription, name: form.name, name_th: form.name_th },
+                    {
+                      shortDescription: form.shortDescription,
+                      name: form.name,
+                      name_th: form.name_th,
+                      sourceDescription: form.sourceDescription,
+                    },
                     (v) => setForm((f) => ({ ...f, shortDescription_th: v }))
                   )
                 }

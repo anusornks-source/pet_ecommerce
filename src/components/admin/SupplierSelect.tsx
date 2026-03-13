@@ -71,7 +71,7 @@ export function SupplierSelect({
     setLoading(true);
     try {
       const url = q.trim()
-        ? `/api/admin/suppliers?search=${encodeURIComponent(q)}&limit=30&minimal=true`
+        ? `/api/admin/suppliers?search=${encodeURIComponent(q)}&limit=50&minimal=true`
         : `/api/admin/suppliers?limit=50&minimal=true`;
       const res = await fetch(url);
       const data = await res.json();

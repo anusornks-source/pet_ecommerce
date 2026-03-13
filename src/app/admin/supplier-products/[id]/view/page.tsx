@@ -204,6 +204,12 @@ export default function SupplierProductViewPage({ params }: { params: Promise<{ 
               ✓ ดู Product
             </Link>
           )}
+          <Link
+            href={`/admin/supplier-products/${sp.id}/edit`}
+            className="text-sm px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+          >
+            แก้ไข Supplier Product
+          </Link>
           <button
             onClick={handleDelete}
             disabled={deleting}
@@ -328,11 +334,11 @@ export default function SupplierProductViewPage({ params }: { params: Promise<{ 
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1">คำอธิบาย (EN)</p>
-              <div className="text-stone-700 text-sm prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sp.description || "—" }} />
+              <div className="text-stone-700 text-sm prose prose-sm desc-html max-w-none" dangerouslySetInnerHTML={{ __html: sp.description || "—" }} />
             </div>
             <div>
               <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1">คำอธิบาย (TH)</p>
-              <div className="text-stone-700 text-sm prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sp.description_th || "—" }} />
+              <div className="text-stone-700 text-sm prose prose-sm desc-html max-w-none" dangerouslySetInnerHTML={{ __html: sp.description_th || "—" }} />
             </div>
           </div>
           <div className="grid md:grid-cols-2 gap-6">

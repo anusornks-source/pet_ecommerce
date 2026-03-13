@@ -224,6 +224,8 @@ model SupplierProduct {
   description_th      String?  @db.Text
   shortDescription    String?  @db.Text
   shortDescription_th String?  @db.Text
+  /// คำอธิบายดิบจากแหล่งที่มา (HTML เต็มจาก URL / CJ ฯลฯ)
+  sourceDescription   String?  @db.Text
   supplierSku         String?
   supplierUrl         String?
   supplierPrice       Float?

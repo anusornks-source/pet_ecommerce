@@ -121,6 +121,9 @@ export default function SupplierDetailPage({
   const [supplierImageUrl, setSupplierImageUrl] = useState("");
   const [savingSupplierImage, setSavingSupplierImage] = useState(false);
   const [aiTarget, setAiTarget] = useState<string | null>(null);
+  const [urlModalOpen, setUrlModalOpen] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
+  const [urlScanning, setUrlScanning] = useState(false);
 
   const suggestField = async (field: string, ctx: Record<string, string>, setter: (v: string) => void) => {
     setAiTarget(field);
@@ -317,6 +320,73 @@ export default function SupplierDetailPage({
     }
   };
 
+  const handleScanUrlToSupplierProduct = async () => {
+    const url = urlInput.trim();
+    if (!url) {
+      toast.error("กรุณาแปะ URL");
+      return;
+    }
+    setUrlScanning(true);
+    try {
+      const res = await fetch("/api/admin/supplier-products/parse-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (!data.success || !data.data) {
+        toast.error(data.error || "Scan ไม่สำเร็จ");
+        return;
+      }
+      const d = data.data as {
+        name?: string;
+        name_th?: string;
+        description?: string;
+        description_th?: string;
+        shortDescription?: string;
+        shortDescription_th?: string;
+        supplierSku?: string;
+        supplierUrl?: string;
+        supplierPrice?: number | null;
+        images?: string[];
+        remark?: string | null;
+      };
+      const createRes = await fetch(`/api/admin/suppliers/${id}/supplier-products`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: d.name || "Product",
+          name_th: d.name_th || null,
+          description: d.description || "",
+          description_th: d.description_th || null,
+          shortDescription: d.shortDescription || null,
+          shortDescription_th: d.shortDescription_th || null,
+          sourceDescription: d.description || d.description_th || null,
+          supplierSku: d.supplierSku || null,
+          supplierUrl: d.supplierUrl || url,
+          supplierPrice: d.supplierPrice ?? null,
+          images: Array.isArray(d.images) ? d.images : [],
+          categoryId: null,
+          remark: d.remark || null,
+          validationStatus: ProductValidationStatus.Lead,
+        }),
+      });
+      const createData = await createRes.json();
+      if (createData.success) {
+        toast.success("เพิ่ม Supplier Product จาก URL แล้ว");
+        setUrlModalOpen(false);
+        setUrlInput("");
+        loadSupplierProducts();
+      } else {
+        toast.error(createData.error || "เพิ่มไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("เกิดข้อผิดพลาด");
+    } finally {
+      setUrlScanning(false);
+    }
+  };
+
   const searchProducts = (q: string) => {
     setProductSearch(q);
     if (searchTimer.current) clearTimeout(searchTimer.current);
@@ -433,27 +503,51 @@ export default function SupplierDetailPage({
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      {/* Page label */}
-      <div>
-        <h1 className="text-2xl font-bold text-stone-800">Supplier & Supplier Products</h1>
-        <p className="text-sm text-stone-500 mt-1">
-          {supplier.nameTh ?? supplier.name}
-        </p>
-      </div>
-
-      <div className="flex items-center gap-4">
-        <Link
-          href="/admin/suppliers"
-          className="text-sm text-stone-500 hover:text-stone-700"
-        >
-          ← กลับ
-        </Link>
-        <Link
-          href={`/admin/suppliers/${id}/view`}
-          className="text-sm text-stone-500 hover:text-stone-700"
-        >
-          ดู
-        </Link>
+      {/* Page label + actions */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-stone-800">Supplier & Supplier Products</h1>
+          <p className="text-sm text-stone-500 mt-1">
+            {supplier.nameTh ?? supplier.name}
+          </p>
+          <div className="flex items-center gap-4 mt-2">
+            <Link
+              href="/admin/suppliers"
+              className="text-sm text-stone-500 hover:text-stone-700"
+            >
+              ← กลับ
+            </Link>
+            <Link
+              href={`/admin/suppliers/${id}/view`}
+              className="text-sm text-stone-500 hover:text-stone-700"
+            >
+              ดู
+            </Link>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={async () => {
+              if (!confirm("ต้องการลบ Supplier นี้พร้อมข้อมูลที่เกี่ยวข้องหรือไม่?")) return;
+              try {
+                const res = await fetch(`/api/admin/suppliers/${id}`, { method: "DELETE" });
+                const data = await res.json();
+                if (data.success) {
+                  toast.success("ลบ Supplier แล้ว");
+                  window.location.href = "/admin/suppliers";
+                } else {
+                  toast.error(data.error || "ลบไม่สำเร็จ");
+                }
+              } catch {
+                toast.error("เกิดข้อผิดพลาด");
+              }
+            }}
+            className="px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-sm text-red-600 hover:bg-red-100"
+          >
+            ลบ Supplier
+          </button>
+        </div>
       </div>
 
       <div className="bg-white border border-stone-200 rounded-2xl p-6">
@@ -508,14 +602,23 @@ export default function SupplierDetailPage({
 
       {/* Supplier Products — สินค้าจาก supplier ก่อน import */}
       <div className="bg-white border border-stone-200 rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 gap-2">
           <h2 className="font-bold text-stone-800">Supplier Products (สินค้าจาก Supplier)</h2>
-          <button
-            onClick={() => setShowAddSp(!showAddSp)}
-            className="text-sm px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-medium"
-          >
-            {showAddSp ? "ยกเลิก" : "+ เพิ่มสินค้า"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setUrlModalOpen(true)}
+              className="text-sm px-3 py-1.5 rounded-lg border border-violet-300 bg-violet-50 text-violet-700 hover:bg-violet-100 font-medium"
+            >
+              + จาก URL
+            </button>
+            <button
+              onClick={() => setShowAddSp(!showAddSp)}
+              className="text-sm px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-medium"
+            >
+              {showAddSp ? "ยกเลิก" : "+ เพิ่มสินค้า"}
+            </button>
+          </div>
         </div>
         <p className="text-xs text-stone-500 mb-4">เก็บข้อมูลสินค้าจาก supplier ไว้ก่อน — เมื่อมีแววขายได้ คลิก Import เป็น Product</p>
 
@@ -541,14 +644,14 @@ export default function SupplierDetailPage({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-semibold text-stone-600">คำอธิบาย (EN) *</label>
-                  <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description", { description_th: spForm.description_th, name: spForm.name, name_th: spForm.name_th }, (v) => setSpForm((f) => ({ ...f, description: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description" ? "…" : "✨ AI"}</button>
+                  <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description", { description_th: spForm.description_th, name: spForm.name, name_th: spForm.name_th, sourceDescription: spForm.description_th }, (v) => setSpForm((f) => ({ ...f, description: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description" ? "…" : "✨ AI"}</button>
                 </div>
                 <textarea value={spForm.description} onChange={(e) => setSpForm((f) => ({ ...f, description: e.target.value }))} rows={4} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="Description" required />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-semibold text-stone-600">คำอธิบาย (TH)</label>
-                  <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description_th", { description: spForm.description }, (v) => setSpForm((f) => ({ ...f, description_th: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description_th" ? "…" : "✨ AI"}</button>
+                  <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_description_th", { description: spForm.description, sourceDescription: spForm.description }, (v) => setSpForm((f) => ({ ...f, description_th: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_description_th" ? "…" : "✨ AI"}</button>
                 </div>
                 <textarea value={spForm.description_th} onChange={(e) => setSpForm((f) => ({ ...f, description_th: e.target.value }))} rows={4} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="คำอธิบายสินค้า" />
               </div>
@@ -557,14 +660,13 @@ export default function SupplierDetailPage({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-semibold text-stone-600">คำอธิบายสั้น (EN)</label>
-                  <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_shortDescription", { shortDescription_th: spForm.shortDescription_th, name: spForm.name, name_th: spForm.name_th }, (v) => setSpForm((f) => ({ ...f, shortDescription: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_shortDescription" ? "…" : "✨ AI"}</button>
                 </div>
                 <textarea value={spForm.shortDescription} onChange={(e) => setSpForm((f) => ({ ...f, shortDescription: e.target.value }))} rows={3} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="Short description" />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-semibold text-stone-600">คำอธิบายสั้น (TH)</label>
-                  <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_shortDescription_th", { shortDescription: spForm.shortDescription, name: spForm.name, name_th: spForm.name_th }, (v) => setSpForm((f) => ({ ...f, shortDescription_th: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_shortDescription_th" ? "…" : "✨ AI"}</button>
+                  <button type="button" disabled={!!aiTarget} onClick={() => suggestField("sp_shortDescription_th", { shortDescription: spForm.shortDescription, name: spForm.name, name_th: spForm.name_th, sourceDescription: spForm.description_th }, (v) => setSpForm((f) => ({ ...f, shortDescription_th: v })))} className="text-[10px] px-2 py-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50">{aiTarget === "sp_shortDescription_th" ? "…" : "✨ AI"}</button>
                 </div>
                 <input value={spForm.shortDescription_th} onChange={(e) => setSpForm((f) => ({ ...f, shortDescription_th: e.target.value }))} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="คำอธิบายสั้น" />
               </div>
@@ -1012,6 +1114,59 @@ export default function SupplierDetailPage({
               </button>
               <button onClick={() => setImportModal(null)} disabled={!!importingSpId} className="px-4 py-2 rounded-lg border border-stone-200 text-stone-600 text-sm">
                 ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Supplier Product from URL Modal */}
+      {urlModalOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !urlScanning) {
+              setUrlModalOpen(false);
+              setUrlInput("");
+            }
+          }}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-bold text-stone-800 mb-3">เพิ่ม Supplier Product จาก URL</h3>
+            <p className="text-sm text-stone-500 mb-4">
+              แปะลิงก์สินค้าจากหน้าเว็บ Supplier ระบบจะใช้ AI ช่วยดึงข้อมูลมาเป็น Supplier Product ให้
+            </p>
+            <input
+              type="url"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleScanUrlToSupplierProduct()}
+              placeholder="https://..."
+              className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-violet-300"
+              autoFocus
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setUrlModalOpen(false);
+                  setUrlInput("");
+                }}
+                disabled={urlScanning}
+                className="px-4 py-2 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-50 text-sm disabled:opacity-50"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={handleScanUrlToSupplierProduct}
+                disabled={urlScanning}
+                className="px-4 py-2 rounded-xl bg-violet-500 hover:bg-violet-600 disabled:bg-stone-300 text-white text-sm font-medium"
+              >
+                {urlScanning ? "กำลัง Scan..." : "Scan & เพิ่ม"}
               </button>
             </div>
           </div>

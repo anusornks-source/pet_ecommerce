@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { del } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 import { ProductValidationStatus } from "@/generated/prisma/client";
@@ -27,6 +28,7 @@ export async function PATCH(
     description_th,
     shortDescription,
     shortDescription_th,
+    sourceDescription,
     supplierSku,
     supplierUrl,
     supplierPrice,
@@ -46,6 +48,7 @@ export async function PATCH(
     ...(description_th !== undefined && { description_th: description_th?.trim() || null }),
     ...(shortDescription !== undefined && { shortDescription: shortDescription?.trim() || null }),
     ...(shortDescription_th !== undefined && { shortDescription_th: shortDescription_th?.trim() || null }),
+    ...(sourceDescription !== undefined && { sourceDescription: sourceDescription?.trim() || null }),
     ...(supplierSku !== undefined && { supplierSku: supplierSku?.trim() || null }),
     ...(supplierUrl !== undefined && { supplierUrl: supplierUrl?.trim() || null }),
     ...(supplierPrice !== undefined && { supplierPrice: supplierPrice != null ? parseFloat(supplierPrice) : null }),
@@ -82,6 +85,55 @@ export async function DELETE(
   });
   if (!sp) {
     return NextResponse.json({ success: false, error: "ไม่พบสินค้า" }, { status: 404 });
+  }
+
+  // ลบรูปออกจาก Blob ถ้าไม่มีที่อื่นใช้งานแล้ว (SupplierProduct / Product / MarketingAsset)
+  try {
+    const urls = Array.isArray(sp.images) ? sp.images : [];
+    const isBlobUrl = (u: string) => u.includes("blob.vercel-storage.com");
+    const trim = (u: string) => u?.trim() ?? "";
+
+    for (const rawUrl of urls) {
+      const url = trim(rawUrl);
+      if (!url || !isBlobUrl(url)) continue;
+
+      // เช็ค SupplierProduct อื่น ๆ ที่ใช้ URL นี้
+      const otherSpCount = await prisma.supplierProduct.count({
+        where: {
+          id: { not: spId },
+          images: { has: url },
+        },
+      });
+
+      // เช็ค Product ที่ใช้ URL นี้ (images / videos / mediaOrder)
+      const otherProduct = await prisma.product.findFirst({
+        where: {
+          OR: [
+            { images: { has: url } },
+            { videos: { has: url } },
+            { mediaOrder: { has: url } },
+          ],
+        },
+        select: { id: true },
+      });
+
+      // เช็ค MarketingAsset ที่ใช้ URL นี้
+      const otherAssetCount = await prisma.marketingAsset.count({
+        where: {
+          url,
+        },
+      });
+
+      if (otherSpCount === 0 && !otherProduct && otherAssetCount === 0) {
+        try {
+          await del(url);
+        } catch (err) {
+          console.error("[supplier-products] blob del error:", err);
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[supplier-products] blob cleanup error:", err);
   }
 
   await prisma.supplierProduct.delete({ where: { id: spId } });

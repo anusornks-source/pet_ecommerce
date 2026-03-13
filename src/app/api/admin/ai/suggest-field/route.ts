@@ -4,7 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const PROMPTS: Record<string, (ctx: Record<string, string>) => string> = {
+const PROMPTS: Record<string, (ctx: Record<string, any>) => string> = {
   name_th: ({ name }) =>
     `Translate this product category name to Thai (short, natural): "${name}". Reply with ONLY the Thai text, nothing else.`,
   name_en: ({ name_th }) =>
@@ -89,6 +89,117 @@ const PROMPTS: Record<string, (ctx: Record<string, string>) => string> = {
       ? `Based on this source (may contain HTML), write a ONE-LINE short product description in Thai (max ~100 chars):\n\n${src}\n\nFocus on key benefits only. Reply with ONLY the Thai text.`
       : `Write a one-line short product description in Thai for: "${name || name_th || "pet product"}" (max ~100 chars). Be specific. Reply with ONLY the text.`;
   },
+  // Ad image text fields
+  ad_title: ({ lang, name, name_th, shortDescription, shortDescription_th, price }) => {
+    const baseName = lang === "th" ? name_th || name || "สินค้า" : name || name_th || "pet product";
+    const baseShort =
+      lang === "th"
+        ? shortDescription_th || shortDescription || ""
+        : shortDescription || shortDescription_th || "";
+    const priceText = typeof price === "number" && price > 0 ? `ราคา ${price} บาท` : "";
+    if (lang === "th") {
+      return [
+        `เขียนหัวข้อ Title ภาษาไทยสำหรับภาพโฆษณาสินค้า เพื่อใช้ใน Shopee / Lazada / Facebook / IG`,
+        `ข้อมูลสินค้า:`,
+        `- ชื่อสินค้า: ${baseName}`,
+        baseShort ? `- short description: ${baseShort}` : "",
+        priceText ? `- ${priceText}` : "",
+        ``,
+        `กฎ:`,
+        `- เป็นภาษาไทยล้วน อ่านง่าย ทันสมัย`,
+        `- ยาวไม่เกิน 1–2 บรรทัด (ประมาณ 8–14 คำ)`,
+        `- โฟกัส benefit หลักของสินค้า ไม่ต้องใส่รายละเอียดเยอะ`,
+        `- ใส่อีโมจิ 1–2 ตัวได้ แต่ไม่เยอะเกินไป`,
+        `- ห้ามใส่ราคา/ตัวเลขยาว ๆ ในหัวข้อ`,
+        `ตอบกลับมาเป็นข้อความหัวข้อบรรทัดเดียวเท่านั้น`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+    }
+    return [
+      `Write a short, punchy English ad title for a product image, for Shopee / Lazada / Facebook / IG.`,
+      `Product info:`,
+      `- Name: ${baseName}`,
+      baseShort ? `- Short description: ${baseShort}` : "",
+      priceText ? `- ${priceText}` : "",
+      ``,
+      `Rules:`,
+      `- English only, casual and clear`,
+      `- Max 1–2 lines (~6–12 words)`,
+      `- Focus on the main benefit, not specs`,
+      `- Optional 1 emoji is ok, but not required`,
+      `- Do NOT include price or long numbers`,
+      `Reply with ONLY the title text (single line).`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+  },
+  ad_subtitle: ({ lang, name, name_th, shortDescription, shortDescription_th }) => {
+    const baseName = lang === "th" ? name_th || name || "สินค้า" : name || name_th || "pet product";
+    const baseShort =
+      lang === "th"
+        ? shortDescription_th || shortDescription || ""
+        : shortDescription || shortDescription_th || "";
+    if (lang === "th") {
+      return [
+        `เขียน Subtitle ภาษาไทยสั้น ๆ สำหรับภาพโฆษณาสินค้า โดยขยาย benefit หลักของ "${baseName}"`,
+        baseShort ? `ข้อมูลเพิ่มเติม: ${baseShort}` : "",
+        ``,
+        `กฎ:`,
+        `- ยาวประมาณ 1–2 ประโยค`,
+        `- โฟกัสที่ปัญหาที่ช่วยแก้ หรือความสบายที่ลูกค้าได้`,
+        `- น้ำเสียงเป็นกันเอง ไม่ขายตรงเกินไป`,
+        `- หลีกเลี่ยงใช้ emoji เยอะเกินไป (ใส่ 0–1 ตัวได้)`,
+        `ตอบกลับเป็นข้อความอย่างเดียว (ไม่ต้องมี bullet / ตัวเลขนำหน้า)`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+    }
+    return [
+      `Write a short English subtitle for a product ad image expanding the main benefit of "${baseName}".`,
+      baseShort ? `Extra info: ${baseShort}` : "",
+      ``,
+      `Rules:`,
+      `- Length: 1–2 sentences`,
+      `- Focus on problem solved or key benefit in daily life`,
+      `- Friendly tone, not too salesy`,
+      `- No bullet points, no numbering`,
+      `Reply with ONLY the subtitle text.`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+  },
+  ad_badge: ({ lang, name, name_th }) => {
+    const baseName = lang === "th" ? name_th || name || "สินค้า" : name || name_th || "pet product";
+    if (lang === "th") {
+      return [
+        `เขียนข้อความ Badge สั้น ๆ ภาษาไทยสำหรับแถบโปรโมชั่นบนภาพโฆษณาสินค้า`,
+        `สินค้า: ${baseName}`,
+        ``,
+        `ตัวอย่างแนวทาง: "ลดการหลุดร่วง", "ของเล่นลูกรัก", "หมดปัญหากลิ่นฉี่", "นุ่มฟูไม่บาดผิว"`,
+        ``,
+        `กฎ:`,
+        `- ความยาวไม่เกิน ~12 ตัวอักษร`,
+        `- โฟกัส benefit/จุดเด่นที่มองเห็นได้ทันที`,
+        `- ใส่อีโมจิ 1 ตัวด้านหน้าก็ได้ เช่น ✅ 🐶 ✨`,
+        `- ห้ามใส่ราคา ตัวเลขเยอะ ๆ หรือข้อความยาวหลายคำ`,
+        `ตอบกลับมาเป็นข้อความ badge สั้น ๆ บรรทัดเดียวเท่านั้น`,
+      ].join("\n");
+    }
+    return [
+      `Write a very short English badge text for a product ad image.`,
+      `Product: ${baseName}`,
+      ``,
+      `Examples: "Reduce shedding", "Puppy’s favorite toy", "No more pee smell", "Soft on sensitive skin"`,
+      ``,
+      `Rules:`,
+      `- Max ~20 characters`,
+      `- Focus on one clear benefit`,
+      `- 1 emoji at the start is OK (e.g. ✅ 🐶 ✨), but optional`,
+      `- No price or long numbers`,
+      `Reply with ONLY the badge text (single line).`,
+    ].join("\n");
+  },
 };
 
 export async function POST(request: NextRequest) {
@@ -96,7 +207,7 @@ export async function POST(request: NextRequest) {
   if (isNextResponse(auth)) return auth;
 
   const body = await request.json();
-  const { field, ...ctx } = body as { field: string } & Record<string, string>;
+  const { field, ...ctx } = body as { field: string } & Record<string, any>;
 
   if (!PROMPTS[field]) {
     return NextResponse.json({ success: false, error: "Unknown field" }, { status: 400 });
@@ -113,7 +224,11 @@ export async function POST(request: NextRequest) {
         ? 600
         : field === "sp_shortDescription" || field === "sp_shortDescription_th"
           ? 160
-          : 50;
+          : field === "ad_title" || field === "ad_badge"
+            ? 80
+            : field === "ad_subtitle"
+              ? 160
+              : 50;
 
     const message = await client.messages.create({
       model: "claude-haiku-4-5-20251001",

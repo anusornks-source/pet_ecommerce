@@ -804,6 +804,7 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
             shortDescription: productContext.shortDescription ?? undefined,
             shortDescription_th: undefined,
             price: productContext.price ?? null,
+            normalPrice: productContext.normalPrice ?? null,
             images: adImages,
             shopLogoUrl: null,
           }}

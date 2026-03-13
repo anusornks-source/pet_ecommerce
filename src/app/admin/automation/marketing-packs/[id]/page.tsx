@@ -875,6 +875,7 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
             shortDescription: pack.product.shortDescription ?? undefined,
             shortDescription_th: pack.product.shortDescription_th ?? undefined,
             price: pack.product.price,
+            normalPrice: pack.product.normalPrice ?? null,
             images: galleryImages,
             shopLogoUrl: null,
           }}

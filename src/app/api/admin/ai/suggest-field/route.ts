@@ -200,6 +200,13 @@ const PROMPTS: Record<string, (ctx: Record<string, any>) => string> = {
       `Reply with ONLY the badge text (single line).`,
     ].join("\n");
   },
+  ad_badge_icon: ({ shortDescription }) => {
+    return [
+      `Given this badge text: "${shortDescription}"`,
+      `Suggest a single emoji that best represents it.`,
+      `Reply with ONLY one emoji character, nothing else.`,
+    ].join("\n");
+  },
 };
 
 export async function POST(request: NextRequest) {
@@ -224,7 +231,9 @@ export async function POST(request: NextRequest) {
         ? 600
         : field === "sp_shortDescription" || field === "sp_shortDescription_th"
           ? 160
-          : field === "ad_title" || field === "ad_badge"
+          : field === "ad_badge_icon"
+            ? 10
+            : field === "ad_title" || field === "ad_badge"
             ? 80
             : field === "ad_subtitle"
               ? 160

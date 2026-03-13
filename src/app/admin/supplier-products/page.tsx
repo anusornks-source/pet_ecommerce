@@ -674,30 +674,12 @@ export default function AdminSupplierProductsPage() {
                       >
                         ดู
                       </Link>
-                      <button
-                        onClick={() => {
-                          setEditSpModal(sp);
-                          setEditSpForm({
-                            supplierId: sp.supplier.id,
-                            name: sp.name,
-                            name_th: sp.name_th ?? "",
-                            description: sp.description ?? "",
-                            description_th: sp.description_th ?? "",
-                            shortDescription: sp.shortDescription ?? "",
-                            shortDescription_th: sp.shortDescription_th ?? "",
-                            supplierSku: sp.supplierSku ?? "",
-                            supplierUrl: sp.supplierUrl ?? "",
-                            supplierPrice: sp.supplierPrice != null ? String(sp.supplierPrice) : "",
-                            imagesText: sp.images?.join(", ") ?? "",
-                            categoryId: sp.categoryId ?? "",
-                            remark: sp.remark ?? "",
-                            validationStatus: (sp.validationStatus ?? ProductValidationStatus.Lead) as "Lead" | "Qualified" | "Approved" | "Rejected",
-                          });
-                        }}
+                      <Link
+                        href={`/admin/supplier-products/${sp.id}/edit`}
                         className="inline-block text-[7px] px-1 py-0.5 rounded border border-amber-200/80 text-amber-700/90 bg-amber-50/50 hover:bg-amber-100/80 hover:border-amber-300 transition-colors text-center leading-tight"
                       >
                         แก้ไข
-                      </button>
+                      </Link>
                       {!sp.productId ? (
                         <button
                           onClick={() => {

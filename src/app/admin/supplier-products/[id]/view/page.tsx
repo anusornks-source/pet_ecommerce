@@ -181,7 +181,7 @@ export default function SupplierProductViewPage({ params }: { params: Promise<{ 
   const selectedImage = images[selectedImageIndex];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 py-8 space-y-4">
       {/* Breadcrumb & Actions */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
@@ -194,14 +194,6 @@ export default function SupplierProductViewPage({ params }: { params: Promise<{ 
           >
             แก้ไขที่หน้า Supplier
           </Link>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-medium uppercase tracking-wide text-stone-400">
-              View Supplier Product
-            </span>
-            <h1 className="text-xl font-bold text-stone-800 truncate max-w-md">
-            {sp.name_th ?? sp.name}
-            </h1>
-          </div>
         </div>
         <div className="flex items-center gap-2">
           {sp.productId && (
@@ -220,6 +212,11 @@ export default function SupplierProductViewPage({ params }: { params: Promise<{ 
             {deleting ? "กำลังลบ..." : "ลบ"}
           </button>
         </div>
+      </div>
+
+      {/* Page label */}
+      <div>
+        <h1 className="text-2xl font-bold text-stone-800">Supplier Product</h1>
       </div>
 
       {/* Hero */}

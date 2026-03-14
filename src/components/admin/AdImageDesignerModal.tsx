@@ -413,33 +413,19 @@ export const AdImageDesignerModal: React.FC<Props> = ({ open, onClose, product, 
           a.click();
           document.body.removeChild(a);
         } else {
-          // upload to /api/upload then save as marketing asset
           const res = await fetch(dataUrl);
           const blob = await res.blob();
           const fd = new FormData();
           fd.append("file", blob, `ad-${product.id}.png`);
-          const uploadRes = await fetch("/api/upload", {
+          fd.append("productId", product.id);
+          if (context?.marketingPackId) fd.append("marketingPackId", context.marketingPackId);
+          fd.append("prompt", `ad-designer:${lang}:${aspect}`);
+
+          const saveRes = await fetch("/api/admin/marketing-assets/upload-direct", {
             method: "POST",
             body: fd,
           });
-          if (!uploadRes.ok) throw new Error("Upload failed");
-          const uploadData = (await uploadRes.json()) as { success?: boolean; url?: string; error?: string };
-          if (!uploadData.success || !uploadData.url) {
-            throw new Error(uploadData.error || "Upload invalid");
-          }
-
-          const saveRes = await fetch("/api/admin/marketing-assets/save-from-url", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              url: uploadData.url,
-              productId: product.id,
-              marketingPackId: context?.marketingPackId,
-              prompt: `ad-designer:${lang}:${aspect}`,
-              angle: null,
-            }),
-          });
-          if (!saveRes.ok) throw new Error("Save asset failed");
+          if (!saveRes.ok) throw new Error("Upload failed");
           const saveData = (await saveRes.json()) as { success?: boolean; error?: string };
           if (!saveData.success) {
             throw new Error(saveData.error || "Save asset invalid");

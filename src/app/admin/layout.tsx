@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import AdminSidebar from "./AdminSidebar";
+import AdminLayoutClient from "./AdminLayoutClient";
 import { ShopAdminProvider } from "@/context/ShopAdminContext";
 
 export default async function AdminLayout({
@@ -23,10 +23,7 @@ export default async function AdminLayout({
 
   return (
     <ShopAdminProvider session={session}>
-      <div className="flex h-screen bg-stone-50 overflow-hidden">
-        <AdminSidebar />
-        <main className="flex-1 min-w-0 px-6 pt-4 pb-6 overflow-y-auto">{children}</main>
-      </div>
+      <AdminLayoutClient>{children}</AdminLayoutClient>
     </ShopAdminProvider>
   );
 }

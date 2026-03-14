@@ -6,7 +6,6 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 import MarketingAssetsSection from "@/components/admin/MarketingAssetsSection";
 import { useLocale } from "@/context/LocaleContext";
-import { AdImageDesignerModal } from "@/components/admin/AdImageDesignerModal";
 
 function AutoTextarea({ value, onChange, className, minHeight = 72 }: { value: string; onChange: (v: string) => void; className?: string; minHeight?: number }) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -345,7 +344,6 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
   const [editedImagePrompts, setEditedImagePrompts] = useState<{ angle: string; prompt: string }[]>([]);
   const [editedVideoPrompts, setEditedVideoPrompts] = useState<{ angle: string; concept: string }[]>([]);
   const [packAssetsRefreshKey, setPackAssetsRefreshKey] = useState(0);
-  const [showAdDesigner, setShowAdDesigner] = useState(false);
 
   useEffect(() => {
     fetch(`/api/admin/automation/marketing-packs/${id}`)
@@ -546,13 +544,12 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
           <div className="flex items-center gap-2">
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${pack.lang === "en" ? "bg-blue-100 text-blue-600" : "bg-amber-100 text-amber-600"}`}>{pack.lang}</span>
             <span className="text-xs text-stone-400">{date}</span>
-            <button
-              type="button"
-              onClick={() => setShowAdDesigner(true)}
+            <Link
+              href={`/admin/ad-designer?productId=${pack.productId}&marketingPackId=${pack.id}&returnUrl=${encodeURIComponent(`/admin/automation/marketing-packs/${pack.id}`)}`}
               className="text-[11px] px-2.5 py-1 rounded-full border border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100"
             >
               สร้างภาพ Ads
-            </button>
+            </Link>
           </div>
         </div>
         <div className="p-5 flex gap-6">
@@ -864,28 +861,6 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
         />
       </div>
 
-      {showAdDesigner && (
-        <AdImageDesignerModal
-          open={showAdDesigner}
-          onClose={() => setShowAdDesigner(false)}
-          product={{
-            id: pack.productId,
-            name: pack.product.name,
-            name_th: pack.product.name_th,
-            shortDescription: pack.product.shortDescription ?? undefined,
-            shortDescription_th: pack.product.shortDescription_th ?? undefined,
-            price: pack.product.price,
-            normalPrice: pack.product.normalPrice ?? null,
-            images: galleryImages,
-            shopLogoUrl: null,
-          }}
-          context={{ marketingPackId: pack.id }}
-          onSaved={() => {
-            setPackAssetsRefreshKey((k) => k + 1);
-            toast.success("บันทึกภาพ Ads เข้า Marketing Assets แล้ว");
-          }}
-        />
-      )}
 
       {/* 7. Short Video Ad Concepts */}
       {pack.videoAdPrompts && pack.videoAdPrompts.length > 0 && (

@@ -6,7 +6,6 @@ import Image from "next/image";
 import MarketingAssetsSection from "@/components/admin/MarketingAssetsSection";
 import { useLocale } from "@/context/LocaleContext";
 import toast from "react-hot-toast";
-import { AdImageDesignerModal } from "@/components/admin/AdImageDesignerModal";
 import {
   DndContext,
   closestCenter,
@@ -147,7 +146,6 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
   const [editingPriceLinkId, setEditingPriceLinkId] = useState<string | null>(null);
   const [editPriceValue, setEditPriceValue] = useState("");
   const [hiddenSections, setHiddenSections] = useState<Set<string>>(new Set());
-  const [showAdDesigner, setShowAdDesigner] = useState(false);
 
   const toggleSection = (sectionId: string) => {
     setHiddenSections((prev) => {
@@ -434,13 +432,12 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
               <p className="text-sm text-stone-600 mt-3 line-clamp-3">{product.shortDescription}</p>
             )}
             <div className="mt-4">
-              <button
-                type="button"
-                onClick={() => setShowAdDesigner(true)}
+              <Link
+                href={`/admin/ad-designer?productId=${id}&returnUrl=${encodeURIComponent(`/admin/products/${id}/view`)}`}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 shadow-sm transition-colors"
               >
                 🎨 สร้างภาพ Ads
-              </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -733,27 +730,6 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
         />
       </CollapsibleSection>
 
-      {showAdDesigner && (
-        <AdImageDesignerModal
-          open={showAdDesigner}
-          onClose={() => setShowAdDesigner(false)}
-          product={{
-            id: product.id,
-            name: product.name,
-            name_th: product.name_th,
-            shortDescription: product.shortDescription ?? undefined,
-            shortDescription_th: undefined,
-            price: product.price,
-            normalPrice: product.normalPrice,
-            images: product.images,
-            shopLogoUrl: null,
-          }}
-          onSaved={() => {
-            setMarketingAssetsRefreshKey((k) => k + 1);
-            toast.success("บันทึกภาพ Ads เข้า Marketing Assets แล้ว");
-          }}
-        />
-      )}
     </div>
   );
 }

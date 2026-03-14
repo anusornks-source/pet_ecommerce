@@ -6,7 +6,6 @@ import Link from "next/link";
 import { formatSize } from "@/lib/utils";
 import toast from "react-hot-toast";
 import AIImageGenModal, { type ProductContext } from "@/components/admin/AIImageGenModal";
-import { AdImageDesignerModal } from "@/components/admin/AdImageDesignerModal";
 import {
   DndContext,
   closestCenter,
@@ -415,7 +414,6 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [showAdDesigner, setShowAdDesigner] = useState(false);
 
   const loadAssets = useCallback((p: number) => {
     setLoading(true);
@@ -677,13 +675,12 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
         {((!hideUpload || needsEnrich) || (productId && productContext)) && (
           <div className="flex items-center gap-2">
             {productId && productContext && (
-              <button
-                type="button"
-                onClick={() => setShowAdDesigner(true)}
+              <Link
+                href={`/admin/ad-designer?productId=${productId}&${marketingPackId ? `marketingPackId=${marketingPackId}&` : ""}returnUrl=${encodeURIComponent(marketingPackId ? `/admin/automation/marketing-packs/${marketingPackId}` : `/admin/products/${productId}/view`)}`}
                 className="text-[11px] px-2.5 py-1 rounded-full border border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100"
               >
                 สร้างภาพ Ads
-              </button>
+              </Link>
             )}
             {needsEnrich && (
               <button
@@ -791,25 +788,6 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
           productContext={productContext ?? undefined}
           onClose={() => setAiModalImageUrl(null)}
           onSaveSuccess={() => loadAssets(page)}
-        />
-      )}
-      {showAdDesigner && productId && productContext && (
-        <AdImageDesignerModal
-          open={showAdDesigner}
-          onClose={() => setShowAdDesigner(false)}
-          product={{
-            id: productId,
-            name: productContext.name ?? productName ?? null,
-            name_th: productContext.name_th ?? null,
-            shortDescription: productContext.shortDescription ?? undefined,
-            shortDescription_th: undefined,
-            price: productContext.price ?? null,
-            normalPrice: productContext.normalPrice ?? null,
-            images: adImages,
-            shopLogoUrl: null,
-          }}
-          context={marketingPackId ? { marketingPackId } : undefined}
-          onSaved={() => loadAssets(page)}
         />
       )}
     </div>

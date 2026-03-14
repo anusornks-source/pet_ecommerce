@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
+import Link from "next/link";
 import html2canvas from "html2canvas-pro";
 
 type Lang = "th" | "en";
@@ -24,11 +25,10 @@ export type AdImageDesignerContext = {
 };
 
 type Props = {
-  open: boolean;
-  onClose: () => void;
   product: AdImageDesignerProduct;
   context?: AdImageDesignerContext;
   onSaved?: () => void;
+  backHref?: string;
 };
 
 type AiField = "ad_title" | "ad_subtitle" | "ad_badge";
@@ -88,7 +88,7 @@ const BADGE_TEXT_OPTIONS = [
 let badgeIdCounter = 0;
 const newBadgeId = () => `badge-${++badgeIdCounter}`;
 
-export const AdImageDesignerModal: React.FC<Props> = ({ open, onClose, product, context, onSaved }) => {
+export const AdImageDesigner: React.FC<Props> = ({ product, context, onSaved, backHref }) => {
   const [lang, setLang] = useState<Lang>("th");
   const [aspect, setAspect] = useState<Aspect>("1:1");
   const [bgPreset, setBgPreset] = useState<"brand" | "pink" | "blue" | "green" | "white" | "dark">("blue");
@@ -133,7 +133,6 @@ export const AdImageDesignerModal: React.FC<Props> = ({ open, onClose, product, 
   const [pricePos, setPricePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [ctaPos, setCtaPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Unified drag system
   const [dragTarget, setDragTarget] = useState<string | null>(null);
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const [loadingBadgeIcon, setLoadingBadgeIcon] = useState<string | null>(null);
@@ -342,12 +341,6 @@ export const AdImageDesignerModal: React.FC<Props> = ({ open, onClose, product, 
 
   const ctaBgClass = (CTA_COLOR_PRESETS.find((p) => p.id === ctaColor) ?? CTA_COLOR_PRESETS[0]!).cls;
 
-  const handleClose = () => {
-    if (saving) return;
-    setError(null);
-    onClose();
-  };
-
   const callAi = useCallback(
     async (field: AiField) => {
       if (loadingField) return;
@@ -553,180 +546,167 @@ export const AdImageDesignerModal: React.FC<Props> = ({ open, onClose, product, 
     setImageScale(1);
   }, [primaryImage]);
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[1400px] max-h-[95vh] flex flex-col">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-stone-200">
+    <div className="bg-white rounded-2xl shadow-xl w-full max-w-[1400px] flex flex-col border border-stone-200">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-stone-200">
+        <div className="flex items-center gap-3">
+          {backHref && (
+            <Link
+              href={backHref}
+              className="rounded-full p-1.5 hover:bg-stone-100 text-stone-500 shrink-0"
+              title="กลับ"
+            >
+              ←
+            </Link>
+          )}
           <div>
             <h2 className="text-base font-semibold text-stone-800">สร้างภาพ Ads</h2>
             <p className="text-xs text-stone-500">
               {displayName || "เลือกสินค้า"} • เลือก layout แล้วปรับข้อความเพื่อใช้ใน Shopee / Lazada / Social
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="rounded-full p-1.5 hover:bg-stone-100 text-stone-500"
-          >
-            <span className="sr-only">ปิด</span>
-            ✕
-          </button>
         </div>
+      </div>
 
-        <div className="flex-1 min-h-0 flex flex-col md:flex-row">
-          {/* Preview */}
-          <div className="md:w-1/2 border-b md:border-b-0 md:border-r border-stone-200 p-4 flex flex-col items-center justify-start gap-2 overflow-y-auto">
-            <div className="flex items-center justify-between w-full">
-              <div className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[11px] text-stone-600">
-                <button
-                  type="button"
-                  onClick={() => setAspect("1:1")}
-                  className={`px-2 py-0.5 rounded-full ${
-                    aspect === "1:1" ? "bg-white shadow text-stone-900" : "opacity-70"
-                  }`}
-                >
-                  1:1
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAspect("4:5")}
-                  className={`px-2 py-0.5 rounded-full ${
-                    aspect === "4:5" ? "bg-white shadow text-stone-900" : "opacity-70"
-                  }`}
-                >
-                  4:5
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAspect("9:16")}
-                  className={`px-2 py-0.5 rounded-full ${
-                    aspect === "9:16" ? "bg-white shadow text-stone-900" : "opacity-70"
-                  }`}
-                >
-                  9:16
-                </button>
-              </div>
-              <div className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[11px] text-stone-600">
-                <button
-                  type="button"
-                  onClick={() => setLang("th")}
-                  className={`px-2 py-0.5 rounded-full ${
-                    lang === "th" ? "bg-white shadow text-stone-900" : "opacity-70"
-                  }`}
-                >
-                  TH
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLang("en")}
-                  className={`px-2 py-0.5 rounded-full ${
-                    lang === "en" ? "bg-white shadow text-stone-900" : "opacity-70"
-                  }`}
-                >
-                  EN
-                </button>
-              </div>
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row">
+        {/* Preview - same as modal */}
+        <div className="md:w-1/2 border-b md:border-b-0 md:border-r border-stone-200 p-4 flex flex-col items-center justify-start gap-2 overflow-y-auto">
+          <div className="flex items-center justify-between w-full">
+            <div className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[11px] text-stone-600">
+              <button
+                type="button"
+                onClick={() => setAspect("1:1")}
+                className={`px-2 py-0.5 rounded-full ${aspect === "1:1" ? "bg-white shadow text-stone-900" : "opacity-70"}`}
+              >
+                1:1
+              </button>
+              <button
+                type="button"
+                onClick={() => setAspect("4:5")}
+                className={`px-2 py-0.5 rounded-full ${aspect === "4:5" ? "bg-white shadow text-stone-900" : "opacity-70"}`}
+              >
+                4:5
+              </button>
+              <button
+                type="button"
+                onClick={() => setAspect("9:16")}
+                className={`px-2 py-0.5 rounded-full ${aspect === "9:16" ? "bg-white shadow text-stone-900" : "opacity-70"}`}
+              >
+                9:16
+              </button>
             </div>
+            <div className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[11px] text-stone-600">
+              <button
+                type="button"
+                onClick={() => setLang("th")}
+                className={`px-2 py-0.5 rounded-full ${lang === "th" ? "bg-white shadow text-stone-900" : "opacity-70"}`}
+              >
+                TH
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang("en")}
+                className={`px-2 py-0.5 rounded-full ${lang === "en" ? "bg-white shadow text-stone-900" : "opacity-70"}`}
+              >
+                EN
+              </button>
+            </div>
+          </div>
 
-            <div
-              ref={canvasRef}
-              className={`relative w-full max-w-[420px] mx-auto shrink-0 rounded-[28px] overflow-hidden shadow-xl ${bgClass} cursor-move`}
-              style={{ aspectRatio: aspect === "4:5" ? "4/5" : aspect === "9:16" ? "9/16" : "1/1" }}
-              onMouseDown={(e) => startDrag("image", e)}
-            >
-              {layout === "overlay" ? (
-                <>
-                  {primaryImage && (
-                    <div
-                      className="absolute inset-0 z-[1] pointer-events-none"
-                      style={{
-                        transform: `translate(${imageOffset.x}px, ${imageOffset.y}px) scale(${imageScale})`,
-                        transformOrigin: "center",
-                      }}
-                    >
-                      <img src={primaryImage} alt="" className="w-full h-full object-cover" />
-                      {imageDim < 100 && <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${(100 - imageDim) / 100})` }} />}
-                    </div>
-                  )}
-                  <div className="absolute z-20 inset-0 p-4 flex flex-col pointer-events-none" style={textShadowStyle}>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex flex-col gap-1 max-w-[75%]">
-                        {showEyebrow && (
-                          <div
-                            className={`inline-block self-start text-[11px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded cursor-move pointer-events-auto ${eyebrowColorClass}`}
-                            style={{ transform: `translate(${textPositions.eyebrow.x}px, ${textPositions.eyebrow.y}px)`, ...textBgStyle }}
-                            onMouseDown={(e) => startDrag("eyebrow", e)}
-                          >
-                            {eyebrowText}
-                          </div>
-                        )}
-                        {showHeading && (
-                          <div
-                            className={`inline-block self-start font-extrabold text-lg leading-snug line-clamp-3 px-1.5 py-0.5 rounded cursor-move pointer-events-auto ${headingColorClass}`}
-                            style={{ transform: `translate(${textPositions.heading.x}px, ${textPositions.heading.y}px)`, ...textBgStyle }}
-                            onMouseDown={(e) => startDrag("heading", e)}
-                          >
-                            {title || displayName || (lang === "th" ? "ชื่อสินค้า" : "Product name")}
-                          </div>
-                        )}
-                        {showSubtitle && (
-                          <div
-                            className={`inline-block self-start text-[11px] leading-snug line-clamp-3 px-1.5 py-0.5 rounded cursor-move pointer-events-auto ${bodyColorClass}`}
-                            style={{ transform: `translate(${textPositions.subtitle.x}px, ${textPositions.subtitle.y}px)`, ...textBgStyle }}
-                            onMouseDown={(e) => startDrag("subtitle", e)}
-                          >
-                            {subtitle ||
-                              defaultSubtitle ||
-                              (lang === "th"
-                                ? "ข้อความสั้น ๆ เกี่ยวกับ benefit ของสินค้า"
-                                : "Short line about the main benefits")}
-                          </div>
-                        )}
-                      </div>
-                      {showLogo && product.shopLogoUrl && (
-                        <div className="shrink-0">
-                          <img src={product.shopLogoUrl} alt="logo" className="w-10 h-10 rounded-full border border-white/70 shadow-sm object-cover bg-white/80" />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-auto pointer-events-auto">
-                      {showPrice && priceText && (
+          <div
+            ref={canvasRef}
+            className={`relative w-full max-w-[420px] mx-auto shrink-0 rounded-[28px] overflow-hidden shadow-xl ${bgClass} cursor-move`}
+            style={{ aspectRatio: aspect === "4:5" ? "4/5" : aspect === "9:16" ? "9/16" : "1/1" }}
+            onMouseDown={(e) => startDrag("image", e)}
+          >
+            {layout === "overlay" ? (
+              <>
+                {primaryImage && (
+                  <div
+                    className="absolute inset-0 z-[1] pointer-events-none"
+                    style={{
+                      transform: `translate(${imageOffset.x}px, ${imageOffset.y}px) scale(${imageScale})`,
+                      transformOrigin: "center",
+                    }}
+                  >
+                    <img src={primaryImage} alt="" className="w-full h-full object-cover" />
+                    {imageDim < 100 && <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${(100 - imageDim) / 100})` }} />}
+                  </div>
+                )}
+                <div className="absolute z-20 inset-0 p-4 flex flex-col pointer-events-none" style={textShadowStyle}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex flex-col gap-1 max-w-[75%]">
+                      {showEyebrow && (
                         <div
-                          className="inline-flex items-baseline gap-2 cursor-move"
-                          style={{ ...priceBgStyle, transform: `translate(${pricePos.x}px, ${pricePos.y}px)` }}
-                          onMouseDown={(e) => startDrag("price", e)}
+                          className={`inline-block self-start text-[11px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded cursor-move pointer-events-auto ${eyebrowColorClass}`}
+                          style={{ transform: `translate(${textPositions.eyebrow.x}px, ${textPositions.eyebrow.y}px)`, ...textBgStyle }}
+                          onMouseDown={(e) => startDrag("eyebrow", e)}
                         >
-                          <span className={`font-extrabold text-xl ${priceColorClass}`}>{priceText}</span>
-                          {normalPriceText && (
-                            <span className={`text-sm line-through ${strikeColorClass}`}>{normalPriceText}</span>
-                          )}
+                          {eyebrowText}
+                        </div>
+                      )}
+                      {showHeading && (
+                        <div
+                          className={`inline-block self-start font-extrabold text-lg leading-snug line-clamp-3 px-1.5 py-0.5 rounded cursor-move pointer-events-auto ${headingColorClass}`}
+                          style={{ transform: `translate(${textPositions.heading.x}px, ${textPositions.heading.y}px)`, ...textBgStyle }}
+                          onMouseDown={(e) => startDrag("heading", e)}
+                        >
+                          {title || displayName || (lang === "th" ? "ชื่อสินค้า" : "Product name")}
+                        </div>
+                      )}
+                      {showSubtitle && (
+                        <div
+                          className={`inline-block self-start text-[11px] leading-snug line-clamp-3 px-1.5 py-0.5 rounded cursor-move pointer-events-auto ${bodyColorClass}`}
+                          style={{ transform: `translate(${textPositions.subtitle.x}px, ${textPositions.subtitle.y}px)`, ...textBgStyle }}
+                          onMouseDown={(e) => startDrag("subtitle", e)}
+                        >
+                          {subtitle ||
+                            defaultSubtitle ||
+                            (lang === "th" ? "ข้อความสั้น ๆ เกี่ยวกับ benefit ของสินค้า" : "Short line about the main benefits")}
                         </div>
                       )}
                     </div>
+                    {showLogo && product.shopLogoUrl && (
+                      <div className="shrink-0">
+                        <img src={product.shopLogoUrl} alt="logo" className="w-10 h-10 rounded-full border border-white/70 shadow-sm object-cover bg-white/80" />
+                      </div>
+                    )}
                   </div>
 
-                  {badges.map((b) => {
-                    const bgCls = BADGE_BG_OPTIONS.find((o) => o.id === b.bgColor)?.cls ?? "bg-white/90";
-                    const txtCls = BADGE_TEXT_OPTIONS.find((o) => o.id === b.textColor)?.cls ?? "text-stone-900";
-                    return (
+                  <div className="mt-auto pointer-events-auto">
+                    {showPrice && priceText && (
                       <div
-                        key={b.id}
-                        className={`absolute z-25 inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-semibold shadow-sm whitespace-nowrap cursor-move ${bgCls} ${txtCls}`}
-                        style={{ left: b.x, top: b.y }}
-                        onMouseDown={(e) => startDrag(b.id, e)}
+                        className="inline-flex items-baseline gap-2 cursor-move"
+                        style={{ ...priceBgStyle, transform: `translate(${pricePos.x}px, ${pricePos.y}px)` }}
+                        onMouseDown={(e) => startDrag("price", e)}
                       >
-                        {b.icon && <span>{b.icon}</span>}
-                        {b.text}
+                        <span className={`font-extrabold text-xl ${priceColorClass}`}>{priceText}</span>
+                        {normalPriceText && (
+                          <span className={`text-sm line-through ${strikeColorClass}`}>{normalPriceText}</span>
+                        )}
                       </div>
-                    );
-                  })}
-                </>
-              ) : (
-                <div className="absolute inset-0 flex">
-                {/* Text side */}
+                    )}
+                  </div>
+                </div>
+
+                {badges.map((b) => {
+                  const bgCls = BADGE_BG_OPTIONS.find((o) => o.id === b.bgColor)?.cls ?? "bg-white/90";
+                  const txtCls = BADGE_TEXT_OPTIONS.find((o) => o.id === b.textColor)?.cls ?? "text-stone-900";
+                  return (
+                    <div
+                      key={b.id}
+                      className={`absolute z-25 inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-semibold shadow-sm whitespace-nowrap cursor-move ${bgCls} ${txtCls}`}
+                      style={{ left: b.x, top: b.y }}
+                      onMouseDown={(e) => startDrag(b.id, e)}
+                    >
+                      {b.icon && <span>{b.icon}</span>}
+                      {b.text}
+                    </div>
+                  );
+                })}
+              </>
+            ) : (
+              <div className="absolute inset-0 flex">
                 <div className="relative z-20 w-[55%] p-4 flex flex-col" style={textShadowStyle}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex flex-col gap-1">
@@ -756,9 +736,7 @@ export const AdImageDesignerModal: React.FC<Props> = ({ open, onClose, product, 
                         >
                           {subtitle ||
                             defaultSubtitle ||
-                            (lang === "th"
-                              ? "ข้อความสั้น ๆ เกี่ยวกับ benefit ของสินค้า"
-                              : "Short line about the main benefits")}
+                            (lang === "th" ? "ข้อความสั้น ๆ เกี่ยวกับ benefit ของสินค้า" : "Short line about the main benefits")}
                         </div>
                       )}
                     </div>
@@ -800,7 +778,6 @@ export const AdImageDesignerModal: React.FC<Props> = ({ open, onClose, product, 
                     );
                   })}
                 </div>
-                {/* Image side */}
                 {primaryImage && (
                   <div
                     className="relative z-10 w-[45%] flex items-center justify-center cursor-move overflow-hidden"
@@ -817,360 +794,332 @@ export const AdImageDesignerModal: React.FC<Props> = ({ open, onClose, product, 
                   </div>
                 )}
               </div>
-              )}
+            )}
 
-              {showDiscountBadge && discountPct > 0 && (
-                <div
-                  className="absolute right-3 top-3 z-40 cursor-move"
-                  style={{ transform: `translate(${discountBadgePos.x}px, ${discountBadgePos.y}px)` }}
-                  onMouseDown={(e) => startDrag("discountBadge", e)}
-                >
-                  <div className={`px-3 py-1.5 rounded-full font-extrabold text-sm shadow-lg whitespace-nowrap ${discountBadgeCls}`}>
-                    -{discountPct}%
-                  </div>
+            {showDiscountBadge && discountPct > 0 && (
+              <div
+                className="absolute right-3 top-3 z-40 cursor-move"
+                style={{ transform: `translate(${discountBadgePos.x}px, ${discountBadgePos.y}px)` }}
+                onMouseDown={(e) => startDrag("discountBadge", e)}
+              >
+                <div className={`px-3 py-1.5 rounded-full font-extrabold text-sm shadow-lg whitespace-nowrap ${discountBadgeCls}`}>
+                  -{discountPct}%
                 </div>
-              )}
+              </div>
+            )}
 
-              {ctaText && (
-                <div
-                  className="absolute right-4 bottom-4 z-30 cursor-move"
-                  style={{ transform: `translate(${ctaPos.x}px, ${ctaPos.y}px)` }}
-                  onMouseDown={(e) => startDrag("cta", e)}
-                >
-                  <div className={`inline-flex items-center px-3.5 py-1.5 rounded-full ${ctaBgClass} text-[11px] font-semibold shadow-md`}>
-                    {ctaText}
-                  </div>
+            {ctaText && (
+              <div
+                className="absolute right-4 bottom-4 z-30 cursor-move"
+                style={{ transform: `translate(${ctaPos.x}px, ${ctaPos.y}px)` }}
+                onMouseDown={(e) => startDrag("cta", e)}
+              >
+                <div className={`inline-flex items-center px-3.5 py-1.5 rounded-full ${ctaBgClass} text-[11px] font-semibold shadow-md`}>
+                  {ctaText}
                 </div>
-              )}
-            </div>
-
-            {images.length > 1 && (
-              <div className="mt-2 w-full max-w-[420px] flex flex-wrap gap-1.5">
-                {images.slice(0, 8).map((img, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setActiveImage(img)}
-                    className={`relative w-12 h-12 rounded-lg overflow-hidden border-2 ${
-                      (activeImage ?? images[0]) === img
-                        ? "border-orange-500"
-                        : "border-stone-200 hover:border-stone-400"
-                    }`}
-                  >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
               </div>
             )}
           </div>
 
-          {/* Controls */}
-          <div className="md:w-1/2 p-4 space-y-2 overflow-y-auto">
-            {error && (
-              <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-                {error}
-              </div>
-            )}
+          {images.length > 1 && (
+            <div className="mt-2 w-full max-w-[420px] flex flex-wrap gap-1.5">
+              {images.slice(0, 8).map((img, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setActiveImage(img)}
+                  className={`relative w-12 h-12 rounded-lg overflow-hidden border-2 ${
+                    (activeImage ?? images[0]) === img ? "border-orange-500" : "border-stone-200 hover:border-stone-400"
+                  }`}
+                >
+                  <img src={img} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
-            {/* ─── Group: Layout & Background ─── */}
-            <fieldset className="border border-stone-200 rounded-xl p-3 space-y-2">
-              <legend className="text-[11px] font-bold text-stone-500 uppercase tracking-wider px-1">Layout & Background</legend>
-              <div className="flex gap-2 items-center flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setLayout("split")}
-                  className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
-                    layout === "split"
-                      ? "bg-orange-500 text-white border-orange-500 shadow"
-                      : "bg-white text-stone-600 border-stone-300"
-                  }`}
-                >
-                  รูปขวา + ตัวหนังสือซ้าย
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setLayout("overlay"); setImageOffset({ x: 0, y: 0 }); }}
-                  className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
-                    layout === "overlay"
-                      ? "bg-orange-500 text-white border-orange-500 shadow"
-                      : "bg-white text-stone-600 border-stone-300"
-                  }`}
-                >
-                  รูปเต็ม + Text overlay
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-1.5 items-center">
-                <span className="text-[11px] text-stone-500 mr-1">Background</span>
-                {(["brand", "pink", "blue", "green", "white", "dark"] as const).map((bg) => {
-                  const styles: Record<string, string> = {
-                    brand: "bg-linear-to-r from-orange-500 to-amber-400 text-white",
-                    pink: "bg-linear-to-r from-fuchsia-500 to-rose-400 text-white",
-                    blue: "bg-linear-to-r from-sky-500 to-indigo-500 text-white",
-                    green: "bg-linear-to-r from-emerald-500 to-lime-400 text-white",
-                    white: "bg-white text-stone-600 border-stone-300",
-                    dark: "bg-stone-900 text-white",
-                  };
-                  const labels: Record<string, string> = { brand: "ส้ม", pink: "ชมพู", blue: "ฟ้า", green: "เขียว", white: "ขาว", dark: "ดำ" };
-                  return (
-                    <button key={bg} type="button" onClick={() => setBgPreset(bg)}
-                      className={`px-2 py-0.5 rounded-full text-[10px] border ${styles[bg]} ${bgPreset === bg ? "shadow ring-1 ring-orange-400" : "opacity-70"}`}
-                    >{labels[bg]}</button>
-                  );
-                })}
-              </div>
-              <div className="flex gap-2 items-center">
-                <span className="text-[11px] text-stone-500">ขนาดรูป</span>
-                <input type="range" min={50} max={300} value={Math.round(imageScale * 100)} onChange={(e) => setImageScale(Number(e.target.value) / 100)} className="flex-1 accent-orange-500" />
-                <span className="text-[11px] text-stone-500 ml-1">ความสว่าง</span>
-                <input type="range" min={0} max={100} value={imageDim} onChange={(e) => setImageDim(Number(e.target.value))} className="w-16 accent-stone-500" />
-                <button type="button" onClick={() => { setImageOffset({ x: 0, y: 0 }); setImageScale(1); setImageDim(100); setTextPositions({ eyebrow: { x: 0, y: 0 }, heading: { x: 0, y: 0 }, subtitle: { x: 0, y: 0 } }); setDiscountBadgePos({ x: 0, y: 0 }); setPricePos({ x: 0, y: 0 }); setCtaPos({ x: 0, y: 0 }); }}
-                  className="text-[10px] px-2 py-0.5 rounded-full border border-stone-300 text-stone-600 hover:bg-stone-50">รีเซ็ต</button>
-                <button type="button" onClick={() => { setLayout("overlay"); setImageOffset({ x: 0, y: 0 }); setImageScale(1.1); }}
-                  className="text-[10px] px-2 py-0.5 rounded-full border border-orange-300 text-orange-700 bg-orange-50 hover:bg-orange-100">เต็มพื้น</button>
-              </div>
-              <div className="flex gap-3 items-center flex-wrap">
+        {/* Controls - same as modal */}
+        <div className="md:w-1/2 p-4 space-y-2 overflow-y-auto">
+          {error && (
+            <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              {error}
+            </div>
+          )}
+
+          <fieldset className="border border-stone-200 rounded-xl p-3 space-y-2">
+            <legend className="text-[11px] font-bold text-stone-500 uppercase tracking-wider px-1">Layout & Background</legend>
+            <div className="flex gap-2 items-center flex-wrap">
+              <button
+                type="button"
+                onClick={() => setLayout("split")}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${layout === "split" ? "bg-orange-500 text-white border-orange-500 shadow" : "bg-white text-stone-600 border-stone-300"}`}
+              >
+                รูปขวา + ตัวหนังสือซ้าย
+              </button>
+              <button
+                type="button"
+                onClick={() => { setLayout("overlay"); setImageOffset({ x: 0, y: 0 }); }}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${layout === "overlay" ? "bg-orange-500 text-white border-orange-500 shadow" : "bg-white text-stone-600 border-stone-300"}`}
+              >
+                รูปเต็ม + Text overlay
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1.5 items-center">
+              <span className="text-[11px] text-stone-500 mr-1">Background</span>
+              {(["brand", "pink", "blue", "green", "white", "dark"] as const).map((bg) => {
+                const styles: Record<string, string> = {
+                  brand: "bg-linear-to-r from-orange-500 to-amber-400 text-white",
+                  pink: "bg-linear-to-r from-fuchsia-500 to-rose-400 text-white",
+                  blue: "bg-linear-to-r from-sky-500 to-indigo-500 text-white",
+                  green: "bg-linear-to-r from-emerald-500 to-lime-400 text-white",
+                  white: "bg-white text-stone-600 border-stone-300",
+                  dark: "bg-stone-900 text-white",
+                };
+                const labels: Record<string, string> = { brand: "ส้ม", pink: "ชมพู", blue: "ฟ้า", green: "เขียว", white: "ขาว", dark: "ดำ" };
+                return (
+                  <button key={bg} type="button" onClick={() => setBgPreset(bg)} className={`px-2 py-0.5 rounded-full text-[10px] border ${styles[bg]} ${bgPreset === bg ? "shadow ring-1 ring-orange-400" : "opacity-70"}`}>
+                    {labels[bg]}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-2 items-center">
+              <span className="text-[11px] text-stone-500">ขนาดรูป</span>
+              <input type="range" min={50} max={300} value={Math.round(imageScale * 100)} onChange={(e) => setImageScale(Number(e.target.value) / 100)} className="flex-1 accent-orange-500" />
+              <span className="text-[11px] text-stone-500 ml-1">ความสว่าง</span>
+              <input type="range" min={0} max={100} value={imageDim} onChange={(e) => setImageDim(Number(e.target.value))} className="w-16 accent-stone-500" />
+              <button type="button" onClick={() => { setImageOffset({ x: 0, y: 0 }); setImageScale(1); setImageDim(100); setTextPositions({ eyebrow: { x: 0, y: 0 }, heading: { x: 0, y: 0 }, subtitle: { x: 0, y: 0 } }); setDiscountBadgePos({ x: 0, y: 0 }); setPricePos({ x: 0, y: 0 }); setCtaPos({ x: 0, y: 0 }); }} className="text-[10px] px-2 py-0.5 rounded-full border border-stone-300 text-stone-600 hover:bg-stone-50">
+                รีเซ็ต
+              </button>
+              <button type="button" onClick={() => { setLayout("overlay"); setImageOffset({ x: 0, y: 0 }); setImageScale(1.1); }} className="text-[10px] px-2 py-0.5 rounded-full border border-orange-300 text-orange-700 bg-orange-50 hover:bg-orange-100">
+                เต็มพื้น
+              </button>
+            </div>
+            <div className="flex gap-3 items-center flex-wrap">
+              <label className="inline-flex items-center gap-1.5 text-[11px] text-stone-700">
+                <input type="checkbox" className="rounded border-stone-300 text-orange-600 focus:ring-orange-500" checked={showLogo} onChange={(e) => setShowLogo(e.target.checked)} disabled={!product.shopLogoUrl} />
+                โลโก้ร้าน
+              </label>
+              {discountPct > 0 && (
                 <label className="inline-flex items-center gap-1.5 text-[11px] text-stone-700">
-                  <input type="checkbox" className="rounded border-stone-300 text-orange-600 focus:ring-orange-500" checked={showLogo} onChange={(e) => setShowLogo(e.target.checked)} disabled={!product.shopLogoUrl} />
-                  โลโก้ร้าน
+                  <input type="checkbox" className="rounded border-stone-300 text-orange-600 focus:ring-orange-500" checked={showDiscountBadge} onChange={(e) => setShowDiscountBadge(e.target.checked)} />
+                  ลด -{discountPct}%
                 </label>
-                {discountPct > 0 && (
-                  <label className="inline-flex items-center gap-1.5 text-[11px] text-stone-700">
-                    <input type="checkbox" className="rounded border-stone-300 text-orange-600 focus:ring-orange-500" checked={showDiscountBadge} onChange={(e) => setShowDiscountBadge(e.target.checked)} />
-                    ลด -{discountPct}%
-                  </label>
-                )}
-                {showDiscountBadge && discountPct > 0 && (
-                  <div className="flex gap-1">
-                    {DISCOUNT_BADGE_PRESETS.map((preset) => (
-                      <button key={preset.id} type="button" onClick={() => setDiscountBadgeColor(preset.id)} title={preset.label}
-                        className={`w-5 h-5 rounded-full border-2 ${preset.swatch} ${discountBadgeColor === preset.id ? "ring-2 ring-orange-400 ring-offset-1" : "opacity-60 hover:opacity-100"}`}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </fieldset>
-
-            {/* ─── Group: Text ─── */}
-            <fieldset className="border border-stone-200 rounded-xl p-3 space-y-2">
-              <legend className="text-[11px] font-bold text-stone-500 uppercase tracking-wider px-1">ข้อความ</legend>
-              <div>
-                <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-600 mb-1">
-                  <input type="checkbox" className="rounded border-stone-300 text-orange-600 focus:ring-orange-500" checked={showEyebrow} onChange={(e) => setShowEyebrow(e.target.checked)} />
-                  Eyebrow
-                </label>
-                <input type="text" value={eyebrowCustom} onChange={(e) => setEyebrowCustom(e.target.value)} placeholder={defaultEyebrow} className="input input-sm w-full" disabled={!showEyebrow} />
-              </div>
-              <div>
-                <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-600 mb-1">
-                  <input type="checkbox" className="rounded border-stone-300 text-orange-600 focus:ring-orange-500" checked={showHeading} onChange={(e) => setShowHeading(e.target.checked)} />
-                  Title ({lang === "th" ? "TH" : "EN"})
-                </label>
-                <div className="flex gap-1.5">
-                  <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={displayName || (lang === "th" ? "หัวข้อหลัก" : "Headline")} className="input input-sm flex-1" />
-                  <button type="button" onClick={() => callAi("ad_title")} disabled={loadingField === "ad_title"} className="text-xs px-2 py-1 rounded-md border border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100 disabled:opacity-60">
-                    {loadingField === "ad_title" ? "..." : "AI"}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-600 mb-1">
-                  <input type="checkbox" className="rounded border-stone-300 text-orange-600 focus:ring-orange-500" checked={showSubtitle} onChange={(e) => setShowSubtitle(e.target.checked)} />
-                  Subtitle ({lang === "th" ? "TH" : "EN"})
-                </label>
-                <div className="flex gap-1.5">
-                  <textarea value={subtitle} onChange={(e) => setSubtitle(e.target.value)} rows={2} placeholder={lang === "th" ? "ขยาย benefit 1–2 ประโยค" : "1–2 sentences"} className="input input-sm flex-1 min-h-[44px] resize-y" />
-                  <button type="button" onClick={() => callAi("ad_subtitle")} disabled={loadingField === "ad_subtitle"} className="text-xs px-2 py-1 rounded-md border border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100 disabled:opacity-60 h-[44px]">
-                    {loadingField === "ad_subtitle" ? "..." : "AI"}
-                  </button>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-                <div>
-                  <span className="text-[11px] text-stone-500">สี</span>
-                  <div className="flex flex-wrap gap-1 mt-0.5">
-                    {TEXT_COLOR_PRESETS.map((preset) => (
-                      <button key={preset.id} type="button" onClick={() => setTextColor(preset.id)} title={preset.label}
-                        className={`w-5 h-5 rounded-full border-2 ${preset.swatch} ${textColor === preset.id ? "ring-2 ring-orange-400 ring-offset-1" : "opacity-60 hover:opacity-100"}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] text-stone-500">เงา</span>
-                  {(["none", "soft", "strong"] as const).map((v) => (
-                    <button key={v} type="button" onClick={() => setTextShadow(v)}
-                      className={`px-2 py-0.5 rounded-full text-[10px] border ${textShadow === v ? "bg-stone-800 text-white border-stone-800" : "bg-white text-stone-600 border-stone-300"}`}
-                    >{{ none: "ไม่มี", soft: "อ่อน", strong: "เข้ม" }[v]}</button>
+              )}
+              {showDiscountBadge && discountPct > 0 && (
+                <div className="flex gap-1">
+                  {DISCOUNT_BADGE_PRESETS.map((preset) => (
+                    <button key={preset.id} type="button" onClick={() => setDiscountBadgeColor(preset.id)} title={preset.label} className={`w-5 h-5 rounded-full border-2 ${preset.swatch} ${discountBadgeColor === preset.id ? "ring-2 ring-orange-400 ring-offset-1" : "opacity-60 hover:opacity-100"}`} />
                   ))}
                 </div>
+              )}
+            </div>
+          </fieldset>
+
+          <fieldset className="border border-stone-200 rounded-xl p-3 space-y-2">
+            <legend className="text-[11px] font-bold text-stone-500 uppercase tracking-wider px-1">ข้อความ</legend>
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-600 mb-1">
+                <input type="checkbox" className="rounded border-stone-300 text-orange-600 focus:ring-orange-500" checked={showEyebrow} onChange={(e) => setShowEyebrow(e.target.checked)} />
+                Eyebrow
+              </label>
+              <input type="text" value={eyebrowCustom} onChange={(e) => setEyebrowCustom(e.target.value)} placeholder={defaultEyebrow} className="input input-sm w-full" disabled={!showEyebrow} />
+            </div>
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-600 mb-1">
+                <input type="checkbox" className="rounded border-stone-300 text-orange-600 focus:ring-orange-500" checked={showHeading} onChange={(e) => setShowHeading(e.target.checked)} />
+                Title ({lang === "th" ? "TH" : "EN"})
+              </label>
+              <div className="flex gap-1.5">
+                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={displayName || (lang === "th" ? "หัวข้อหลัก" : "Headline")} className="input input-sm flex-1" />
+                <button type="button" onClick={() => callAi("ad_title")} disabled={loadingField === "ad_title"} className="text-xs px-2 py-1 rounded-md border border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100 disabled:opacity-60">
+                  {loadingField === "ad_title" ? "..." : "AI"}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-600 mb-1">
+                <input type="checkbox" className="rounded border-stone-300 text-orange-600 focus:ring-orange-500" checked={showSubtitle} onChange={(e) => setShowSubtitle(e.target.checked)} />
+                Subtitle ({lang === "th" ? "TH" : "EN"})
+              </label>
+              <div className="flex gap-1.5">
+                <textarea value={subtitle} onChange={(e) => setSubtitle(e.target.value)} rows={2} placeholder={lang === "th" ? "ขยาย benefit 1–2 ประโยค" : "1–2 sentences"} className="input input-sm flex-1 min-h-[44px] resize-y" />
+                <button type="button" onClick={() => callAi("ad_subtitle")} disabled={loadingField === "ad_subtitle"} className="text-xs px-2 py-1 rounded-md border border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100 disabled:opacity-60 h-[44px]">
+                  {loadingField === "ad_subtitle" ? "..." : "AI"}
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+              <div>
+                <span className="text-[11px] text-stone-500">สี</span>
+                <div className="flex flex-wrap gap-1 mt-0.5">
+                  {TEXT_COLOR_PRESETS.map((preset) => (
+                    <button key={preset.id} type="button" onClick={() => setTextColor(preset.id)} title={preset.label} className={`w-5 h-5 rounded-full border-2 ${preset.swatch} ${textColor === preset.id ? "ring-2 ring-orange-400 ring-offset-1" : "opacity-60 hover:opacity-100"}`} />
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-stone-500">เงา</span>
+                {(["none", "soft", "strong"] as const).map((v) => (
+                  <button key={v} type="button" onClick={() => setTextShadow(v)} className={`px-2 py-0.5 rounded-full text-[10px] border ${textShadow === v ? "bg-stone-800 text-white border-stone-800" : "bg-white text-stone-600 border-stone-300"}`}>
+                    {{ none: "ไม่มี", soft: "อ่อน", strong: "เข้ม" }[v]}
+                  </button>
+                ))}
+              </div>
+              <div>
+                <label className="inline-flex items-center gap-1 text-[11px] text-stone-700">
+                  <input type="checkbox" className="rounded border-stone-300 text-orange-600 focus:ring-orange-500" checked={textBgEnabled} onChange={(e) => setTextBgEnabled(e.target.checked)} />
+                  กรอบสี
+                </label>
+                {textBgEnabled && (
+                  <>
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {TEXT_BG_PRESETS.map((preset) => (
+                        <button key={preset.id} type="button" onClick={() => setTextBgColor(preset.id)} title={preset.label} className={`w-5 h-5 rounded-full border-2 ${preset.swatch} ${textBgColor === preset.id ? "ring-2 ring-orange-400 ring-offset-1" : "opacity-60 hover:opacity-100"}`} />
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className="text-[10px] text-stone-500">โปร่งใส</span>
+                      <input type="range" min={10} max={100} value={textBgOpacity} onChange={(e) => setTextBgOpacity(Number(e.target.value))} className="flex-1 accent-orange-500" />
+                      <span className="text-[10px] text-stone-500 w-7 text-right">{textBgOpacity}%</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset className="border border-stone-200 rounded-xl p-3 space-y-2">
+            <legend className="text-[11px] font-bold text-stone-500 uppercase tracking-wider px-1">Badges</legend>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-stone-400">ลากขยับได้บน canvas</span>
+              <button type="button" onClick={addBadge} className="text-[11px] px-2.5 py-1 rounded-lg border border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100">
+                + เพิ่ม
+              </button>
+            </div>
+            {badges.length === 0 && <p className="text-[11px] text-stone-400">ยังไม่มี badge</p>}
+            <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
+              {badges.map((b) => {
+                const isEditing = editingBadgeId === b.id;
+                return (
+                  <div key={b.id} className="border border-stone-200 rounded-lg p-1.5">
+                    <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto auto auto auto", gap: "4px", alignItems: "center" }}>
+                      {b.icon ? (
+                        <button type="button" onClick={() => updateBadge(b.id, { icon: "" })} className="text-sm leading-none hover:opacity-60" title="กดเพื่อลบ emoji">
+                          {b.icon}
+                        </button>
+                      ) : (
+                        <span className="text-[9px] text-stone-300">✦</span>
+                      )}
+                      <input type="text" value={b.text} onChange={(e) => updateBadge(b.id, { text: e.target.value })} className="input input-xs text-[11px] h-5 min-w-0" placeholder="badge" />
+                      <button type="button" onClick={() => suggestBadgeIcon(b.id, b.text)} disabled={loadingBadgeIcon === b.id} className="text-[8px] px-1 h-5 rounded border border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100 disabled:opacity-60">
+                        {loadingBadgeIcon === b.id ? ".." : "AI"}
+                      </button>
+                      <button type="button" onClick={() => setEditingBadgeId(isEditing ? null : b.id)} className="text-[9px] w-5 h-5 flex items-center justify-center rounded border border-stone-300 text-stone-600 hover:bg-stone-50">
+                        🎨
+                      </button>
+                      <button type="button" onClick={() => removeBadge(b.id)} className="text-[9px] w-5 h-5 flex items-center justify-center rounded border border-red-200 text-red-500 hover:bg-red-50">
+                        ✕
+                      </button>
+                    </div>
+                    {isEditing && (
+                      <div className="space-y-1 pt-1 border-t border-stone-100">
+                        <div className="flex items-start gap-1">
+                          <span className="text-[9px] text-stone-500 shrink-0 pt-0.5 w-6">text</span>
+                          <div className="flex flex-wrap gap-0.5">
+                            {BADGE_TEXT_OPTIONS.map((opt) => (
+                              <button key={opt.id} type="button" onClick={() => updateBadge(b.id, { textColor: opt.id })} className={`w-4 h-4 rounded-full border ${opt.swatch} ${b.textColor === opt.id ? "ring-2 ring-orange-400 ring-offset-1" : "opacity-60 hover:opacity-100"}`} title={opt.label} />
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-1">
+                          <span className="text-[9px] text-stone-500 shrink-0 pt-0.5 w-6">พื้น</span>
+                          <div className="flex flex-wrap gap-0.5">
+                            {BADGE_BG_OPTIONS.map((opt) => (
+                              <button key={opt.id} type="button" onClick={() => updateBadge(b.id, { bgColor: opt.id })} className={`w-4 h-4 rounded-full border ${opt.swatch} ${b.bgColor === opt.id ? "ring-2 ring-orange-400 ring-offset-1" : "opacity-60 hover:opacity-100"}`} title={opt.label} />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <fieldset className="border border-stone-200 rounded-xl p-3 space-y-2">
+            <legend className="text-[11px] font-bold text-stone-500 uppercase tracking-wider px-1">ราคา & ปุ่ม CTA</legend>
+            <div className="space-y-1.5">
+              <label className="inline-flex items-center gap-1.5 text-[11px] text-stone-700">
+                <input type="checkbox" className="rounded border-stone-300 text-orange-600 focus:ring-orange-500" checked={showPrice} onChange={(e) => setShowPrice(e.target.checked)} />
+                ราคา ({priceText || "ไม่มี"}
+                {normalPriceText ? ` ← ${normalPriceText}` : ""})
+              </label>
+              {showPrice && priceText && (
+                <div>
+                  <span className="text-[10px] text-stone-500">สี:</span>
+                  <div className="flex flex-wrap gap-1 mt-0.5">
+                    {PRICE_COLOR_PRESETS.map((preset) => (
+                      <button key={preset.id} type="button" onClick={() => setPriceColor(preset.id)} title={preset.label} className={`w-5 h-5 rounded-full border-2 ${preset.swatch} ${priceColor === preset.id ? "ring-2 ring-orange-400 ring-offset-1" : "opacity-60 hover:opacity-100"}`}>
+                        {preset.id === "auto" ? <span className="text-[7px] text-white font-bold">A</span> : null}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {showPrice && priceText && (
                 <div>
                   <label className="inline-flex items-center gap-1 text-[11px] text-stone-700">
-                    <input type="checkbox" className="rounded border-stone-300 text-orange-600 focus:ring-orange-500" checked={textBgEnabled} onChange={(e) => setTextBgEnabled(e.target.checked)} />
+                    <input type="checkbox" className="rounded border-stone-300 text-orange-600 focus:ring-orange-500" checked={priceBgEnabled} onChange={(e) => setPriceBgEnabled(e.target.checked)} />
                     กรอบสี
                   </label>
-                  {textBgEnabled && (
+                  {priceBgEnabled && (
                     <>
                       <div className="flex flex-wrap gap-1 mt-0.5">
                         {TEXT_BG_PRESETS.map((preset) => (
-                          <button key={preset.id} type="button" onClick={() => setTextBgColor(preset.id)} title={preset.label}
-                            className={`w-5 h-5 rounded-full border-2 ${preset.swatch} ${textBgColor === preset.id ? "ring-2 ring-orange-400 ring-offset-1" : "opacity-60 hover:opacity-100"}`}
-                          />
+                          <button key={preset.id} type="button" onClick={() => setPriceBgColor(preset.id)} title={preset.label} className={`w-5 h-5 rounded-full border-2 ${preset.swatch} ${priceBgColor === preset.id ? "ring-2 ring-orange-400 ring-offset-1" : "opacity-60 hover:opacity-100"}`} />
                         ))}
                       </div>
                       <div className="flex items-center gap-1.5 mt-1">
                         <span className="text-[10px] text-stone-500">โปร่งใส</span>
-                        <input type="range" min={10} max={100} value={textBgOpacity} onChange={(e) => setTextBgOpacity(Number(e.target.value))} className="flex-1 accent-orange-500" />
-                        <span className="text-[10px] text-stone-500 w-7 text-right">{textBgOpacity}%</span>
+                        <input type="range" min={10} max={100} value={priceBgOpacity} onChange={(e) => setPriceBgOpacity(Number(e.target.value))} className="flex-1 accent-orange-500" />
+                        <span className="text-[10px] text-stone-500 w-7 text-right">{priceBgOpacity}%</span>
                       </div>
                     </>
                   )}
                 </div>
+              )}
+            </div>
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <span className="text-[11px] text-stone-500 mb-0.5 block">CTA</span>
+                <input type="text" value={ctaText} onChange={(e) => setCtaText(e.target.value)} className="input input-sm w-full" />
               </div>
-            </fieldset>
-
-            {/* ─── Group: Badges ─── */}
-            <fieldset className="border border-stone-200 rounded-xl p-3 space-y-2">
-              <legend className="text-[11px] font-bold text-stone-500 uppercase tracking-wider px-1">Badges</legend>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-stone-400">ลากขยับได้บน canvas</span>
-                <button type="button" onClick={addBadge} className="text-[11px] px-2.5 py-1 rounded-lg border border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100">+ เพิ่ม</button>
+              <div className="flex gap-1 pb-0.5">
+                {CTA_COLOR_PRESETS.map((preset) => (
+                  <button key={preset.id} type="button" onClick={() => setCtaColor(preset.id)} title={preset.label} className={`w-5 h-5 rounded-full border-2 ${preset.swatch} ${ctaColor === preset.id ? "ring-2 ring-orange-400 ring-offset-1" : "opacity-60 hover:opacity-100"}`} />
+                ))}
               </div>
-              {badges.length === 0 && <p className="text-[11px] text-stone-400">ยังไม่มี badge</p>}
-              <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
-                {badges.map((b) => {
-                  const isEditing = editingBadgeId === b.id;
-                  return (
-                    <div key={b.id} className="border border-stone-200 rounded-lg p-1.5">
-                      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto auto auto auto", gap: "4px", alignItems: "center" }}>
-                        {b.icon ? (
-                          <button type="button" onClick={() => updateBadge(b.id, { icon: "" })} className="text-sm leading-none hover:opacity-60" title="กดเพื่อลบ emoji">{b.icon}</button>
-                        ) : (
-                          <span className="text-[9px] text-stone-300">✦</span>
-                        )}
-                        <input type="text" value={b.text} onChange={(e) => updateBadge(b.id, { text: e.target.value })} className="input input-xs text-[11px] h-5 min-w-0" placeholder="badge" />
-                        <button type="button" onClick={() => suggestBadgeIcon(b.id, b.text)} disabled={loadingBadgeIcon === b.id}
-                          className="text-[8px] px-1 h-5 rounded border border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100 disabled:opacity-60">{loadingBadgeIcon === b.id ? ".." : "AI"}</button>
-                        <button type="button" onClick={() => setEditingBadgeId(isEditing ? null : b.id)} className="text-[9px] w-5 h-5 flex items-center justify-center rounded border border-stone-300 text-stone-600 hover:bg-stone-50">🎨</button>
-                        <button type="button" onClick={() => removeBadge(b.id)} className="text-[9px] w-5 h-5 flex items-center justify-center rounded border border-red-200 text-red-500 hover:bg-red-50">✕</button>
-                      </div>
-                      {isEditing && (
-                        <div className="space-y-1 pt-1 border-t border-stone-100">
-                          <div className="flex items-start gap-1">
-                            <span className="text-[9px] text-stone-500 shrink-0 pt-0.5 w-6">text</span>
-                            <div className="flex flex-wrap gap-0.5">
-                              {BADGE_TEXT_OPTIONS.map((opt) => (
-                                <button key={opt.id} type="button" onClick={() => updateBadge(b.id, { textColor: opt.id })}
-                                  className={`w-4 h-4 rounded-full border ${opt.swatch} ${b.textColor === opt.id ? "ring-2 ring-orange-400 ring-offset-1" : "opacity-60 hover:opacity-100"}`} title={opt.label} />
-                              ))}
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-1">
-                            <span className="text-[9px] text-stone-500 shrink-0 pt-0.5 w-6">พื้น</span>
-                            <div className="flex flex-wrap gap-0.5">
-                              {BADGE_BG_OPTIONS.map((opt) => (
-                                <button key={opt.id} type="button" onClick={() => updateBadge(b.id, { bgColor: opt.id })}
-                                  className={`w-4 h-4 rounded-full border ${opt.swatch} ${b.bgColor === opt.id ? "ring-2 ring-orange-400 ring-offset-1" : "opacity-60 hover:opacity-100"}`} title={opt.label} />
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </fieldset>
-
-            {/* ─── Group: Price & CTA ─── */}
-            <fieldset className="border border-stone-200 rounded-xl p-3 space-y-2">
-              <legend className="text-[11px] font-bold text-stone-500 uppercase tracking-wider px-1">ราคา & ปุ่ม CTA</legend>
-              <div className="space-y-1.5">
-                <label className="inline-flex items-center gap-1.5 text-[11px] text-stone-700">
-                  <input type="checkbox" className="rounded border-stone-300 text-orange-600 focus:ring-orange-500" checked={showPrice} onChange={(e) => setShowPrice(e.target.checked)} />
-                  ราคา ({priceText || "ไม่มี"}{normalPriceText ? ` ← ${normalPriceText}` : ""})
-                </label>
-                {showPrice && priceText && (
-                  <div>
-                    <span className="text-[10px] text-stone-500">สี:</span>
-                    <div className="flex flex-wrap gap-1 mt-0.5">
-                      {PRICE_COLOR_PRESETS.map((preset) => (
-                        <button key={preset.id} type="button" onClick={() => setPriceColor(preset.id)} title={preset.label}
-                          className={`w-5 h-5 rounded-full border-2 ${preset.swatch} ${priceColor === preset.id ? "ring-2 ring-orange-400 ring-offset-1" : "opacity-60 hover:opacity-100"}`}
-                        >{preset.id === "auto" ? <span className="text-[7px] text-white font-bold">A</span> : null}</button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {showPrice && priceText && (
-                  <div>
-                    <label className="inline-flex items-center gap-1 text-[11px] text-stone-700">
-                      <input type="checkbox" className="rounded border-stone-300 text-orange-600 focus:ring-orange-500" checked={priceBgEnabled} onChange={(e) => setPriceBgEnabled(e.target.checked)} />
-                      กรอบสี
-                    </label>
-                    {priceBgEnabled && (
-                      <>
-                        <div className="flex flex-wrap gap-1 mt-0.5">
-                          {TEXT_BG_PRESETS.map((preset) => (
-                            <button key={preset.id} type="button" onClick={() => setPriceBgColor(preset.id)} title={preset.label}
-                              className={`w-5 h-5 rounded-full border-2 ${preset.swatch} ${priceBgColor === preset.id ? "ring-2 ring-orange-400 ring-offset-1" : "opacity-60 hover:opacity-100"}`}
-                            />
-                          ))}
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <span className="text-[10px] text-stone-500">โปร่งใส</span>
-                          <input type="range" min={10} max={100} value={priceBgOpacity} onChange={(e) => setPriceBgOpacity(Number(e.target.value))} className="flex-1 accent-orange-500" />
-                          <span className="text-[10px] text-stone-500 w-7 text-right">{priceBgOpacity}%</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-2 items-end">
-                <div className="flex-1">
-                  <span className="text-[11px] text-stone-500 mb-0.5 block">CTA</span>
-                  <input type="text" value={ctaText} onChange={(e) => setCtaText(e.target.value)} className="input input-sm w-full" />
-                </div>
-                <div className="flex gap-1 pb-0.5">
-                  {CTA_COLOR_PRESETS.map((preset) => (
-                    <button key={preset.id} type="button" onClick={() => setCtaColor(preset.id)} title={preset.label}
-                      className={`w-5 h-5 rounded-full border-2 ${preset.swatch} ${ctaColor === preset.id ? "ring-2 ring-orange-400 ring-offset-1" : "opacity-60 hover:opacity-100"}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </fieldset>
-
-          </div>
+            </div>
+          </fieldset>
         </div>
+      </div>
 
-        <div className="border-t border-stone-200 px-5 py-3 flex items-center justify-between">
-          <div className="text-[11px] text-stone-500">
-            ภาพที่สร้างจะเหมาะกับ{" "}
-            {aspect === "1:1" ? "Shopee / Lazada square" : aspect === "4:5" ? "Facebook / IG feed" : "Story / Reel"}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => handleExport("download")}
-              disabled={saving}
-              className="px-3 py-1.5 rounded-lg border border-stone-300 text-xs text-stone-700 hover:bg-stone-50 disabled:opacity-60"
-            >
-              ดาวน์โหลด PNG
-            </button>
-            <button
-              type="button"
-              onClick={() => handleExport("save")}
-              disabled={saving}
-              className="px-3.5 py-1.5 rounded-lg bg-orange-500 text-xs font-semibold text-white hover:bg-orange-600 disabled:opacity-60"
-            >
-              {saving ? "กำลังบันทึก..." : "บันทึกเข้า Marketing Assets"}
-            </button>
-          </div>
+      <div className="border-t border-stone-200 px-5 py-3 flex items-center justify-between">
+        <div className="text-[11px] text-stone-500">
+          ภาพที่สร้างจะเหมาะกับ {aspect === "1:1" ? "Shopee / Lazada square" : aspect === "4:5" ? "Facebook / IG feed" : "Story / Reel"}
+        </div>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => handleExport("download")} disabled={saving} className="px-3 py-1.5 rounded-lg border border-stone-300 text-xs text-stone-700 hover:bg-stone-50 disabled:opacity-60">
+            ดาวน์โหลด PNG
+          </button>
+          <button type="button" onClick={() => handleExport("save")} disabled={saving} className="px-3.5 py-1.5 rounded-lg bg-orange-500 text-xs font-semibold text-white hover:bg-orange-600 disabled:opacity-60">
+            {saving ? "กำลังบันทึก..." : "บันทึกเข้า Marketing Assets"}
+          </button>
         </div>
       </div>
     </div>
   );
 };
-

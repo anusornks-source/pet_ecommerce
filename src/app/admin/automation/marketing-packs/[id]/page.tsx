@@ -548,7 +548,7 @@ export default function MarketingPackDetailPage({ params }: { params: Promise<{ 
               href={`/admin/ad-designer?productId=${pack.productId}&marketingPackId=${pack.id}&returnUrl=${encodeURIComponent(`/admin/automation/marketing-packs/${pack.id}`)}`}
               className="text-[11px] px-2.5 py-1 rounded-full border border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100"
             >
-              สร้างภาพ Ads
+              Ads Creator
             </Link>
           </div>
         </div>

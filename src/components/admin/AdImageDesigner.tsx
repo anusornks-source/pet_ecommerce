@@ -560,7 +560,7 @@ export const AdImageDesigner: React.FC<Props> = ({ product, context, onSaved, ba
             </Link>
           )}
           <div>
-            <h2 className="text-base font-semibold text-stone-800">สร้างภาพ Ads</h2>
+            <h2 className="text-base font-semibold text-stone-800">Ads Creator</h2>
             <p className="text-xs text-stone-500">
               {displayName || "เลือกสินค้า"} • เลือก layout แล้วปรับข้อความเพื่อใช้ใน Shopee / Lazada / Social
             </p>

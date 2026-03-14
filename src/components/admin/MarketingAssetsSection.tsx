@@ -679,7 +679,7 @@ export default function MarketingAssetsSection({ shopId, productId, marketingPac
                 href={`/admin/ad-designer?productId=${productId}&${marketingPackId ? `marketingPackId=${marketingPackId}&` : ""}returnUrl=${encodeURIComponent(marketingPackId ? `/admin/automation/marketing-packs/${marketingPackId}` : `/admin/products/${productId}/view`)}`}
                 className="text-[11px] px-2.5 py-1 rounded-full border border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100"
               >
-                สร้างภาพ Ads
+                Ads Creator
               </Link>
             )}
             {needsEnrich && (

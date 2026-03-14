@@ -288,9 +288,9 @@ export const AdImageDesigner: React.FC<Props> = ({ product, context, onSaved, ba
 
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
-  const textSectionRef = useRef<HTMLDivElement | null>(null);
-  const badgesSectionRef = useRef<HTMLDivElement | null>(null);
-  const priceSectionRef = useRef<HTMLDivElement | null>(null);
+  const textSectionRef = useRef<HTMLFieldSetElement | null>(null);
+  const badgesSectionRef = useRef<HTMLFieldSetElement | null>(null);
+  const priceSectionRef = useRef<HTMLFieldSetElement | null>(null);
   const eyebrowInputRef = useRef<HTMLInputElement | null>(null);
   const headingInputRef = useRef<HTMLInputElement | null>(null);
   const subtitleInputRef = useRef<HTMLTextAreaElement | null>(null);

@@ -297,7 +297,7 @@ export const AdImageDesigner: React.FC<Props> = ({ product, context, onSaved, ba
 
   const CLICK_THRESHOLD = 6;
   const SNAP_THRESHOLD = 6;
-  const SNAP_THRESHOLD_TEXT = 10; // ใหญ่กว่าเล็กน้อย ให้ title ติดเส้นแดง (x=0) ได้ง่าย
+  const SNAP_THRESHOLD_TEXT = 4; // เล็ก — ต้องเข้าใกล้เส้นจริงๆ ถึง snap ไม่ติดเส้นอื่นก่อนถึง safe area
   const CONTENT_EDGE_PX = 16; // ตรงกับ left-4/right-4/top-4/bottom-4 ที่แสดงเป็นเส้น snap
   const DISCOUNT_SNAP_INSET = 2; // ส่วนลดใช้ right-4 top-4 (16px) เหมือนเส้น — inset เล็กน้อยกัน shadow
   const SAFE_AREA_MARGIN = 0.08;
@@ -682,6 +682,7 @@ export const AdImageDesigner: React.FC<Props> = ({ product, context, onSaved, ba
   const ctaElRef = useRef<HTMLDivElement | null>(null);
   const discountBadgeElRef = useRef<HTMLDivElement | null>(null);
   const dragBadgeElRef = useRef<HTMLDivElement | null>(null);
+  const priceElRef = useRef<HTMLDivElement | null>(null);
 
   const startDrag = (targetId: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -692,8 +693,13 @@ export const AdImageDesigner: React.FC<Props> = ({ product, context, onSaved, ba
     dragInitialRef.current = { x: e.clientX, y: e.clientY };
     if (targetId.startsWith("badge-")) {
       dragBadgeElRef.current = e.currentTarget as HTMLDivElement;
+      priceElRef.current = null;
+    } else if (targetId === "price") {
+      priceElRef.current = e.currentTarget as HTMLDivElement;
+      dragBadgeElRef.current = null;
     } else {
       dragBadgeElRef.current = null;
+      priceElRef.current = null;
     }
   };
 
@@ -713,24 +719,26 @@ export const AdImageDesigner: React.FC<Props> = ({ product, context, onSaved, ba
       dragStartRef.current = { x: e.clientX, y: e.clientY };
       const target = dragTargetRef.current;
 
-      const margin = rect ? Math.min(rect.width, rect.height) * 0.05 : 16;
       const cx = rect ? rect.width / 2 : 0;
       const cy = rect ? rect.height / 2 : 0;
-      const left = margin;
-      const right = rect ? rect.width - margin : 400;
-      const top = margin;
-      const bottom = rect ? rect.height - margin : 400;
-      // เส้น snap ที่เห็นบน canvas = 16px (left-4/right-4/top-4/bottom-4)
       const edge = CONTENT_EDGE_PX;
       const leftEdge = edge;
       const rightEdge = rect ? rect.width - edge : 400 - edge;
       const topEdge = edge;
       const bottomEdge = rect ? rect.height - edge : 400 - edge;
-      const snapXText = [0, cx, right];
-      const snapYText = [0, cy, bottom];
-      // ราคา CTA ส่วนลด badge ใช้เส้น 16px ให้ตรงกับที่เห็น
-      const snapXBadge = [0, leftEdge, cx, rightEdge];
-      const snapYBadge = [0, topEdge, cy, bottomEdge];
+      const outerRight = rect ? rect.width : 400;
+      const outerBottom = rect ? rect.height : 400;
+      // Safe area = 8% จากขอบ (ตรงกับเส้น rounded dashed บน canvas)
+      const leftSafe = rect ? rect.width * SAFE_AREA_MARGIN : 400 * SAFE_AREA_MARGIN;
+      const rightSafe = rect ? rect.width * (1 - SAFE_AREA_MARGIN) : 400 * (1 - SAFE_AREA_MARGIN);
+      const topSafe = rect ? rect.height * SAFE_AREA_MARGIN : 400 * SAFE_AREA_MARGIN;
+      const bottomSafe = rect ? rect.height * (1 - SAFE_AREA_MARGIN) : 400 * (1 - SAFE_AREA_MARGIN);
+      // Text + Price อยู่ใน div p-4 → จุดเริ่ม = (edge, edge) → snap ขอบกล่อง (ใส่กรอบแล้วกรอบไม่เกินเข้าไป)
+      const snapXText = [-edge, 0, leftSafe - edge, cx - edge, rightSafe - edge, rightEdge - edge, outerRight - edge];
+      const snapYText = [-edge, 0, topSafe - edge, cy - edge, bottomSafe - edge, bottomEdge - edge, outerBottom - edge];
+      // Badge ใช้ left/top ใน canvas โดยตรง → ใช้พิกัด canvas
+      const snapXBadge = [0, leftEdge, leftSafe, cx, rightSafe, rightEdge, outerRight];
+      const snapYBadge = [0, topEdge, topSafe, cy, bottomSafe, bottomEdge, outerBottom];
 
       if (target === "image") {
         setImageOffset((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
@@ -750,10 +758,19 @@ export const AdImageDesigner: React.FC<Props> = ({ product, context, onSaved, ba
         const offT = edge;
         const rightEdgeAtGuide = rect ? rightEdge - (rect.width - offR) - DISCOUNT_SNAP_INSET : -DISCOUNT_SNAP_INSET;
         const topEdgeAtGuide = topEdge - offT + DISCOUNT_SNAP_INSET;
+        // ส่วนลด right-4 top-4: กรอบใน + Safe area + กรอบนอก
+        const outerRightDiscount = offR;
+        const outerLeftDiscount = rect ? offR - rect.width + w : -400 + w;
+        const outerTopDiscount = -offT;
+        const outerBottomDiscount = rect ? rect.height - offT - h : 400 - offT - h;
+        const safeRightDiscount = rect ? rightSafe - (rect.width - offR) : rightSafe - 400 + offR;
+        const safeLeftDiscount = rect ? leftSafe - (rect.width - offR - w) : leftSafe - 400 + offR + w;
+        const safeTopDiscount = topSafe - offT;
+        const safeBottomDiscount = rect ? bottomSafe - offT - h : bottomSafe - offT - h;
         const snapX = rect
-          ? [0, rightEdgeAtGuide, leftEdge - (rect.width - offR - w), cx - (rect.width - offR - w), rightEdge - (rect.width - offR - w)]
+          ? [0, rightEdgeAtGuide, outerRightDiscount, safeRightDiscount, leftEdge - (rect.width - offR - w), safeLeftDiscount, outerLeftDiscount, cx - (rect.width - offR - w), rightEdge - (rect.width - offR - w)]
           : snapXBadge;
-        const snapY = rect ? [0, topEdgeAtGuide, cy - offT, bottomEdge - offT - h] : snapYBadge;
+        const snapY = rect ? [0, topEdgeAtGuide, outerTopDiscount, safeTopDiscount, cy - offT, bottomEdge - offT - h, safeBottomDiscount, outerBottomDiscount] : snapYBadge;
         setDiscountBadgePos((prev) => {
           const next = { x: prev.x + dx, y: prev.y + dy };
           next.x = snapToGuides(next.x, snapX, SNAP_THRESHOLD_TEXT);
@@ -761,10 +778,30 @@ export const AdImageDesigner: React.FC<Props> = ({ product, context, onSaved, ba
           return next;
         });
       } else if (target === "price") {
+        const el = priceElRef.current;
+        const pw = el ? el.getBoundingClientRect().width : 0;
+        const ph = el ? el.getBoundingClientRect().height : 0;
+        // X: content-relative เหมือน text + จุดขอบขวาชิดเส้น
+        const snapXPrice = [...snapXText, rightSafe - edge - pw, rightEdge - edge - pw, outerRight - edge - pw];
+        // ราคาอยู่ใน mt-auto → จุดเริ่มอยู่ล่าง → y เป็น offset จากล่าง ต้องคำนวณจุด snap ด้านบนแยก (ขอบบนชิดเส้น = defaultPriceTop + y = targetTop → y = targetTop - defaultPriceTop)
+        const defaultPriceTop = rect ? rect.height - edge - ph : 400 - edge - ph;
+        const snapYPrice = rect
+          ? [
+              // ขอบบนชิดเส้น: บนนอก, กรอบใน, safe, กลาง
+              0 - defaultPriceTop,
+              topEdge - defaultPriceTop,
+              topSafe - defaultPriceTop,
+              cy - defaultPriceTop,
+              // ขอบล่างชิดเส้น
+              bottomSafe - ph - defaultPriceTop,
+              bottomEdge - ph - defaultPriceTop,
+              outerBottom - ph - defaultPriceTop,
+            ]
+          : snapYText;
         setPricePos((prev) => {
           const next = { x: prev.x + dx, y: prev.y + dy };
-          next.x = snapToGuides(next.x, snapXBadge, SNAP_THRESHOLD_TEXT);
-          next.y = snapToGuides(next.y, snapYBadge, SNAP_THRESHOLD_TEXT);
+          next.x = snapToGuides(next.x, snapXPrice, SNAP_THRESHOLD_TEXT);
+          next.y = snapToGuides(next.y, snapYPrice, SNAP_THRESHOLD_TEXT);
           return next;
         });
       } else if (target === "cta") {
@@ -773,8 +810,21 @@ export const AdImageDesigner: React.FC<Props> = ({ product, context, onSaved, ba
         const h = el ? el.getBoundingClientRect().height : 0;
         const offR = edge;
         const offB = edge; // right-4 bottom-4 = CONTENT_EDGE_PX
-        const snapX = rect ? [0, leftEdge - (rect.width - offR - w), cx - (rect.width - offR - w), rightEdge - (rect.width - offR - w)] : snapXBadge;
-        const snapY = rect ? [0, topEdge - (rect.height - offB - h), cy - (rect.height - offB - h), bottomEdge - (rect.height - offB - h)] : snapYBadge;
+        // CTA: กรอบใน + Safe area + กรอบนอก
+        const ctaOuterRight = offR;
+        const ctaOuterLeft = rect ? offR - rect.width + w : -400 + w;
+        const ctaOuterTop = rect ? offB - rect.height + h : -400 + h;
+        const ctaOuterBottom = offB;
+        const ctaSafeRight = rect ? rightSafe - (rect.width - offR) : rightSafe - 400 + offR;
+        const ctaSafeLeft = rect ? leftSafe - (rect.width - offR - w) : leftSafe - 400 + offR + w;
+        const ctaSafeTop = rect ? topSafe - (rect.height - offB - h) : topSafe - 400 + offB + h;
+        const ctaSafeBottom = rect ? bottomSafe - (rect.height - offB) : bottomSafe - 400 + offB;
+        const snapX = rect
+          ? [0, ctaOuterRight, ctaOuterLeft, ctaSafeRight, ctaSafeLeft, leftEdge - (rect.width - offR - w), cx - (rect.width - offR - w), rightEdge - (rect.width - offR - w)]
+          : snapXBadge;
+        const snapY = rect
+          ? [0, ctaOuterBottom, ctaOuterTop, ctaSafeBottom, ctaSafeTop, topEdge - (rect.height - offB - h), cy - (rect.height - offB - h), bottomEdge - (rect.height - offB - h)]
+          : snapYBadge;
         setCtaPos((prev) => {
           const next = { x: prev.x + dx, y: prev.y + dy };
           next.x = snapToGuides(next.x, snapX, SNAP_THRESHOLD_TEXT);
@@ -785,9 +835,9 @@ export const AdImageDesigner: React.FC<Props> = ({ product, context, onSaved, ba
         const el = dragBadgeElRef.current;
         const bw = el ? el.getBoundingClientRect().width : 0;
         const bh = el ? el.getBoundingClientRect().height : 0;
-        // badge ใช้ (x,y) = มุมซ้ายบน → เพิ่มจุด snap ขวา/ล่าง: ขอบขวาชิดเส้น = rightEdge - w, ขอบล่างชิดเส้น = bottomEdge - h
-        const snapXBadgeWithRight = rect ? [...snapXBadge, rightEdge - bw] : snapXBadge;
-        const snapYBadgeWithBottom = rect ? [...snapYBadge, bottomEdge - bh] : snapYBadge;
+        // badge มุมซ้ายบน → เพิ่มจุดขวา/ล่าง: กรอบใน + Safe area + กรอบนอก
+        const snapXBadgeWithRight = rect ? [...snapXBadge, rightSafe - bw, rightEdge - bw, outerRight - bw] : snapXBadge;
+        const snapYBadgeWithBottom = rect ? [...snapYBadge, bottomSafe - bh, bottomEdge - bh, outerBottom - bh] : snapYBadge;
         setBadges((prev) =>
           prev.map((b) => {
             if (b.id !== target) return b;
@@ -815,6 +865,7 @@ export const AdImageDesigner: React.FC<Props> = ({ product, context, onSaved, ba
       dragStartRef.current = null;
       dragInitialRef.current = null;
       dragBadgeElRef.current = null;
+      priceElRef.current = null;
     };
 
     document.addEventListener("mousemove", handleMouseMove);
@@ -1273,6 +1324,7 @@ export const AdImageDesigner: React.FC<Props> = ({ product, context, onSaved, ba
                   <div className="mt-auto pointer-events-auto">
                     {showPrice && priceText && (
                       <div
+                        ref={priceElRef}
                         className={`inline-flex items-baseline gap-2 cursor-move ${priceFontClassName} ${selectedElementId === "price" ? "ring-2 ring-orange-400 ring-offset-1 rounded" : ""}`}
                         style={{ ...priceBgStyle, ...priceFontStyle, transform: `translate(${pricePos.x}px, ${pricePos.y}px)`, zIndex: getZIndex("price") }}
                         onMouseDown={(e) => startDrag("price", e)}
@@ -1352,6 +1404,7 @@ const badgeFontClassName = getFontClassName(b.fontFamily ?? "Prompt");
                   <div className="mt-auto">
                     {showPrice && priceText && (
                       <div
+                        ref={priceElRef}
                         className={`inline-flex items-baseline gap-2 cursor-move ${priceFontClassName} ${selectedElementId === "price" ? "ring-2 ring-orange-400 ring-offset-1 rounded" : ""}`}
                         style={{ ...priceBgStyle, ...priceFontStyle, transform: `translate(${pricePos.x}px, ${pricePos.y}px)`, zIndex: getZIndex("price") }}
                         onMouseDown={(e) => startDrag("price", e)}
@@ -1431,8 +1484,12 @@ const badgeFontClassName = getFontClassName(b.fontFamily ?? "Prompt");
             )}
 
             {showSnapLines && (
-            <div data-ad-snap-guide className="absolute pointer-events-none z-[50] border border-dashed border-white/50 rounded-lg" style={{ top: `${SAFE_AREA_MARGIN * 100}%`, left: `${SAFE_AREA_MARGIN * 100}%`, right: `${SAFE_AREA_MARGIN * 100}%`, bottom: `${SAFE_AREA_MARGIN * 100}%` }}>
-            </div>
+              <>
+                <div data-ad-snap-guide className="absolute top-0 bottom-0 w-0 border-l border-dashed border-white/50 pointer-events-none z-[50]" style={{ left: `${SAFE_AREA_MARGIN * 100}%` }} aria-hidden />
+                <div data-ad-snap-guide className="absolute top-0 bottom-0 w-0 border-r border-dashed border-white/50 pointer-events-none z-[50]" style={{ right: `${SAFE_AREA_MARGIN * 100}%` }} aria-hidden />
+                <div data-ad-snap-guide className="absolute left-0 right-0 h-0 border-t border-dashed border-white/50 pointer-events-none z-[50]" style={{ top: `${SAFE_AREA_MARGIN * 100}%` }} aria-hidden />
+                <div data-ad-snap-guide className="absolute left-0 right-0 h-0 border-b border-dashed border-white/50 pointer-events-none z-[50]" style={{ bottom: `${SAFE_AREA_MARGIN * 100}%` }} aria-hidden />
+              </>
             )}
           </div>
 

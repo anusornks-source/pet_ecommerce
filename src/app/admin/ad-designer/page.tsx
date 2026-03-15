@@ -20,11 +20,15 @@ export type AdDesignSummary = {
 export default function AdDesignerPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const productId = searchParams.get("productId");
+  const productIdParam = searchParams.get("productId");
+  const adDesignIdParam = searchParams.get("adDesignId");
   const marketingPackId = searchParams.get("marketingPackId") || undefined;
-  const returnUrl = searchParams.get("returnUrl") || (productId ? `/admin/products/${productId}/view` : "/admin/products");
+  const returnUrl =
+    searchParams.get("returnUrl") ||
+    (productIdParam ? `/admin/products/${productIdParam}/view` : "/admin/automation/ad-designs");
 
   const [product, setProduct] = useState<AdImageDesignerProduct | null>(null);
+  const [productId, setProductId] = useState<string | null>(productIdParam);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
@@ -42,56 +46,93 @@ export default function AdDesignerPage() {
     }
   }, [productId]);
 
+  const loadProductAndDesigns = useCallback(
+    (pid: string, preselectedDesign: AdDesignSummary | null) => {
+      setLoading(true);
+      setError(null);
+      setProductId(pid);
+      Promise.all([
+        fetch(`/api/admin/products/${pid}`, { cache: "no-store" }).then((r) => r.json()),
+        fetch(`/api/admin/marketing-assets?productId=${pid}&limit=100`, { cache: "no-store" }).then((r) => r.json()),
+        fetch(`/api/admin/products/${pid}/ad-designs`, { cache: "no-store" }).then((r) => r.json()),
+      ])
+        .then(([productRes, assetsRes, adDesignsRes]) => {
+          if (!productRes.success || !productRes.data) {
+            setError(productRes.error || "โหลดสินค้าไม่สำเร็จ");
+            setProduct(null);
+            return;
+          }
+          const p = productRes.data;
+          const productImages = p.images ?? [];
+          let images = productImages;
+          if (assetsRes.success && Array.isArray(assetsRes.data) && assetsRes.data.length > 0) {
+            const assetUrls = assetsRes.data
+              .filter((a: { type?: string; url?: string }) => a.type === "IMAGE" && a.url)
+              .map((a: { url: string }) => a.url);
+            images = assetUrls.length > 0 ? assetUrls : productImages;
+          }
+          setProduct({
+            id: p.id,
+            name: p.name,
+            name_th: p.name_th ?? undefined,
+            shortDescription: p.shortDescription ?? undefined,
+            shortDescription_th: p.shortDescription_th ?? undefined,
+            price: p.price,
+            normalPrice: p.normalPrice ?? undefined,
+            images,
+            shopLogoUrl: null,
+          });
+          if (adDesignsRes.success && Array.isArray(adDesignsRes.data)) {
+            setAdDesigns(adDesignsRes.data as AdDesignSummary[]);
+          }
+          if (preselectedDesign) {
+            setSelectedAdDesign(preselectedDesign);
+          }
+        })
+        .catch((err) => {
+          console.error("[AdDesignerPage]", err);
+          setError("โหลดสินค้าไม่สำเร็จ");
+          setProduct(null);
+        })
+        .finally(() => setLoading(false));
+    },
+    []
+  );
+
   useEffect(() => {
-    if (!productId) {
-      setError("ไม่มี productId");
+    if (adDesignIdParam) {
+      fetch(`/api/admin/ad-designs/${adDesignIdParam}`, { cache: "no-store" })
+        .then((r) => r.json())
+        .then((designRes) => {
+          if (!designRes.success || !designRes.data) {
+            setError(designRes.error || "ไม่พบ Ad Design");
+            setLoading(false);
+            return;
+          }
+          const d = designRes.data;
+          const summary: AdDesignSummary = {
+            id: d.id,
+            name: d.name,
+            note: d.note ?? null,
+            state: d.state,
+            createdAt: d.createdAt,
+            updatedAt: d.updatedAt,
+          };
+          loadProductAndDesigns(d.productId, summary);
+        })
+        .catch(() => {
+          setError("โหลด Ad Design ไม่สำเร็จ");
+          setLoading(false);
+        });
+      return;
+    }
+    if (!productIdParam) {
+      setError("ไม่มี productId หรือ adDesignId");
       setLoading(false);
       return;
     }
-    setLoading(true);
-    setError(null);
-    Promise.all([
-      fetch(`/api/admin/products/${productId}`, { cache: "no-store" }).then((r) => r.json()),
-      fetch(`/api/admin/marketing-assets?productId=${productId}&limit=100`, { cache: "no-store" }).then((r) => r.json()),
-      fetch(`/api/admin/products/${productId}/ad-designs`, { cache: "no-store" }).then((r) => r.json()),
-    ])
-      .then(([productRes, assetsRes, adDesignsRes]) => {
-        if (!productRes.success || !productRes.data) {
-          setError(productRes.error || "โหลดสินค้าไม่สำเร็จ");
-          setProduct(null);
-          return;
-        }
-        const p = productRes.data;
-        const productImages = p.images ?? [];
-        let images = productImages;
-        if (assetsRes.success && Array.isArray(assetsRes.data) && assetsRes.data.length > 0) {
-          const assetUrls = assetsRes.data
-            .filter((a: { type?: string; url?: string }) => a.type === "IMAGE" && a.url)
-            .map((a: { url: string }) => a.url);
-          images = assetUrls.length > 0 ? assetUrls : productImages;
-        }
-        setProduct({
-          id: p.id,
-          name: p.name,
-          name_th: p.name_th ?? undefined,
-          shortDescription: p.shortDescription ?? undefined,
-          shortDescription_th: p.shortDescription_th ?? undefined,
-          price: p.price,
-          normalPrice: p.normalPrice ?? undefined,
-          images,
-          shopLogoUrl: null,
-        });
-        if (adDesignsRes.success && Array.isArray(adDesignsRes.data)) {
-          setAdDesigns(adDesignsRes.data as AdDesignSummary[]);
-        }
-      })
-      .catch((err) => {
-        console.error("[AdDesignerPage]", err);
-        setError("โหลดสินค้าไม่สำเร็จ");
-        setProduct(null);
-      })
-      .finally(() => setLoading(false));
-  }, [productId]);
+    loadProductAndDesigns(productIdParam, null);
+  }, [productIdParam, adDesignIdParam, loadProductAndDesigns]);
 
   const handleSaved = () => {
     toast.success("บันทึกภาพ Ads เข้า Marketing Assets แล้ว");
@@ -177,13 +218,13 @@ export default function AdDesignerPage() {
     [fetchAdDesigns]
   );
 
-  if (!productId) {
+  if (!adDesignIdParam && !productIdParam) {
     return (
       <div className="p-8 max-w-2xl mx-auto">
         <div className="bg-red-50 border border-red-100 rounded-xl p-6 text-center">
-          <p className="text-red-700 font-medium">ไม่มี productId</p>
-          <Link href="/admin/products" className="mt-4 inline-block text-sm text-orange-600 hover:underline">
-            กลับไปรายการสินค้า
+          <p className="text-red-700 font-medium">ไม่มี productId หรือ adDesignId</p>
+          <Link href="/admin/automation/ad-designs" className="mt-4 inline-block text-sm text-orange-600 hover:underline">
+            กลับไป Ad Designs
           </Link>
         </div>
       </div>

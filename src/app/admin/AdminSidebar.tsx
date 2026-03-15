@@ -62,6 +62,7 @@ const navEntries: NavEntry[] = [
       { href: "/admin/automation/trend-pipeline", labelKey: "trendPipeline", icon: "🔥" },
       { href: "/admin/automation/creative", labelKey: "creativeStudio", icon: "✨" },
       { href: "/admin/automation/marketing-packs", labelKey: "marketingPacks", icon: "📦" },
+      { href: "/admin/automation/ad-designs", labelKey: "adDesign", icon: "🎨" },
     ],
   },
   { href: "/admin/orders", labelKey: "orders", icon: "🛒" },

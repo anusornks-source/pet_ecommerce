@@ -8,12 +8,10 @@ import { AdImageDesigner, type AdImageDesignerProduct } from "@/components/admin
 import { AD_TEMPLATES } from "@/lib/adDesignerTemplates";
 import type { AdTemplateState } from "@/lib/adDesignerTemplates";
 
-const MY_TEMPLATES_KEY = "ad-designer-my-templates";
-type SavedTemplate = { id: string; name: string; state: AdTemplateState };
-
 export type AdDesignSummary = {
   id: string;
   name: string;
+  note: string | null;
   state: AdTemplateState;
   createdAt: string;
   updatedAt: string;
@@ -30,10 +28,9 @@ export default function AdDesignerPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  const [selectedSavedTemplate, setSelectedSavedTemplate] = useState<SavedTemplate | null>(null);
   const [selectedAdDesign, setSelectedAdDesign] = useState<AdDesignSummary | null>(null);
-  const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([]);
   const [adDesigns, setAdDesigns] = useState<AdDesignSummary[]>([]);
+  const [adDesignSearch, setAdDesignSearch] = useState("");
 
   const fetchAdDesigns = useCallback(async () => {
     if (!productId) return;
@@ -43,15 +40,6 @@ export default function AdDesignerPage() {
       setAdDesigns(json.data as AdDesignSummary[]);
     }
   }, [productId]);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(MY_TEMPLATES_KEY);
-      if (raw) setSavedTemplates(JSON.parse(raw));
-    } catch {
-      setSavedTemplates([]);
-    }
-  }, []);
 
   useEffect(() => {
     if (!productId) {
@@ -109,6 +97,85 @@ export default function AdDesignerPage() {
     router.push(returnUrl);
   };
 
+  const handleSaveAdDesign = useCallback(
+    async (payload: { name: string; state: AdTemplateState }) => {
+      if (!productId) return;
+      const res = await fetch(`/api/admin/products/${productId}/ad-designs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        toast.error(json.error || "บันทึก Ad Design ไม่สำเร็จ");
+        return;
+      }
+      toast.success("บันทึก Ad Design แล้ว");
+      await fetchAdDesigns();
+    },
+    [productId, fetchAdDesigns]
+  );
+
+  const handleUpdateAdDesign = useCallback(
+    async (payload: { id: string; state: AdTemplateState }) => {
+      const res = await fetch(`/api/admin/ad-designs/${payload.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: payload.state }),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        toast.error(json.error || "อัปเดตไม่สำเร็จ");
+        return;
+      }
+      toast.success("อัปเดต Ad Design แล้ว");
+      await fetchAdDesigns();
+      setSelectedAdDesign((prev) =>
+        prev && prev.id === payload.id
+          ? { ...prev, state: payload.state, updatedAt: (json.data?.updatedAt as string) ?? prev.updatedAt }
+          : prev
+      );
+    },
+    [fetchAdDesigns]
+  );
+
+  const handleUpdateAdDesignMeta = useCallback(
+    async (id: string, payload: { name: string; note: string | null }) => {
+      const res = await fetch(`/api/admin/ad-designs/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: payload.name.trim(), note: payload.note?.trim() || null }),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        toast.error(json.error || "บันทึกไม่สำเร็จ");
+        return;
+      }
+      toast.success("บันทึกชื่อและหมายเหตุแล้ว");
+      await fetchAdDesigns();
+      setSelectedAdDesign((prev) =>
+        prev && prev.id === id ? { ...prev, name: payload.name.trim(), note: payload.note?.trim() || null } : prev
+      );
+    },
+    [fetchAdDesigns]
+  );
+
+  const handleDeleteAdDesign = useCallback(
+    async (id: string) => {
+      if (!confirm("ลบ Ad Design นี้?")) return;
+      const res = await fetch(`/api/admin/ad-designs/${id}`, { method: "DELETE" });
+      const json = await res.json();
+      if (!json.success) {
+        toast.error(json.error || "ลบไม่สำเร็จ");
+        return;
+      }
+      toast.success("ลบแล้ว");
+      await fetchAdDesigns();
+      setSelectedAdDesign((prev) => (prev?.id === id ? null : prev));
+    },
+    [fetchAdDesigns]
+  );
+
   if (!productId) {
     return (
       <div className="p-8 max-w-2xl mx-auto">
@@ -143,86 +210,7 @@ export default function AdDesignerPage() {
     );
   }
 
-  const showTemplatePicker = selectedTemplateId === null && !selectedSavedTemplate && !selectedAdDesign;
-
-  const handleSaveAdDesign = useCallback(
-    async (payload: { name: string; state: AdTemplateState }) => {
-      if (!productId) return;
-      const res = await fetch(`/api/admin/products/${productId}/ad-designs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const json = await res.json();
-      if (!json.success) {
-        toast.error(json.error || "บันทึก Ad Design ไม่สำเร็จ");
-        return;
-      }
-      toast.success("บันทึก Ad Design แล้ว");
-      await fetchAdDesigns();
-    },
-    [productId, fetchAdDesigns]
-  );
-
-  const handleUpdateAdDesign = useCallback(
-    async (payload: { id: string; state: AdTemplateState }) => {
-      const res = await fetch(`/api/admin/ad-designs/${payload.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ state: payload.state }),
-      });
-      const json = await res.json();
-      if (!json.success) {
-        toast.error(json.error || "อัปเดตไม่สำเร็จ");
-        return;
-      }
-      toast.success("อัปเดต Ad Design แล้ว");
-      await fetchAdDesigns();
-      if (selectedAdDesign?.id === payload.id) {
-        setSelectedAdDesign((prev) => (prev ? { ...prev, state: payload.state, updatedAt: json.data?.updatedAt ?? prev.updatedAt } : null));
-      }
-    },
-    [selectedAdDesign?.id, fetchAdDesigns]
-  );
-
-  const handleRenameAdDesign = useCallback(
-    async (id: string, newName: string) => {
-      const res = await fetch(`/api/admin/ad-designs/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName.trim() }),
-      });
-      const json = await res.json();
-      if (!json.success) {
-        toast.error(json.error || "เปลี่ยนชื่อไม่สำเร็จ");
-        return;
-      }
-      toast.success("เปลี่ยนชื่อแล้ว");
-      await fetchAdDesigns();
-      if (selectedAdDesign?.id === id) {
-        setSelectedAdDesign((prev) => (prev ? { ...prev, name: newName.trim() } : null));
-      }
-    },
-    [selectedAdDesign?.id, fetchAdDesigns]
-  );
-
-  const handleDeleteAdDesign = useCallback(
-    async (id: string) => {
-      if (!confirm("ลบ Ad Design นี้?")) return;
-      const res = await fetch(`/api/admin/ad-designs/${id}`, { method: "DELETE" });
-      const json = await res.json();
-      if (!json.success) {
-        toast.error(json.error || "ลบไม่สำเร็จ");
-        return;
-      }
-      toast.success("ลบแล้ว");
-      await fetchAdDesigns();
-      if (selectedAdDesign?.id === id) {
-        setSelectedAdDesign(null);
-      }
-    },
-    [selectedAdDesign?.id, fetchAdDesigns]
-  );
+  const showTemplatePicker = selectedTemplateId === null && !selectedAdDesign;
 
   if (showTemplatePicker) {
     return (
@@ -233,53 +221,88 @@ export default function AdDesignerPage() {
             ← กลับ
           </Link>
         </div>
-        <p className="text-sm text-stone-500 mb-4">เลือกเทมเพลตเพื่อเริ่มออกแบบ โหลด Ad Design ที่บันทึกไว้ หรือเริ่มจากหน้าว่าง</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <button
-            type="button"
-            onClick={() => setSelectedTemplateId("")}
-            className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-stone-200 hover:border-orange-300 hover:bg-orange-50/50 text-stone-500 hover:text-orange-700 transition-colors"
-          >
-            <span className="text-3xl mb-2">📄</span>
-            <span className="text-sm font-medium">เริ่มจากหน้าว่าง</span>
-          </button>
-          {AD_TEMPLATES.map((t) => (
+        <p className="text-sm text-stone-500 mb-6">เลือกเทมเพลตหรือโหลด Ad Design ที่บันทึกไว้</p>
+
+        <section className="mb-8">
+          <h3 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-3">เทมเพลต (Preset)</h3>
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
             <button
-              key={t.id}
               type="button"
-              onClick={() => setSelectedTemplateId(t.id)}
-              className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-stone-200 hover:border-orange-400 hover:bg-orange-50/50 transition-colors text-left"
+              onClick={() => setSelectedTemplateId("")}
+              className="flex flex-col items-center justify-center p-3 rounded-lg border-2 border-dashed border-stone-200 hover:border-orange-300 hover:bg-orange-50/50 text-stone-500 hover:text-orange-700 transition-colors"
             >
-              <span className="text-2xl mb-2">{t.id === "sale" ? "🏷️" : t.id === "freeshipping" ? "🚚" : t.id === "new" ? "✨" : t.id === "bestseller" ? "🔥" : t.id === "flash" ? "⚡" : "📦"}</span>
-              <span className="text-sm font-semibold text-stone-800">{t.labelTh}</span>
-              <span className="text-xs text-stone-500">{t.labelEn}</span>
+              <span className="text-xl mb-1">📄</span>
+              <span className="text-xs font-medium">เริ่มจากหน้าว่าง</span>
             </button>
-          ))}
-          {adDesigns.map((ad) => (
-            <button
-              key={ad.id}
-              type="button"
-              onClick={() => setSelectedAdDesign(ad)}
-              className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-stone-200 hover:border-violet-400 hover:bg-violet-50/50 transition-colors text-left"
-            >
-              <span className="text-2xl mb-2">🎨</span>
-              <span className="text-sm font-semibold text-stone-800">{ad.name}</span>
-              <span className="text-xs text-stone-500">Ad Design</span>
-            </button>
-          ))}
-          {savedTemplates.map((st) => (
-            <button
-              key={st.id}
-              type="button"
-              onClick={() => setSelectedSavedTemplate(st)}
-              className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-stone-200 hover:border-emerald-400 hover:bg-emerald-50/50 transition-colors text-left"
-            >
-              <span className="text-2xl mb-2">💾</span>
-              <span className="text-sm font-semibold text-stone-800">{st.name}</span>
-              <span className="text-xs text-stone-500">My template</span>
-            </button>
-          ))}
-        </div>
+            {AD_TEMPLATES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setSelectedTemplateId(t.id)}
+                className="flex flex-col items-center justify-center p-3 rounded-lg border-2 border-stone-200 hover:border-orange-400 hover:bg-orange-50/50 transition-colors text-left"
+              >
+                <span className="text-lg mb-1">{t.id === "sale" ? "🏷️" : t.id === "freeshipping" ? "🚚" : t.id === "new" ? "✨" : t.id === "bestseller" ? "🔥" : t.id === "flash" ? "⚡" : "📦"}</span>
+                <span className="text-xs font-semibold text-stone-800">{t.labelTh}</span>
+                <span className="text-[10px] text-stone-500">{t.labelEn}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h3 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-3">Ad Design ที่บันทึกไว้ (ของสินค้านี้)</h3>
+          {adDesigns.length === 0 ? (
+            <p className="text-sm text-stone-400">ยังไม่มี Ad Design — บันทึกจากหน้าแก้ไขแล้วจะแสดงที่นี่</p>
+          ) : (
+            <>
+              <div className="mb-3">
+                <input
+                  type="search"
+                  placeholder="ค้นหาชื่อ Ad Design..."
+                  value={adDesignSearch}
+                  onChange={(e) => setAdDesignSearch(e.target.value)}
+                  className="w-full max-w-xs px-3 py-2 text-sm rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400"
+                />
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+                {adDesigns
+                  .filter((ad) => !adDesignSearch.trim() || ad.name.toLowerCase().includes(adDesignSearch.trim().toLowerCase()))
+                  .map((ad) => (
+                    <div
+                      key={ad.id}
+                      className="group relative flex flex-col items-center justify-center p-3 rounded-lg border-2 border-violet-200 bg-violet-50/30 hover:border-violet-400 hover:bg-violet-50/60 transition-colors"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAdDesign(ad)}
+                        className="flex flex-col items-center justify-center w-full text-left"
+                      >
+                        <span className="text-lg mb-1">🎨</span>
+                        <span className="text-xs font-semibold text-stone-800">{ad.name}</span>
+                        <span className="text-[10px] text-violet-600">โหลดมาแก้ต่อ</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm("ลบ Ad Design นี้?")) handleDeleteAdDesign(ad.id);
+                        }}
+                        className="absolute top-1.5 right-1.5 p-1 rounded text-stone-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        title="ลบ"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+              </div>
+              {adDesigns.filter((ad) => !adDesignSearch.trim() || ad.name.toLowerCase().includes(adDesignSearch.trim().toLowerCase())).length === 0 && (
+                <p className="text-sm text-stone-400">ไม่พบ Ad Design ที่ตรงกับคำค้น</p>
+              )}
+            </>
+          )}
+        </section>
       </div>
     );
   }
@@ -293,13 +316,14 @@ export default function AdDesignerPage() {
             context={marketingPackId ? { marketingPackId } : undefined}
             onSaved={handleSaved}
             backHref={returnUrl}
-            initialTemplateId={selectedSavedTemplate || selectedAdDesign ? undefined : selectedTemplateId || undefined}
-            initialTemplateState={selectedSavedTemplate?.state ?? selectedAdDesign?.state ?? undefined}
+            initialTemplateId={selectedAdDesign ? undefined : selectedTemplateId || undefined}
+            initialTemplateState={selectedAdDesign?.state ?? undefined}
             initialAdDesignId={selectedAdDesign?.id ?? undefined}
             initialAdDesignName={selectedAdDesign?.name ?? undefined}
+            initialAdDesignNote={selectedAdDesign?.note ?? undefined}
             onSaveAdDesign={handleSaveAdDesign}
             onUpdateAdDesign={handleUpdateAdDesign}
-            onRenameAdDesign={handleRenameAdDesign}
+            onUpdateAdDesignMeta={handleUpdateAdDesignMeta}
             onDeleteAdDesign={handleDeleteAdDesign}
           />
         </div>

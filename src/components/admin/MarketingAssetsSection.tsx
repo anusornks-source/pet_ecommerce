@@ -345,12 +345,23 @@ const SortableAssetCard = memo(function SortableAssetCard({
           </div>
         )}
       </div>
-      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-2 right-2 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <a
+          href={asset.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-white/20 bg-black/70 text-white shadow transition-all duration-150 hover:scale-110 hover:bg-black hover:ring-2 hover:ring-inset hover:ring-white/80"
+          title="ดูเต็มขนาด"
+          aria-label="ดู"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </a>
         {asset.type === "IMAGE" && onAiGenClick && (
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onAiGenClick(asset.url); }}
-            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-[10px]"
+            className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-purple-600 text-white text-[10px] transition-all duration-150 hover:scale-110 hover:bg-purple-500 hover:ring-2 hover:ring-inset hover:ring-white/80"
             title="AI สร้างรูป"
           >
             ✨
@@ -361,14 +372,17 @@ const SortableAssetCard = memo(function SortableAssetCard({
           download={asset.filename ?? ""}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-black/60 hover:bg-black/80 text-white text-[10px]"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-black/60 text-white text-[10px] transition-all duration-150 hover:scale-110 hover:bg-black hover:ring-2 hover:ring-inset hover:ring-white/80"
+          title="ดาวน์โหลด"
         >
           ⬇
         </a>
         <button
-          onClick={() => onDelete(asset.id)}
+          onClick={(e) => { e.stopPropagation(); onDelete(asset.id); }}
           disabled={deletingId === asset.id}
-          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/80 hover:bg-red-500 text-white text-[10px] disabled:opacity-50"
+          className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-red-500/80 text-white text-[10px] transition-all duration-150 hover:scale-110 hover:bg-red-500 hover:ring-2 hover:ring-inset hover:ring-white/80 disabled:opacity-50 disabled:hover:scale-100 disabled:hover:ring-0"
+          title="ลบ"
         >
           {deletingId === asset.id ? "..." : "✕"}
         </button>

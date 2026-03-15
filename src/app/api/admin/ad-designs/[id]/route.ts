@@ -12,7 +12,7 @@ export async function GET(
   const { id } = await params;
   const design = await prisma.adDesign.findUnique({
     where: { id },
-    select: { id: true, productId: true, name: true, state: true, createdAt: true, updatedAt: true },
+    select: { id: true, productId: true, name: true, note: true, state: true, createdAt: true, updatedAt: true },
   });
   if (!design) {
     return NextResponse.json({ success: false, error: "AdDesign not found" }, { status: 404 });
@@ -34,14 +34,15 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const { name, state } = body;
-  const data: { name?: string; state?: object } = {};
+  const { name, note, state } = body;
+  const data: { name?: string; note?: string | null; state?: object } = {};
   if (name !== undefined) {
     if (typeof name !== "string" || !name.trim()) {
       return NextResponse.json({ success: false, error: "name must be non-empty string" }, { status: 400 });
     }
     data.name = name.trim();
   }
+  if (note !== undefined) data.note = typeof note === "string" ? (note.trim() || null) : null;
   if (state !== undefined) data.state = state as object;
 
   const updated = await prisma.adDesign.update({

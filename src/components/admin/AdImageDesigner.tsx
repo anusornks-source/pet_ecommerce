@@ -7,8 +7,6 @@ import html2canvas from "html2canvas-pro";
 import { AD_TEMPLATES } from "@/lib/adDesignerTemplates";
 import type { AdTemplateState } from "@/lib/adDesignerTemplates";
 
-const MY_TEMPLATES_KEY = "ad-designer-my-templates";
-
 const sarabun = Sarabun({ subsets: ["thai"], weight: ["400", "600", "700"] });
 const prompt = Prompt({ subsets: ["thai"], weight: ["400", "600", "700"] });
 const kanit = Kanit({ subsets: ["thai"], weight: ["400", "600", "700"] });
@@ -62,12 +60,13 @@ type Props = {
   backHref?: string;
   initialTemplateId?: string | null;
   initialTemplateState?: AdTemplateState | null;
-  /** โหลด Ad Design จาก DB — แสดงปุ่ม อัปเดต / เปลี่ยนชื่อ / ลบ */
+  /** โหลด Ad Design จาก DB — แสดงปุ่ม อัปเดต / บันทึกชื่อ+หมายเหตุ / ลบ */
   initialAdDesignId?: string | null;
   initialAdDesignName?: string | null;
+  initialAdDesignNote?: string | null;
   onSaveAdDesign?: (payload: { name: string; state: AdTemplateState }) => void | Promise<void>;
   onUpdateAdDesign?: (payload: { id: string; state: AdTemplateState }) => void | Promise<void>;
-  onRenameAdDesign?: (id: string, newName: string) => void | Promise<void>;
+  onUpdateAdDesignMeta?: (id: string, payload: { name: string; note: string | null }) => void | Promise<void>;
   onDeleteAdDesign?: (id: string) => void | Promise<void>;
 };
 
@@ -217,9 +216,10 @@ export const AdImageDesigner: React.FC<Props> = ({
   initialTemplateState,
   initialAdDesignId,
   initialAdDesignName,
+  initialAdDesignNote,
   onSaveAdDesign,
   onUpdateAdDesign,
-  onRenameAdDesign,
+  onUpdateAdDesignMeta,
   onDeleteAdDesign,
 }) => {
   const [lang, setLang] = useState<Lang>("th");
@@ -250,6 +250,16 @@ export const AdImageDesigner: React.FC<Props> = ({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [sectionOpen, setSectionOpen] = useState<Record<string, boolean>>({
+    layout: true,
+    image: true,
+    discount: true,
+    text: true,
+    badges: true,
+    price: true,
+  });
+  const toggleSection = (key: string) => setSectionOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [layout, setLayout] = useState<"split" | "overlay">("split");
   const [textColor, setTextColor] = useState<string>("white");
@@ -260,6 +270,9 @@ export const AdImageDesigner: React.FC<Props> = ({
   const [priceFontFamily, setPriceFontFamily] = useState<string>("Prompt");
   const [priceFontSize, setPriceFontSize] = useState<"sm" | "base" | "lg">("lg");
   const [priceFontWeight, setPriceFontWeight] = useState<"normal" | "semibold" | "bold">("bold");
+  const [priceShape, setPriceShape] = useState<"rectangle" | "pill" | "circle">("pill");
+  const [pricePadding, setPricePadding] = useState(14);
+  const [priceBorderRadius, setPriceBorderRadius] = useState(8);
   const [textShadow, setTextShadow] = useState<"none" | "soft" | "strong" | "stroke">("none");
   const [fontFamily, setFontFamily] = useState<string>("Prompt");
   const [fontSize, setFontSize] = useState<"sm" | "base" | "lg">("base");
@@ -278,6 +291,9 @@ export const AdImageDesigner: React.FC<Props> = ({
   const [discountBadgeFontFamily, setDiscountBadgeFontFamily] = useState<string>("Prompt");
   const [discountBadgeFontSize, setDiscountBadgeFontSize] = useState<"sm" | "base" | "lg">("base");
   const [discountBadgeFontWeight, setDiscountBadgeFontWeight] = useState<"normal" | "semibold" | "bold">("bold");
+  const [discountBadgeShape, setDiscountBadgeShape] = useState<"rectangle" | "pill" | "circle">("pill");
+  const [discountBadgePadding, setDiscountBadgePadding] = useState(12);
+  const [discountBadgeBorderRadius, setDiscountBadgeBorderRadius] = useState(8);
   const [imageDim, setImageDim] = useState(100);
   const [textBgEnabled, setTextBgEnabled] = useState(false);
   const [textBgColor, setTextBgColor] = useState<string>("dark");
@@ -286,6 +302,8 @@ export const AdImageDesigner: React.FC<Props> = ({
   const [showHeading, setShowHeading] = useState(true);
   const [showSubtitle, setShowSubtitle] = useState(true);
   const [imageScale, setImageScale] = useState(1);
+  const [editableAdDesignName, setEditableAdDesignName] = useState(initialAdDesignName ?? "");
+  const [editableAdDesignNote, setEditableAdDesignNote] = useState(initialAdDesignNote ?? "");
   const [imageOffset, setImageOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const [textPositions, setTextPositions] = useState<{ eyebrow: { x: number; y: number }; heading: { x: number; y: number }; subtitle: { x: number; y: number } }>({
@@ -375,41 +393,39 @@ export const AdImageDesigner: React.FC<Props> = ({
     return Math.round(((product.normalPrice - product.price) / product.normalPrice) * 100);
   }, [product.price, product.normalPrice]);
 
-  const DISCOUNT_BADGE_PRESETS: { id: string; label: string; swatch: string; cls: string }[] = [
-    { id: "red", label: "แดง", swatch: "bg-red-500 border-red-600", cls: "bg-red-500 text-white" },
-    { id: "orange", label: "ส้ม", swatch: "bg-orange-500 border-orange-600", cls: "bg-orange-500 text-white" },
-    { id: "amber", label: "อำพัน", swatch: "bg-amber-500 border-amber-600", cls: "bg-amber-500 text-white" },
-    { id: "yellow", label: "เหลือง", swatch: "bg-yellow-400 border-yellow-500", cls: "bg-yellow-400 text-stone-900" },
-    { id: "rose", label: "โรส", swatch: "bg-rose-500 border-rose-600", cls: "bg-rose-500 text-white" },
-    { id: "pink", label: "ชมพู", swatch: "bg-pink-500 border-pink-600", cls: "bg-pink-500 text-white" },
-    { id: "fuchsia", label: "บานเย็น", swatch: "bg-fuchsia-500 border-fuchsia-600", cls: "bg-fuchsia-500 text-white" },
-    { id: "purple", label: "ม่วง", swatch: "bg-purple-500 border-purple-600", cls: "bg-purple-500 text-white" },
-    { id: "violet", label: "ไวโอเลต", swatch: "bg-violet-500 border-violet-600", cls: "bg-violet-500 text-white" },
-    { id: "indigo", label: "คราม", swatch: "bg-indigo-500 border-indigo-600", cls: "bg-indigo-500 text-white" },
-    { id: "blue", label: "ฟ้า", swatch: "bg-sky-500 border-sky-600", cls: "bg-sky-500 text-white" },
-    { id: "teal", label: "เทล", swatch: "bg-teal-500 border-teal-600", cls: "bg-teal-500 text-white" },
-    { id: "green", label: "เขียว", swatch: "bg-emerald-500 border-emerald-600", cls: "bg-emerald-500 text-white" },
-    { id: "lime", label: "ไลม์", swatch: "bg-lime-400 border-lime-500", cls: "bg-lime-400 text-stone-900" },
-    { id: "dark", label: "ดำ", swatch: "bg-stone-900 border-stone-900", cls: "bg-black/80 text-white" },
-    { id: "gray", label: "เทา", swatch: "bg-stone-500 border-stone-600", cls: "bg-stone-500 text-white" },
-    { id: "white", label: "ขาว", swatch: "bg-white border-stone-300", cls: "bg-white/90 text-stone-900" },
-  ];
-
-  const sizeMap = { sm: "0.7rem", base: "1rem", lg: "1.125rem" };
+  /** ขนาดเล็ก/กลาง/ใหญ่ ใช้ร่วมกันทุกที่: badge, ราคา, ส่วนลด, CTA */
+  const sizeMap = { sm: "0.75rem", base: "1rem", lg: "1.25rem" } as const;
   const weightMap = { normal: 400, semibold: 600, bold: 700 };
 
-  const discountBadgeBgCls = (DISCOUNT_BADGE_PRESETS.find((p) => p.id === discountBadgeColor) ?? DISCOUNT_BADGE_PRESETS[0]!).cls.split(" ").find((c) => c.startsWith("bg-")) ?? "bg-red-500";
-  const DISCOUNT_BADGE_TEXT_COLORS = [
-    { id: "white", label: "ขาว", cls: "text-white" },
-    { id: "black", label: "ดำ", cls: "text-stone-900" },
-    { id: "yellow", label: "เหลือง", cls: "text-yellow-300" },
-  ];
-  const discountBadgeTextCls = DISCOUNT_BADGE_TEXT_COLORS.find((c) => c.id === discountBadgeTextColor)?.cls ?? "text-white";
+  const discountBadgeBgCls = BADGE_BG_OPTIONS.find((o) => o.id === discountBadgeColor)?.cls ?? "bg-red-500";
+  const discountBadgeTextCls = BADGE_TEXT_OPTIONS.find((o) => o.id === discountBadgeTextColor)?.cls ?? "text-white";
   const discountBadgeFontClassName = getFontClassName(discountBadgeFontFamily);
   const discountBadgeStyle = useMemo<React.CSSProperties>(() => ({
     fontSize: sizeMap[discountBadgeFontSize],
     fontWeight: weightMap[discountBadgeFontWeight],
   }), [discountBadgeFontSize, discountBadgeFontWeight]);
+  const discountBadgeContainerProps = useMemo((): { className: string; style: React.CSSProperties } => {
+    const base = "inline-flex items-center justify-center shadow whitespace-nowrap";
+    const bgCls = discountBadgeBgCls;
+    const txtCls = discountBadgeTextCls;
+    if (discountBadgeShape === "circle") {
+      const size = Math.max(32, discountBadgePadding * 2 + 14);
+      return {
+        className: `${base} rounded-full ${bgCls} ${txtCls}`,
+        style: { padding: 0, width: size, height: size, minWidth: size, minHeight: size },
+      };
+    }
+    if (discountBadgeShape === "rectangle") {
+      return {
+        className: `${base} ${bgCls} ${txtCls}`,
+        style: { padding: discountBadgePadding, borderRadius: discountBadgeBorderRadius },
+      };
+    }
+    return {
+      className: `${base} rounded-full ${bgCls} ${txtCls}`,
+      style: { padding: discountBadgePadding },
+    };
+  }, [discountBadgeShape, discountBadgePadding, discountBadgeBorderRadius, discountBadgeColor, discountBadgeTextColor]);
 
   const TEXT_BG_PRESETS: { id: string; label: string; swatch: string; rgb: string }[] = [
     { id: "dark", label: "ดำ", swatch: "bg-stone-900 border-stone-900", rgb: "0,0,0" },
@@ -440,8 +456,16 @@ export const AdImageDesigner: React.FC<Props> = ({
   const priceBgStyle = useMemo<React.CSSProperties>(() => {
     if (!priceBgEnabled) return {};
     const preset = TEXT_BG_PRESETS.find((p) => p.id === priceBgColor) ?? TEXT_BG_PRESETS[0]!;
-    return { backgroundColor: `rgba(${preset.rgb},${priceBgOpacity / 100})`, borderRadius: "9999px", padding: "4px 14px" };
-  }, [priceBgEnabled, priceBgColor, priceBgOpacity]);
+    const bg = { backgroundColor: `rgba(${preset.rgb},${priceBgOpacity / 100})` };
+    if (priceShape === "circle") {
+      const size = Math.max(36, pricePadding * 2 + 20);
+      return { ...bg, padding: 0, width: size, height: size, minWidth: size, minHeight: size, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center" };
+    }
+    if (priceShape === "rectangle") {
+      return { ...bg, padding: pricePadding, borderRadius: priceBorderRadius };
+    }
+    return { ...bg, padding: pricePadding, borderRadius: 9999 };
+  }, [priceBgEnabled, priceBgColor, priceBgOpacity, priceShape, pricePadding, priceBorderRadius]);
 
   const aspectRatio = useMemo(() => {
     switch (aspect) {
@@ -639,6 +663,70 @@ export const AdImageDesigner: React.FC<Props> = ({
     [lang, loadingField, product.name, product.name_th, product.shortDescription, product.shortDescription_th, product.price]
   );
 
+  const getCurrentTemplateState = useCallback((): AdTemplateState => {
+    return {
+      layout,
+      aspect,
+      bgPreset,
+      textPositions,
+      pricePos,
+      ctaPos,
+      discountBadgePos,
+      badges: badges.map((b) => ({
+        id: b.id,
+        text: b.text,
+        icon: b.icon,
+        textColor: b.textColor,
+        bgColor: b.bgColor,
+        x: b.x,
+        y: b.y,
+        shape: b.shape,
+        padding: b.padding,
+        borderRadius: b.borderRadius,
+        fontFamily: b.fontFamily,
+        fontSize: b.fontSize,
+        fontWeight: b.fontWeight,
+      })),
+      ctaText,
+      ctaColor,
+      ctaBgColor,
+      ctaTextColor,
+      ctaFontFamily,
+      ctaFontSize,
+      ctaFontWeight,
+      ctaShape,
+      ctaPadding,
+      ctaBorderRadius,
+      priceFontFamily,
+      priceFontSize,
+      priceFontWeight,
+      priceShape,
+      pricePadding,
+      priceBorderRadius,
+      showPrice,
+      showLogo,
+      showEyebrow,
+      showHeading,
+      showSubtitle,
+      showDiscountBadge,
+      discountBadgeShape,
+      discountBadgePadding,
+      discountBadgeBorderRadius,
+      discountBadgeBgColor: discountBadgeColor,
+      discountBadgeTextColor,
+      discountBadgeFontFamily,
+      discountBadgeFontSize,
+      discountBadgeFontWeight,
+      overlayType,
+      overlayOpacity,
+      logoPosition,
+      productCutoutStyle,
+      defaultTitle: title || undefined,
+      defaultSubtitle: subtitle || undefined,
+      defaultEyebrow: eyebrowCustom || undefined,
+    };
+  }, [layout, aspect, bgPreset, textPositions, pricePos, ctaPos, discountBadgePos, badges, ctaText, ctaColor, ctaBgColor, ctaTextColor, ctaFontFamily, ctaFontSize, ctaFontWeight, ctaShape, ctaPadding, ctaBorderRadius, priceFontFamily, priceFontSize, priceFontWeight, priceShape, pricePadding, priceBorderRadius, showPrice, showLogo, showEyebrow, showHeading, showSubtitle, showDiscountBadge, discountBadgeShape, discountBadgePadding, discountBadgeBorderRadius, discountBadgeColor, discountBadgeTextColor, discountBadgeFontFamily, discountBadgeFontSize, discountBadgeFontWeight, overlayType, overlayOpacity, logoPosition, productCutoutStyle, title, subtitle, eyebrowCustom]);
+
   const handleExport = useCallback(
     async (mode: "download" | "save", filenameSuffix?: string) => {
       if (!canvasRef.current || saving) return;
@@ -685,7 +773,13 @@ export const AdImageDesigner: React.FC<Props> = ({
           if (!saveData.success) {
             throw new Error(saveData.error || "Save asset invalid");
           }
-          if (onSaved) onSaved();
+          // ถามว่าจะ save Ad Design ลง DB ด้วยไหม — ถ้ากดยกเลิก อยู่หน้าเดิมไม่ redirect
+          if (onSaveAdDesign && typeof window !== "undefined" && window.confirm("บันทึกภาพเข้า Marketing Assets แล้ว — จะบันทึก Ad Design ลง DB ด้วยไหม? (เพื่อโหลดกลับมาแก้ต่อได้)")) {
+            const name = `Design ${new Date().toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })}`;
+            await onSaveAdDesign({ name, state: getCurrentTemplateState() });
+            if (onSaved) onSaved();
+          }
+          // กดยกเลิก = ไม่ redirect อยู่หน้า ad designer ต่อ
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -695,7 +789,7 @@ export const AdImageDesigner: React.FC<Props> = ({
         setSaving(false);
       }
     },
-    [aspect, context?.marketingPackId, lang, onSaved, product.id, saving]
+    [aspect, context?.marketingPackId, getCurrentTemplateState, lang, onSaveAdDesign, onSaved, product.id, saving]
   );
 
   const dragTargetRef = useRef<string | null>(null);
@@ -1057,73 +1151,6 @@ export const AdImageDesigner: React.FC<Props> = ({
     setAspect(original);
   }, [aspect, saving, handleExport]);
 
-  const getCurrentTemplateState = useCallback((): AdTemplateState => {
-    return {
-      layout,
-      aspect,
-      bgPreset,
-      textPositions,
-      pricePos,
-      ctaPos,
-      discountBadgePos,
-      badges: badges.map((b) => ({
-        id: b.id,
-        text: b.text,
-        icon: b.icon,
-        textColor: b.textColor,
-        bgColor: b.bgColor,
-        x: b.x,
-        y: b.y,
-        shape: b.shape,
-        padding: b.padding,
-        borderRadius: b.borderRadius,
-        fontFamily: b.fontFamily,
-        fontSize: b.fontSize,
-        fontWeight: b.fontWeight,
-      })),
-      ctaText,
-      ctaColor,
-      ctaBgColor,
-      ctaTextColor,
-      ctaFontFamily,
-      ctaFontSize,
-      ctaFontWeight,
-      ctaShape,
-      ctaPadding,
-      ctaBorderRadius,
-      priceFontFamily,
-      priceFontSize,
-      priceFontWeight,
-      showPrice,
-      showLogo,
-      showEyebrow,
-      showHeading,
-      showSubtitle,
-      showDiscountBadge,
-      overlayType,
-      overlayOpacity,
-      logoPosition,
-      productCutoutStyle,
-      defaultTitle: title || undefined,
-      defaultSubtitle: subtitle || undefined,
-      defaultEyebrow: eyebrowCustom || undefined,
-    };
-  }, [layout, aspect, bgPreset, textPositions, pricePos, ctaPos, discountBadgePos, badges, ctaText, ctaColor, ctaBgColor, ctaTextColor, ctaFontFamily, ctaFontSize, ctaFontWeight, ctaShape, ctaPadding, ctaBorderRadius, priceFontFamily, priceFontSize, priceFontWeight, showPrice, showLogo, showEyebrow, showHeading, showSubtitle, showDiscountBadge, overlayType, overlayOpacity, logoPosition, productCutoutStyle, title, subtitle, eyebrowCustom]);
-
-  const saveAsTemplate = useCallback(() => {
-    const name = typeof window !== "undefined" ? window.prompt("ชื่อเทมเพลต (Template name)", "My template") : null;
-    if (!name?.trim()) return;
-    const state = getCurrentTemplateState();
-    const raw = typeof window !== "undefined" ? localStorage.getItem(MY_TEMPLATES_KEY) : null;
-    const list: { id: string; name: string; state: AdTemplateState }[] = raw ? JSON.parse(raw) : [];
-    const id = `saved-${Date.now()}`;
-    list.push({ id, name: name.trim(), state });
-    localStorage.setItem(MY_TEMPLATES_KEY, JSON.stringify(list));
-    setError(null);
-    if (typeof window !== "undefined") window.alert("บันทึกเทมเพลตแล้ว (Saved to My templates)");
-  }, [getCurrentTemplateState]);
-
-
   const applyTemplateState = useCallback((s: AdTemplateState) => {
     setLayout(s.layout);
     setAspect(s.aspect);
@@ -1132,6 +1159,15 @@ export const AdImageDesigner: React.FC<Props> = ({
     setPricePos(s.pricePos);
     setCtaPos(s.ctaPos);
     setDiscountBadgePos(s.discountBadgePos);
+    const ext = s as Record<string, unknown>;
+    if (ext.discountBadgeShape != null) setDiscountBadgeShape(ext.discountBadgeShape as "rectangle" | "pill" | "circle");
+    if (ext.discountBadgePadding != null) setDiscountBadgePadding(Number(ext.discountBadgePadding));
+    if (ext.discountBadgeBorderRadius != null) setDiscountBadgeBorderRadius(Number(ext.discountBadgeBorderRadius));
+    if (ext.discountBadgeBgColor != null) setDiscountBadgeColor(ext.discountBadgeBgColor as string);
+    if (ext.discountBadgeTextColor != null) setDiscountBadgeTextColor(ext.discountBadgeTextColor as string);
+    if (ext.discountBadgeFontFamily != null) setDiscountBadgeFontFamily(ext.discountBadgeFontFamily as string);
+    if (ext.discountBadgeFontSize != null) setDiscountBadgeFontSize(ext.discountBadgeFontSize as "sm" | "base" | "lg");
+    if (ext.discountBadgeFontWeight != null) setDiscountBadgeFontWeight(ext.discountBadgeFontWeight as "normal" | "semibold" | "bold");
     setBadges(
       s.badges.map((b) => ({
         ...b,
@@ -1143,7 +1179,6 @@ export const AdImageDesigner: React.FC<Props> = ({
     );
     setCtaText(s.ctaText);
     setCtaColor(s.ctaColor);
-    const ext = s as Record<string, unknown>;
     if (ext.ctaBgColor != null) setCtaBgColor(ext.ctaBgColor as string);
     else if (s.ctaColor) setCtaBgColor(s.ctaColor);
     if (ext.ctaTextColor != null) setCtaTextColor(ext.ctaTextColor as string);
@@ -1157,6 +1192,9 @@ export const AdImageDesigner: React.FC<Props> = ({
     if (ext.priceFontFamily != null) setPriceFontFamily(ext.priceFontFamily as string);
     if (ext.priceFontSize != null) setPriceFontSize(ext.priceFontSize as "sm" | "base" | "lg");
     if (ext.priceFontWeight != null) setPriceFontWeight(ext.priceFontWeight as "normal" | "semibold" | "bold");
+    if (ext.priceShape != null) setPriceShape(ext.priceShape as "rectangle" | "pill" | "circle");
+    if (ext.pricePadding != null) setPricePadding(Number(ext.pricePadding));
+    if (ext.priceBorderRadius != null) setPriceBorderRadius(Number(ext.priceBorderRadius));
     setShowPrice(s.showPrice);
     setShowLogo(s.showLogo);
     setShowEyebrow(s.showEyebrow);
@@ -1182,6 +1220,11 @@ export const AdImageDesigner: React.FC<Props> = ({
     if (!template) return;
     applyTemplateState(template.state);
   }, [initialTemplateId, initialTemplateState, applyTemplateState]);
+
+  useEffect(() => {
+    setEditableAdDesignName(initialAdDesignName ?? "");
+    setEditableAdDesignNote(initialAdDesignNote ?? "");
+  }, [initialAdDesignId, initialAdDesignName, initialAdDesignNote]);
 
   return (
     <div className="h-full bg-white rounded-2xl shadow-xl w-full max-w-[1400px] flex flex-col border border-stone-200 min-h-0">
@@ -1472,11 +1515,11 @@ const badgeFontClassName = getFontClassName(b.fontFamily ?? "Prompt");
             {showDiscountBadge && discountPct > 0 && (
               <div
                 ref={discountBadgeElRef}
-                className={`absolute right-4 top-4 cursor-move ${selectedElementId === "discountBadge" ? "ring-2 ring-orange-400 ring-offset-1 rounded-full" : ""}`}
+                className={`absolute right-4 top-4 cursor-move ${selectedElementId === "discountBadge" ? "ring-2 ring-orange-400 ring-offset-1 rounded" : ""}`}
                 style={{ transform: `translate(${discountBadgePos.x}px, ${discountBadgePos.y}px)`, zIndex: getZIndex("discountBadge") }}
                 onMouseDown={(e) => { e.stopPropagation(); startDrag("discountBadge", e); }}
               >
-                <div className={`px-3 py-1.5 rounded-full shadow whitespace-nowrap ${discountBadgeBgCls} ${discountBadgeTextCls} ${discountBadgeFontClassName}`} style={discountBadgeStyle}>
+                <div className={`${discountBadgeContainerProps.className} ${discountBadgeFontClassName}`} style={{ ...discountBadgeContainerProps.style, ...discountBadgeStyle }}>
                   -{discountPct}%
                 </div>
               </div>
@@ -1562,8 +1605,13 @@ const badgeFontClassName = getFontClassName(b.fontFamily ?? "Prompt");
           )}
 
           <fieldset className="border border-stone-200 rounded-xl p-3 space-y-2">
-            <legend className="text-[11px] font-bold text-stone-500 uppercase tracking-wider px-1">Layout & Background</legend>
-            <div className="flex gap-2 items-center flex-wrap">
+            <button type="button" onClick={() => toggleSection("layout")} className="w-full flex items-center justify-between text-left px-1 -mx-1 rounded hover:bg-stone-50 py-0.5">
+              <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">Layout & Background</span>
+              <span className="text-stone-400 text-xs">{sectionOpen.layout ? "ซ่อน" : "แสดง"}</span>
+            </button>
+            {sectionOpen.layout && (
+            <>
+            <div className="flex gap-2 items-center flex-wrap pt-1">
               <button
                 type="button"
                 onClick={() => setLayout("split")}
@@ -1605,11 +1653,18 @@ const badgeFontClassName = getFontClassName(b.fontFamily ?? "Prompt");
                 </>
               )}
             </div>
+            </>
+            )}
           </fieldset>
 
           <fieldset className="border border-stone-200 rounded-xl p-3 space-y-2">
-            <legend className="text-[11px] font-bold text-stone-500 uppercase tracking-wider px-1">รูปภาพ</legend>
-            <div className="flex gap-2 items-center flex-wrap">
+            <button type="button" onClick={() => toggleSection("image")} className="w-full flex items-center justify-between text-left px-1 -mx-1 rounded hover:bg-stone-50 py-0.5">
+              <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">รูปภาพ</span>
+              <span className="text-stone-400 text-xs">{sectionOpen.image ? "ซ่อน" : "แสดง"}</span>
+            </button>
+            {sectionOpen.image && (
+            <>
+            <div className="flex gap-2 items-center flex-wrap pt-1">
               <span className="text-[11px] text-stone-500">ขนาดรูป</span>
               <input type="range" min={50} max={300} value={Math.round(imageScale * 100)} onChange={(e) => setImageScale(Number(e.target.value) / 100)} className="flex-1 accent-orange-500" />
               <span className="text-[11px] text-stone-500 ml-1">ความสว่าง</span>
@@ -1643,10 +1698,17 @@ const badgeFontClassName = getFontClassName(b.fontFamily ?? "Prompt");
                 Product cutout style
               </label>
             </div>
+            </>
+            )}
           </fieldset>
 
           <fieldset className="border border-stone-200 rounded-xl p-3 space-y-2">
-            <legend className="text-[11px] font-bold text-stone-500 uppercase tracking-wider px-1">ลดราคา</legend>
+            <button type="button" onClick={() => toggleSection("discount")} className="w-full flex items-center justify-between text-left px-1 -mx-1 rounded hover:bg-stone-50 py-0.5">
+              <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">ลดราคา</span>
+              <span className="text-stone-400 text-xs">{sectionOpen.discount ? "ซ่อน" : "แสดง"}</span>
+            </button>
+            {sectionOpen.discount && (
+            <>
             {discountPct > 0 ? (
               <>
                 <label className="inline-flex items-center gap-1.5 text-[11px] text-stone-700">
@@ -1656,44 +1718,54 @@ const badgeFontClassName = getFontClassName(b.fontFamily ?? "Prompt");
                 {showDiscountBadge && (
                   <div className="space-y-2 pl-0">
                     <div className="flex flex-wrap gap-0.5 items-center">
-                      <span className="text-[11px] text-stone-500 mr-1">พื้นหลัง</span>
-                      {DISCOUNT_BADGE_PRESETS.map((preset) => (
-                        <button key={preset.id} type="button" onClick={() => setDiscountBadgeColor(preset.id)} title={preset.label} className={`w-5 h-5 rounded-full border ${preset.swatch} ${discountBadgeColor === preset.id ? "ring-2 ring-orange-400 ring-offset-0.5" : "opacity-80 hover:opacity-100"}`} />
+                      <span className="text-[11px] text-stone-500 mr-1">สีตัวอักษร</span>
+                      {BADGE_TEXT_OPTIONS.map((opt) => (
+                        <button key={opt.id} type="button" onClick={() => setDiscountBadgeTextColor(opt.id)} title={opt.label} className={`w-4 h-4 rounded-full border ${opt.swatch} ${discountBadgeTextColor === opt.id ? "ring-2 ring-orange-400 ring-offset-1" : "opacity-60 hover:opacity-100"}`} />
                       ))}
                     </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1.5 items-center">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] text-stone-500">สีตัวอักษร</span>
-                        <div className="flex gap-0.5">
-                          {DISCOUNT_BADGE_TEXT_COLORS.map((c) => (
-                            <button key={c.id} type="button" onClick={() => setDiscountBadgeTextColor(c.id)} title={c.label} className={`px-2 py-0.5 rounded text-[10px] border ${discountBadgeTextColor === c.id ? "border-orange-400 bg-orange-50 text-orange-700" : "border-stone-200 text-stone-600"}`}>
-                              {c.label}
-                            </button>
-                          ))}
-                        </div>
+                    <div className="flex flex-wrap gap-0.5 items-center">
+                      <span className="text-[11px] text-stone-500 mr-1">พื้นหลัง</span>
+                      {BADGE_BG_OPTIONS.map((opt) => (
+                        <button key={opt.id} type="button" onClick={() => setDiscountBadgeColor(opt.id)} title={opt.label} className={`w-5 h-5 rounded-full border ${opt.swatch} ${discountBadgeColor === opt.id ? "ring-2 ring-orange-400 ring-offset-0.5" : "opacity-80 hover:opacity-100"}`} />
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[11px] text-stone-500 shrink-0">รูปร่าง</span>
+                      {(["rectangle", "pill", "circle"] as const).map((s) => (
+                        <button key={s} type="button" onClick={() => setDiscountBadgeShape(s)} className={`text-[10px] px-1.5 py-0.5 rounded border ${discountBadgeShape === s ? "border-orange-400 bg-orange-50 text-orange-700" : "border-stone-200 text-stone-600"}`}>
+                          {s === "rectangle" ? "□" : s === "pill" ? "⎯" : "○"}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-stone-500 shrink-0">padding</span>
+                      <input type="range" min={4} max={24} value={discountBadgePadding} onChange={(e) => setDiscountBadgePadding(Number(e.target.value))} className="flex-1 h-1.5 accent-orange-500" />
+                      <span className="text-[10px] text-stone-400 w-5">{discountBadgePadding}</span>
+                    </div>
+                    {discountBadgeShape === "rectangle" && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-stone-500 shrink-0">มุม</span>
+                        <input type="range" min={0} max={24} value={discountBadgeBorderRadius} onChange={(e) => setDiscountBadgeBorderRadius(Number(e.target.value))} className="flex-1 h-1.5 accent-orange-500" />
+                        <span className="text-[10px] text-stone-400 w-5">{discountBadgeBorderRadius}</span>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] text-stone-500">ฟอนต์</span>
-                        <select value={discountBadgeFontFamily} onChange={(e) => setDiscountBadgeFontFamily(e.target.value)} className="text-[11px] border border-stone-300 rounded px-2 py-0.5">
-                          {FONT_OPTIONS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
-                        </select>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] text-stone-500">ขนาด</span>
-                        {(["sm", "base", "lg"] as const).map((v) => (
-                          <button key={v} type="button" onClick={() => setDiscountBadgeFontSize(v)} className={`px-1.5 py-0.5 rounded text-[10px] border ${discountBadgeFontSize === v ? "border-orange-400 bg-orange-50 text-orange-700" : "border-stone-200 text-stone-600"}`}>
-                            {v === "sm" ? "เล็ก" : v === "base" ? "กลาง" : "ใหญ่"}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] text-stone-500">น้ำหนัก</span>
-                        {(["normal", "semibold", "bold"] as const).map((v) => (
-                          <button key={v} type="button" onClick={() => setDiscountBadgeFontWeight(v)} className={`px-1.5 py-0.5 rounded text-[10px] border ${discountBadgeFontWeight === v ? "border-orange-400 bg-orange-50 text-orange-700" : "border-stone-200 text-stone-600"}`}>
-                            {v === "normal" ? "ปกติ" : v === "semibold" ? "กลาง" : "หนา"}
-                          </button>
-                        ))}
-                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-x-3 gap-y-1.5 items-center">
+                      <span className="text-[11px] text-stone-500">ฟอนต์</span>
+                      <select value={discountBadgeFontFamily} onChange={(e) => setDiscountBadgeFontFamily(e.target.value)} className="text-[11px] border border-stone-300 rounded px-2 py-0.5">
+                        {FONT_OPTIONS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+                      </select>
+                      <span className="text-[11px] text-stone-500">ขนาด</span>
+                      {(["sm", "base", "lg"] as const).map((v) => (
+                        <button key={v} type="button" onClick={() => setDiscountBadgeFontSize(v)} className={`px-1.5 py-0.5 rounded text-[10px] border ${discountBadgeFontSize === v ? "border-orange-400 bg-orange-50 text-orange-700" : "border-stone-200 text-stone-600"}`}>
+                          {v === "sm" ? "เล็ก" : v === "base" ? "กลาง" : "ใหญ่"}
+                        </button>
+                      ))}
+                      <span className="text-[11px] text-stone-500">น้ำหนัก</span>
+                      {(["normal", "semibold", "bold"] as const).map((v) => (
+                        <button key={v} type="button" onClick={() => setDiscountBadgeFontWeight(v)} className={`px-1.5 py-0.5 rounded text-[10px] border ${discountBadgeFontWeight === v ? "border-orange-400 bg-orange-50 text-orange-700" : "border-stone-200 text-stone-600"}`}>
+                          {v === "normal" ? "ปกติ" : v === "semibold" ? "กลาง" : "หนา"}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -1701,12 +1773,18 @@ const badgeFontClassName = getFontClassName(b.fontFamily ?? "Prompt");
             ) : (
               <p className="text-[11px] text-stone-500">ไม่มีส่วนลด (ราคาปกติเท่ากับราคาขาย)</p>
             )}
+            </>
+            )}
           </fieldset>
 
           <fieldset ref={textSectionRef} className="border border-stone-200 rounded-xl p-3 space-y-3">
-            <legend className="text-[11px] font-bold text-stone-500 uppercase tracking-wider px-1">ข้อความ</legend>
-
-            <div className="space-y-1">
+            <button type="button" onClick={() => toggleSection("text")} className="w-full flex items-center justify-between text-left px-1 -mx-1 rounded hover:bg-stone-50 py-0.5">
+              <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">ข้อความ</span>
+              <span className="text-stone-400 text-xs">{sectionOpen.text ? "ซ่อน" : "แสดง"}</span>
+            </button>
+            {sectionOpen.text && (
+            <>
+            <div className="space-y-1 pt-1">
               <label className="flex items-center gap-1.5 text-xs font-semibold text-stone-600">
                 <input type="checkbox" className="rounded border-stone-300 text-orange-600 focus:ring-orange-500" checked={showEyebrow} onChange={(e) => setShowEyebrow(e.target.checked)} />
                 Eyebrow
@@ -1828,10 +1906,17 @@ const badgeFontClassName = getFontClassName(b.fontFamily ?? "Prompt");
                 )}
               </div>
             </div>
+            </>
+            )}
           </fieldset>
 
           <fieldset ref={badgesSectionRef} className="border border-stone-200 rounded-xl p-3 space-y-2">
-            <legend className="text-[11px] font-bold text-stone-500 uppercase tracking-wider px-1">Badges</legend>
+            <button type="button" onClick={() => toggleSection("badges")} className="w-full flex items-center justify-between text-left px-1 -mx-1 rounded hover:bg-stone-50 py-0.5">
+              <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">Badges</span>
+              <span className="text-stone-400 text-xs">{sectionOpen.badges ? "ซ่อน" : "แสดง"}</span>
+            </button>
+            {sectionOpen.badges && (
+            <div className="pt-1">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <span className="text-[11px] text-stone-400">ลากขยับได้บน canvas</span>
               <div className="flex items-center gap-1">
@@ -1933,11 +2018,17 @@ const badgeFontClassName = getFontClassName(b.fontFamily ?? "Prompt");
                 );
               })}
             </div>
+            </div>
+            )}
           </fieldset>
 
           <fieldset ref={priceSectionRef} className="border border-stone-200 rounded-xl p-3 space-y-3">
-            <legend className="text-[11px] font-bold text-stone-500 uppercase tracking-wider px-1">ราคา & ปุ่ม CTA</legend>
-
+            <button type="button" onClick={() => toggleSection("price")} className="w-full flex items-center justify-between text-left px-1 -mx-1 rounded hover:bg-stone-50 py-0.5">
+              <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">ราคา & ปุ่ม CTA</span>
+              <span className="text-stone-400 text-xs">{sectionOpen.price ? "ซ่อน" : "แสดง"}</span>
+            </button>
+            {sectionOpen.price && (
+            <div className="pt-1 space-y-3">
             <div className="space-y-1.5">
               <label className="inline-flex items-center gap-1.5 text-[11px] text-stone-700">
                 <input type="checkbox" className="rounded border-stone-300 text-orange-600 focus:ring-orange-500" checked={showPrice} onChange={(e) => setShowPrice(e.target.checked)} />
@@ -1985,6 +2076,26 @@ const badgeFontClassName = getFontClassName(b.fontFamily ?? "Prompt");
                           <input type="range" min={10} max={100} value={priceBgOpacity} onChange={(e) => setPriceBgOpacity(Number(e.target.value))} className="flex-1 accent-orange-500" />
                           <span className="text-[10px] text-stone-500 w-7 text-right">{priceBgOpacity}%</span>
                         </div>
+                        <div className="flex items-center gap-2 flex-wrap mt-1.5">
+                          <span className="text-[10px] text-stone-500 shrink-0">รูปร่าง</span>
+                          {(["rectangle", "pill", "circle"] as const).map((s) => (
+                            <button key={s} type="button" onClick={() => setPriceShape(s)} className={`text-[10px] px-1.5 py-0.5 rounded border ${priceShape === s ? "border-orange-400 bg-orange-50 text-orange-700" : "border-stone-200 text-stone-600"}`}>
+                              {s === "rectangle" ? "□" : s === "pill" ? "⎯" : "○"}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] text-stone-500 shrink-0">padding</span>
+                          <input type="range" min={4} max={24} value={pricePadding} onChange={(e) => setPricePadding(Number(e.target.value))} className="flex-1 h-1.5 accent-orange-500" />
+                          <span className="text-[10px] text-stone-400 w-5">{pricePadding}</span>
+                        </div>
+                        {priceShape === "rectangle" && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] text-stone-500 shrink-0">มุม</span>
+                            <input type="range" min={0} max={24} value={priceBorderRadius} onChange={(e) => setPriceBorderRadius(Number(e.target.value))} className="flex-1 h-1.5 accent-orange-500" />
+                            <span className="text-[10px] text-stone-400 w-5">{priceBorderRadius}</span>
+                          </div>
+                        )}
                       </>
                     )}
                   </div>
@@ -2038,6 +2149,8 @@ const badgeFontClassName = getFontClassName(b.fontFamily ?? "Prompt");
                 )}
               </div>
             </div>
+            </div>
+            )}
           </fieldset>
         </div>
       </div>
@@ -2066,9 +2179,6 @@ const badgeFontClassName = getFontClassName(b.fontFamily ?? "Prompt");
           <button type="button" onClick={exportAllSizes} disabled={saving} className="px-3 py-1.5 rounded-lg border border-stone-300 text-xs text-stone-700 hover:bg-stone-50 disabled:opacity-60" title="Export 1:1, 4:5, 9:16">
             Export all sizes
           </button>
-          <button type="button" onClick={saveAsTemplate} className="px-3 py-1.5 rounded-lg border border-stone-300 text-xs text-stone-700 hover:bg-stone-50">
-            Save as template
-          </button>
           {onSaveAdDesign && !initialAdDesignId && (
             <button
               type="button"
@@ -2084,7 +2194,38 @@ const badgeFontClassName = getFontClassName(b.fontFamily ?? "Prompt");
           )}
           {initialAdDesignId && (
             <>
-              <span className="text-[11px] text-stone-400 px-1">Ad Design: {initialAdDesignName ?? initialAdDesignId}</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  value={editableAdDesignName}
+                  onChange={(e) => setEditableAdDesignName(e.target.value)}
+                  placeholder="ชื่อ Ad Design"
+                  className="w-32 min-w-0 px-2 py-1 text-xs rounded-lg border border-stone-200 focus:outline-none focus:ring-1 focus:ring-violet-300 focus:border-violet-400"
+                />
+                <input
+                  type="text"
+                  value={editableAdDesignNote}
+                  onChange={(e) => setEditableAdDesignNote(e.target.value)}
+                  placeholder="หมายเหตุ (ถ้ามี)"
+                  className="w-40 min-w-0 px-2 py-1 text-xs rounded-lg border border-stone-200 focus:outline-none focus:ring-1 focus:ring-violet-300 focus:border-violet-400"
+                />
+                {onUpdateAdDesignMeta && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!editableAdDesignName.trim()) return;
+                      onUpdateAdDesignMeta(initialAdDesignId, {
+                        name: editableAdDesignName.trim(),
+                        note: editableAdDesignNote.trim() || null,
+                      });
+                    }}
+                    disabled={!editableAdDesignName.trim()}
+                    className="px-3 py-1.5 rounded-lg border border-violet-300 text-xs text-violet-700 hover:bg-violet-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    บันทึก
+                  </button>
+                )}
+              </div>
               {onUpdateAdDesign && (
                 <button
                   type="button"
@@ -2092,20 +2233,6 @@ const badgeFontClassName = getFontClassName(b.fontFamily ?? "Prompt");
                   className="px-3 py-1.5 rounded-lg border border-violet-300 text-xs text-violet-700 hover:bg-violet-50"
                 >
                   อัปเดต design
-                </button>
-              )}
-              {onRenameAdDesign && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newName = typeof window !== "undefined" ? window.prompt("ชื่อใหม่", initialAdDesignName ?? "") : null;
-                    if (newName === null) return;
-                    if (!newName.trim()) return;
-                    onRenameAdDesign(initialAdDesignId, newName.trim());
-                  }}
-                  className="px-3 py-1.5 rounded-lg border border-stone-300 text-xs text-stone-700 hover:bg-stone-50"
-                >
-                  เปลี่ยนชื่อ
                 </button>
               )}
               {onDeleteAdDesign && (

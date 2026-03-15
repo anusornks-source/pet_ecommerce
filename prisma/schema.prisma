@@ -431,6 +431,7 @@ model AdDesign {
   id        String   @id @default(cuid())
   productId String
   name      String   /// ชื่อที่ user ตั้ง (แสดงในรายการโหลด)
+  note      String?  /// หมายเหตุ (แก้ได้จาก ad designer)
   state     Json     /// AdTemplateState จาก adDesignerTemplates
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

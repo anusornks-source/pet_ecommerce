@@ -21,7 +21,7 @@ export async function GET(
   const list = await prisma.adDesign.findMany({
     where: { productId },
     orderBy: { updatedAt: "desc" },
-    select: { id: true, name: true, state: true, createdAt: true, updatedAt: true },
+    select: { id: true, name: true, note: true, state: true, createdAt: true, updatedAt: true },
   });
   return NextResponse.json({ success: true, data: list });
 }
@@ -43,7 +43,7 @@ export async function POST(
   }
 
   const body = await request.json();
-  const { name, state } = body;
+  const { name, note, state } = body;
   if (!name || typeof name !== "string" || !name.trim()) {
     return NextResponse.json({ success: false, error: "name required" }, { status: 400 });
   }
@@ -55,6 +55,7 @@ export async function POST(
     data: {
       productId,
       name: name.trim(),
+      note: typeof note === "string" && note.trim() ? note.trim() : null,
       state: state as object,
     },
   });

@@ -316,6 +316,7 @@ model Product {
   marketingAssets  MarketingAsset[]
   /// ลำดับ marketing assets เมื่อดูที่หน้าสินค้า (asset IDs)
   marketingAssetOrder String[] @default([])
+  adDesigns       AdDesign[]
   suppliers        ProductSupplier[]
   supplierProduct  SupplierProduct?
 
@@ -423,6 +424,21 @@ model MarketingAsset {
   @@index([productId])
   @@index([marketingPackId])
   @@map("marketing_assets")
+}
+
+/// Ad design draft: เก็บ state ของ Ads Creator ต่อ product — โหลดกลับมาแก้ต่อได้
+model AdDesign {
+  id        String   @id @default(cuid())
+  productId String
+  name      String   /// ชื่อที่ user ตั้ง (แสดงในรายการโหลด)
+  state     Json     /// AdTemplateState จาก adDesignerTemplates
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("ad_designs")
 }
 
 // ─── Customer ─────────────────────────────────────────────────

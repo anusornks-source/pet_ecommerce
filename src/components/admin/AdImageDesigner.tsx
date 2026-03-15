@@ -62,6 +62,13 @@ type Props = {
   backHref?: string;
   initialTemplateId?: string | null;
   initialTemplateState?: AdTemplateState | null;
+  /** โหลด Ad Design จาก DB — แสดงปุ่ม อัปเดต / เปลี่ยนชื่อ / ลบ */
+  initialAdDesignId?: string | null;
+  initialAdDesignName?: string | null;
+  onSaveAdDesign?: (payload: { name: string; state: AdTemplateState }) => void | Promise<void>;
+  onUpdateAdDesign?: (payload: { id: string; state: AdTemplateState }) => void | Promise<void>;
+  onRenameAdDesign?: (id: string, newName: string) => void | Promise<void>;
+  onDeleteAdDesign?: (id: string) => void | Promise<void>;
 };
 
 type AiField = "ad_title" | "ad_subtitle" | "ad_badge";
@@ -201,7 +208,20 @@ function getBadgeContainerProps(b: BadgeItem, bgCls: string, txtCls: string): { 
   };
 }
 
-export const AdImageDesigner: React.FC<Props> = ({ product, context, onSaved, backHref, initialTemplateId, initialTemplateState }) => {
+export const AdImageDesigner: React.FC<Props> = ({
+  product,
+  context,
+  onSaved,
+  backHref,
+  initialTemplateId,
+  initialTemplateState,
+  initialAdDesignId,
+  initialAdDesignName,
+  onSaveAdDesign,
+  onUpdateAdDesign,
+  onRenameAdDesign,
+  onDeleteAdDesign,
+}) => {
   const [lang, setLang] = useState<Lang>("th");
   const [showSnapLines, setShowSnapLines] = useState(false);
   const [aspect, setAspect] = useState<Aspect>("1:1");
@@ -2049,6 +2069,52 @@ const badgeFontClassName = getFontClassName(b.fontFamily ?? "Prompt");
           <button type="button" onClick={saveAsTemplate} className="px-3 py-1.5 rounded-lg border border-stone-300 text-xs text-stone-700 hover:bg-stone-50">
             Save as template
           </button>
+          {onSaveAdDesign && !initialAdDesignId && (
+            <button
+              type="button"
+              onClick={() => {
+                const name = typeof window !== "undefined" ? window.prompt("ชื่อ Ad Design", "Design 1") : null;
+                if (!name?.trim()) return;
+                onSaveAdDesign({ name: name.trim(), state: getCurrentTemplateState() });
+              }}
+              className="px-3 py-1.5 rounded-lg border border-violet-300 text-xs text-violet-700 hover:bg-violet-50"
+            >
+              บันทึกเป็น Ad Design
+            </button>
+          )}
+          {initialAdDesignId && (
+            <>
+              <span className="text-[11px] text-stone-400 px-1">Ad Design: {initialAdDesignName ?? initialAdDesignId}</span>
+              {onUpdateAdDesign && (
+                <button
+                  type="button"
+                  onClick={() => onUpdateAdDesign({ id: initialAdDesignId, state: getCurrentTemplateState() })}
+                  className="px-3 py-1.5 rounded-lg border border-violet-300 text-xs text-violet-700 hover:bg-violet-50"
+                >
+                  อัปเดต design
+                </button>
+              )}
+              {onRenameAdDesign && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newName = typeof window !== "undefined" ? window.prompt("ชื่อใหม่", initialAdDesignName ?? "") : null;
+                    if (newName === null) return;
+                    if (!newName.trim()) return;
+                    onRenameAdDesign(initialAdDesignId, newName.trim());
+                  }}
+                  className="px-3 py-1.5 rounded-lg border border-stone-300 text-xs text-stone-700 hover:bg-stone-50"
+                >
+                  เปลี่ยนชื่อ
+                </button>
+              )}
+              {onDeleteAdDesign && (
+                <button type="button" onClick={() => onDeleteAdDesign(initialAdDesignId)} className="px-3 py-1.5 rounded-lg border border-red-200 text-xs text-red-600 hover:bg-red-50">
+                  ลบ
+                </button>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>

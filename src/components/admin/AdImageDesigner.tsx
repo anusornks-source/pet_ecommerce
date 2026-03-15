@@ -2195,20 +2195,26 @@ const badgeFontClassName = getFontClassName(b.fontFamily ?? "Prompt");
           {initialAdDesignId && (
             <>
               <div className="flex flex-wrap items-center gap-2">
-                <input
-                  type="text"
-                  value={editableAdDesignName}
-                  onChange={(e) => setEditableAdDesignName(e.target.value)}
-                  placeholder="ชื่อ Ad Design"
-                  className="w-32 min-w-0 px-2 py-1 text-xs rounded-lg border border-stone-200 focus:outline-none focus:ring-1 focus:ring-violet-300 focus:border-violet-400"
-                />
-                <input
-                  type="text"
-                  value={editableAdDesignNote}
-                  onChange={(e) => setEditableAdDesignNote(e.target.value)}
-                  placeholder="หมายเหตุ (ถ้ามี)"
-                  className="w-40 min-w-0 px-2 py-1 text-xs rounded-lg border border-stone-200 focus:outline-none focus:ring-1 focus:ring-violet-300 focus:border-violet-400"
-                />
+                <label className="flex items-center gap-1.5">
+                  <span className="text-xs text-stone-500 shrink-0">ชื่อ:</span>
+                  <input
+                    type="text"
+                    value={editableAdDesignName}
+                    onChange={(e) => setEditableAdDesignName(e.target.value)}
+                    placeholder="ชื่อ Ad Design"
+                    className="w-32 min-w-0 px-2 py-1 text-xs rounded-lg border border-stone-200 focus:outline-none focus:ring-1 focus:ring-violet-300 focus:border-violet-400"
+                  />
+                </label>
+                <label className="flex flex-col gap-0.5">
+                  <span className="text-xs text-stone-500 shrink-0">หมายเหตุ:</span>
+                  <textarea
+                    rows={2}
+                    value={editableAdDesignNote}
+                    onChange={(e) => setEditableAdDesignNote(e.target.value)}
+                    placeholder="ถ้ามี"
+                    className="w-40 min-w-0 px-2 py-1 text-xs rounded-lg border border-stone-200 focus:outline-none focus:ring-1 focus:ring-violet-300 focus:border-violet-400 resize-y"
+                  />
+                </label>
                 {onUpdateAdDesignMeta && (
                   <button
                     type="button"

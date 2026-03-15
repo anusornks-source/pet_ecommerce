@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { ProductValidationStatus } from "@/generated/prisma/client";
 import ProductCard from "@/components/ProductCard";
 import HeroSlider from "@/components/HeroSlider";
 import type { Product } from "@/types";
@@ -71,7 +72,7 @@ export default async function ShopPage({
       include: {
         items: {
           orderBy: { order: "asc" },
-          where: { product: { active: true } },
+          where: { product: { active: true, validationStatus: ProductValidationStatus.Approved } },
           include: {
             product: {
               include: productInclude,
@@ -108,14 +109,14 @@ export default async function ShopPage({
         const ids = sold.map((r) => r.productId);
         if (ids.length > 0) {
           products = await prisma.product.findMany({
-            where: { id: { in: ids }, active: true },
+            where: { id: { in: ids }, active: true, validationStatus: ProductValidationStatus.Approved },
             include: productInclude,
           });
           products = ids.map((id) => products.find((p) => p.id === id)!).filter(Boolean);
         }
       } else if (shelf.sourceType === "featured") {
         products = await prisma.product.findMany({
-          where: { shopId: shop.id, featured: true, active: true },
+          where: { shopId: shop.id, featured: true, active: true, validationStatus: ProductValidationStatus.Approved },
           include: productInclude,
           orderBy: { createdAt: "desc" },
           take: limit,

@@ -20,6 +20,8 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { SUPPLIER_SEARCH_PAGE_SIZE } from "@/lib/constants";
+import { ProductValidationStatus } from "@/generated/prisma/enums";
 
 interface CategoryGroupLite {
   id: string;
@@ -134,6 +136,7 @@ interface ProductFormProps {
     petTypeId: string;
     active: boolean;
     featured: boolean;
+    validationStatus?: string;
     deliveryDays?: string;
     warehouseCountry?: string;
     fulfillmentMethod?: string;
@@ -171,6 +174,7 @@ export default function ProductForm({ productId, productShopId, initialData }: P
     petTypeId: "",
     active: true,
     featured: false,
+    validationStatus: ProductValidationStatus.Approved,
     deliveryDays: "2",
     warehouseCountry: "",
     fulfillmentMethod: "SELF",
@@ -184,6 +188,16 @@ export default function ProductForm({ productId, productShopId, initialData }: P
   const [stockRange, setStockRange] = useState({ min: 50, max: 100 });
   const [allTags, setAllTags] = useState<TagOption[]>([]);
   const [tagIds, setTagIds] = useState<string[]>(initialData?.tagIds ?? []);
+
+  type SupplierOption = { id: string; name: string; nameTh: string | null; imageUrl: string | null };
+  const [supplierSearch, setSupplierSearch] = useState("");
+  const [supplierPage, setSupplierPage] = useState(1);
+  const [supplierTotal, setSupplierTotal] = useState(0);
+  const [supplierResults, setSupplierResults] = useState<SupplierOption[]>([]);
+  const [supplierLoading, setSupplierLoading] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState<SupplierOption | null>(null);
+  const [supplierPrice, setSupplierPrice] = useState("");
+  const supplierSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const emptyVariant = (): VariantRow => {
     const stock = Math.floor(Math.random() * (stockRange.max - stockRange.min + 1)) + stockRange.min;
@@ -234,6 +248,25 @@ export default function ProductForm({ productId, productShopId, initialData }: P
       .then((r) => r.json())
       .then((d) => { if (d.success) setAllTags(d.data); });
   }, [effectiveShopId, effectiveShop]);
+
+  useEffect(() => {
+    if (supplierSearchRef.current) clearTimeout(supplierSearchRef.current);
+    supplierSearchRef.current = setTimeout(() => {
+      setSupplierLoading(true);
+      const q = new URLSearchParams({ minimal: "true", limit: String(SUPPLIER_SEARCH_PAGE_SIZE), page: String(supplierPage) });
+      if (supplierSearch.trim()) q.set("search", supplierSearch.trim());
+      fetch(`/api/admin/suppliers?${q}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success) {
+            setSupplierResults(d.data ?? []);
+            setSupplierTotal(d.total ?? 0);
+          }
+        })
+        .finally(() => setSupplierLoading(false));
+    }, 300);
+    return () => { if (supplierSearchRef.current) clearTimeout(supplierSearchRef.current); };
+  }, [supplierSearch, supplierPage]);
 
   const imageList = form.images.split(",").map((u) => u.trim()).filter(Boolean);
 
@@ -312,6 +345,19 @@ export default function ProductForm({ productId, productShopId, initialData }: P
     const data = await res.json();
 
     if (data.success) {
+      const newProductId = productId ? undefined : (data.data?.id as string | undefined);
+      if (newProductId && selectedSupplier) {
+        const priceVal = supplierPrice.trim() ? parseFloat(supplierPrice) : null;
+        const linkRes = await fetch(`/api/admin/suppliers/${selectedSupplier.id}/products`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: newProductId, supplierPrice: priceVal }),
+        });
+        const linkData = await linkRes.json();
+        if (!linkData.success) {
+          toast.error(linkData.error || "ผูก Supplier ไม่สำเร็จ");
+        }
+      }
       toast.success(productId ? "บันทึกแล้ว" : "เพิ่มสินค้าแล้ว");
       router.push("/admin/products");
     } else {
@@ -716,6 +762,94 @@ export default function ProductForm({ productId, productShopId, initialData }: P
         </div>
       </div>
 
+      {!productId && (
+        <div className="border border-stone-200 rounded-xl p-4 bg-stone-50/50">
+          <label className="block text-sm font-medium text-stone-700 mb-2">Supplier (ถ้ามี)</label>
+          <p className="text-xs text-stone-500 mb-3">ค้นหาและเลือก supplier แล้วใส่ราคาขาย supplier ได้</p>
+          <div className="flex gap-2 mb-3">
+            <input
+              type="search"
+              value={supplierSearch}
+              onChange={(e) => { setSupplierSearch(e.target.value); setSupplierPage(1); }}
+              placeholder="ค้นหาชื่อ supplier..."
+              className="flex-1 border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+            />
+          </div>
+          {selectedSupplier ? (
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-white border border-stone-200 mb-3">
+              {selectedSupplier.imageUrl ? (
+                <img src={selectedSupplier.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover border border-stone-200" />
+              ) : (
+                <div className="w-10 h-10 rounded-lg bg-stone-200 flex items-center justify-center text-stone-500 text-lg">🏪</div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-stone-800">{selectedSupplier.nameTh || selectedSupplier.name}</p>
+                <p className="text-xs text-stone-500">ID: {selectedSupplier.id}</p>
+                <p className="text-xs text-stone-500">ราคาขาย supplier (บาท)</p>
+              </div>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={supplierPrice}
+                onChange={(e) => setSupplierPrice(e.target.value)}
+                placeholder="0"
+                className="w-28 border border-stone-200 rounded-lg px-2 py-1.5 text-sm"
+              />
+              <button type="button" onClick={() => { setSelectedSupplier(null); setSupplierPrice(""); }} className="text-xs text-red-600 hover:underline">
+                ยกเลิก
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="max-h-48 overflow-y-auto border border-stone-200 rounded-lg bg-white divide-y divide-stone-100">
+                {supplierLoading && <div className="p-3 text-sm text-stone-400">กำลังโหลด...</div>}
+                {!supplierLoading && supplierResults.length === 0 && <div className="p-3 text-sm text-stone-400">พิมพ์ค้นหาหรือไม่มีรายการ</div>}
+                {!supplierLoading && supplierResults.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setSelectedSupplier(s)}
+                    className="w-full flex items-center gap-3 p-3 text-left hover:bg-stone-50 transition-colors"
+                  >
+                    {s.imageUrl ? (
+                      <img src={s.imageUrl} alt="" className="w-9 h-9 rounded-lg object-cover border border-stone-200 shrink-0" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-lg bg-stone-200 flex items-center justify-center text-stone-500 shrink-0">🏪</div>
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <span className="font-medium text-stone-800 truncate block">{s.nameTh || s.name}</span>
+                      <span className="text-xs text-stone-500">ID: {s.id}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+              {supplierTotal > SUPPLIER_SEARCH_PAGE_SIZE && (
+                <div className="flex items-center gap-2 mt-2">
+                  <button
+                    type="button"
+                    disabled={supplierPage <= 1}
+                    onClick={() => setSupplierPage((p) => Math.max(1, p - 1))}
+                    className="text-xs px-2 py-1 rounded border border-stone-200 disabled:opacity-40"
+                  >
+                    ← ก่อน
+                  </button>
+                  <span className="text-xs text-stone-500">หน้า {supplierPage} / {Math.ceil(supplierTotal / SUPPLIER_SEARCH_PAGE_SIZE)}</span>
+                  <button
+                    type="button"
+                    disabled={supplierPage >= Math.ceil(supplierTotal / SUPPLIER_SEARCH_PAGE_SIZE)}
+                    onClick={() => setSupplierPage((p) => p + 1)}
+                    className="text-xs px-2 py-1 rounded border border-stone-200 disabled:opacity-40"
+                  >
+                    ถัดไป →
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       <div className={`grid gap-4 ${effectiveShop?.usePetType !== false ? "grid-cols-2" : "grid-cols-1"}`}>
         <div>
           <label className="block text-sm font-medium text-stone-700 mb-1.5">
@@ -785,7 +919,7 @@ export default function ProductForm({ productId, productShopId, initialData }: P
       </div>
 
       {/* Variants */}
-      <div>
+      <div className="border border-stone-200 rounded-xl p-4 bg-stone-50/50">
         <div className="flex items-center justify-between mb-2">
           <label className="block text-sm font-medium text-stone-700">
             Variants (ขนาด / สี) — <span className="text-stone-400 font-normal">ถ้าไม่มี variants ราคา/สต็อกจะใช้จากด้านบน</span>
@@ -883,23 +1017,45 @@ export default function ProductForm({ productId, productShopId, initialData }: P
         )}
       </div>
 
-      <div className="flex items-center gap-6">
-        {/* Active toggle */}
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setForm((f) => ({ ...f, active: !f.active }))}
-            className={`relative w-11 h-6 rounded-full transition-colors ${form.active ? "bg-green-400" : "bg-stone-300"}`}
-          >
-            <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.active ? "translate-x-5" : "translate-x-0.5"}`} />
-          </button>
-          <span className={`text-sm font-medium ${form.active ? "text-green-600" : "text-stone-400"}`}>
-            {form.active ? "แสดงในร้าน (Active)" : "ซ่อนจากร้าน (Inactive)"}
-          </span>
+      <div className="space-y-3">
+        <div className="border border-stone-200 rounded-xl p-4 bg-stone-50/50 flex items-center gap-6">
+          {/* Validation status — ไม่ใช่ Approved จะไม่แสดงบนร้านและขายไม่ได้ */}
+          <div className="flex items-center gap-2">
+            <label htmlFor="validationStatus" className="text-sm font-medium text-stone-700 whitespace-nowrap">
+              สถานะการอนุมัติ
+            </label>
+            <select
+              id="validationStatus"
+              value={form.validationStatus ?? ProductValidationStatus.Approved}
+              onChange={(e) => setForm((f) => ({ ...f, validationStatus: e.target.value as ProductValidationStatus }))}
+              className="border border-stone-200 rounded-lg px-2 py-1.5 text-sm"
+            >
+              <option value={ProductValidationStatus.Lead}>Lead</option>
+              <option value={ProductValidationStatus.Qualified}>Qualified</option>
+              <option value={ProductValidationStatus.Approved}>Approved</option>
+              <option value={ProductValidationStatus.Rejected}>Rejected</option>
+            </select>
+          </div>
+
+          {/* Active toggle */}
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setForm((f) => ({ ...f, active: !f.active }))}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-200 focus:ring-offset-2 ${form.active ? "bg-green-400" : "bg-stone-300"}`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-200 ${form.active ? "left-[22px]" : "left-0.5"}`}
+              />
+            </button>
+            <span className={`text-sm font-medium shrink-0 ${form.active ? "text-green-600" : "text-stone-400"}`}>
+              {form.active ? "แสดงในร้าน (Active)" : "ซ่อนจากร้าน (Inactive)"}
+            </span>
+          </div>
         </div>
 
         {/* Featured */}
-        <div className="flex items-center gap-2">
+        <div className="border border-stone-200 rounded-xl p-4 bg-stone-50/50 flex items-center gap-2">
           <input
             type="checkbox"
             id="featured"
@@ -915,7 +1071,7 @@ export default function ProductForm({ productId, productShopId, initialData }: P
 
       {/* Tags */}
       {allTags.length > 0 && (
-        <div>
+        <div className="border border-stone-200 rounded-xl p-4 bg-stone-50/50">
           <label className="block text-sm font-medium text-stone-700 mb-2">🔖 Tags / Badge</label>
           <div className="flex flex-wrap gap-2">
             {allTags.map((tag) => {

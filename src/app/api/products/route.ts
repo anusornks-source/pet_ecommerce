@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ProductValidationStatus } from "@/generated/prisma/client";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
   const shopSlug = searchParams.get("shopSlug");
   const shelfSlug = searchParams.get("shelf");
 
-  const where: Record<string, unknown> = { active: true };
+  const where: Record<string, unknown> = { active: true, validationStatus: ProductValidationStatus.Approved };
   let shelfOrderedIds: string[] | null = null;
 
   if (shopSlug) {

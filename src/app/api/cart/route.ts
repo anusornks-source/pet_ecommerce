@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { ProductValidationStatus } from "@/generated/prisma/client";
 
 // GET cart
 export async function GET() {
@@ -40,12 +41,14 @@ export async function POST(request: NextRequest) {
 
   // Validate stock — use variant stock if provided, otherwise product stock
   if (variantId) {
-    const variant = await prisma.productVariant.findUnique({ where: { id: variantId } });
+    const variant = await prisma.productVariant.findUnique({ where: { id: variantId }, include: { product: true } });
     if (!variant) return NextResponse.json({ success: false, error: "ไม่พบ variant" }, { status: 404 });
+    if (variant.product.validationStatus !== ProductValidationStatus.Approved) return NextResponse.json({ success: false, error: "สินค้านี้ยังไม่เปิดขาย" }, { status: 400 });
     if (variant.stock < quantity) return NextResponse.json({ success: false, error: "สินค้าไม่เพียงพอ" }, { status: 400 });
   } else {
     const product = await prisma.product.findUnique({ where: { id: productId } });
     if (!product) return NextResponse.json({ success: false, error: "ไม่พบสินค้า" }, { status: 404 });
+    if (product.validationStatus !== ProductValidationStatus.Approved) return NextResponse.json({ success: false, error: "สินค้านี้ยังไม่เปิดขาย" }, { status: 400 });
     if (product.stock < quantity) return NextResponse.json({ success: false, error: "สินค้าไม่เพียงพอ" }, { status: 400 });
   }
 

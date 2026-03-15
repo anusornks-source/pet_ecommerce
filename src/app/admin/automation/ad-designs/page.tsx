@@ -26,9 +26,7 @@ export default function AdDesignsPage() {
   const [editName, setEditName] = useState("");
   const [editNote, setEditNote] = useState("");
   const [saving, setSaving] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [productSearch, setProductSearch] = useState("");
-  const [productOptions, setProductOptions] = useState<{ id: string; name: string; name_th: string | null }[]>([]);
+  const [showAddHint, setShowAddHint] = useState(false);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -47,23 +45,6 @@ export default function AdDesignsPage() {
   useEffect(() => {
     fetchList();
   }, [fetchList]);
-
-  useEffect(() => {
-    if (!showAddModal) return;
-    if (!productSearch.trim()) {
-      setProductOptions([]);
-      return;
-    }
-    const t = setTimeout(async () => {
-      const res = await fetch(
-        `/api/admin/products?search=${encodeURIComponent(productSearch)}&nameOnly=true&limit=20`
-      );
-      const data = await res.json();
-      const arr = data.products ?? data.data ?? [];
-      setProductOptions(Array.isArray(arr) ? arr : []);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [showAddModal, productSearch]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("ลบ Ad Design นี้?")) return;
@@ -122,13 +103,6 @@ export default function AdDesignsPage() {
     }
   };
 
-  const handleAddSelectProduct = (productId: string) => {
-    setShowAddModal(false);
-    setProductSearch("");
-    setProductOptions([]);
-    window.location.href = `/admin/ad-designer?productId=${productId}&returnUrl=${encodeURIComponent("/admin/automation/ad-designs")}`;
-  };
-
   const formatDate = (s: string) => {
     try {
       const d = new Date(s);
@@ -158,13 +132,34 @@ export default function AdDesignsPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="w-72 px-3 py-2 text-sm rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400"
           />
-          <button
-            type="button"
-            onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 transition-colors"
-          >
-            + เพิ่ม Ad Design
-          </button>
+          <div className="relative flex items-center gap-1.5 shrink-0">
+            <Link
+              href="/admin/products?addAdDesign=1"
+              className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 transition-colors inline-flex items-center gap-2"
+            >
+              + เพิ่ม Ad Design
+            </Link>
+            <button
+              type="button"
+              onClick={() => setShowAddHint((v) => !v)}
+              className="w-5 h-5 rounded-full border border-stone-300 bg-stone-50 text-stone-500 hover:bg-stone-100 hover:text-stone-700 flex items-center justify-center text-xs font-semibold"
+              title="วิธีเพิ่ม Ad Design"
+            >
+              i
+            </button>
+            {showAddHint && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  aria-hidden
+                  onClick={() => setShowAddHint(false)}
+                />
+                <div className="absolute right-0 top-full mt-1 z-20 w-72 p-3 text-xs text-stone-600 bg-white border border-stone-200 rounded-lg shadow-lg">
+                  เพิ่ม Ad Design โดยกดปุ่ม Ads Creator ที่หน้า View Product
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -173,7 +168,7 @@ export default function AdDesignsPage() {
           <div className="p-12 text-center text-stone-500">กำลังโหลด...</div>
         ) : list.length === 0 ? (
           <div className="p-12 text-center text-stone-500">
-            {search.trim() ? "ไม่พบรายการที่ตรงกับคำค้น" : "ยังไม่มี Ad Design — กดเพิ่มแล้วไปสร้างจาก Ad Designer"}
+            {search.trim() ? "ไม่พบรายการที่ตรงกับคำค้น" : "ยังไม่มี Ad Design — กดเพิ่ม Ad Design แล้วไปเลือกสินค้าที่หน้ารายการสินค้า"}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -288,57 +283,6 @@ export default function AdDesignsPage() {
           </div>
         )}
       </div>
-
-      {showAddModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          onClick={() => setShowAddModal(false)}
-        >
-          <div
-            className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-semibold text-stone-800 mb-3">
-              เลือกสินค้าเพื่อสร้าง Ad Design
-            </h3>
-            <input
-              type="text"
-              value={productSearch}
-              onChange={(e) => setProductSearch(e.target.value)}
-              placeholder="ค้นชื่อสินค้า..."
-              className="w-full px-3 py-2 text-sm rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-violet-300 mb-3"
-            />
-            <ul className="max-h-60 overflow-y-auto border border-stone-200 rounded-lg divide-y divide-stone-100">
-              {productOptions.length === 0 && !productSearch.trim() && (
-                <li className="px-3 py-4 text-sm text-stone-400">พิมพ์ค้นหาสินค้า</li>
-              )}
-              {productOptions.length === 0 && productSearch.trim() && (
-                <li className="px-3 py-4 text-sm text-stone-400">ไม่พบสินค้า</li>
-              )}
-              {productOptions.map((p) => (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    onClick={() => handleAddSelectProduct(p.id)}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-violet-50 text-stone-800"
-                  >
-                    {p.name_th || p.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-4 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded-lg"
-              >
-                ยกเลิก
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

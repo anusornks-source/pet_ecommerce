@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
-import { FulfillmentMethod } from "@/generated/prisma/client";
+import { FulfillmentMethod, ProductValidationStatus } from "@/generated/prisma/client";
 
 export async function GET(
   request: NextRequest,
@@ -13,16 +13,29 @@ export async function GET(
   const isAdmin = payload.role === "ADMIN";
 
   const { id } = await params;
-  const product = await prisma.product.findFirst({
-    where: isAdmin ? { id } : { id, shopId },
-    include: {
-      category: true,
-      petType: true,
-      variants: { orderBy: { createdAt: "asc" } },
-      tags: true,
-      _count: { select: { marketingAssets: true } },
-    },
-  });
+  const [product, soldResult] = await Promise.all([
+    prisma.product.findFirst({
+      where: isAdmin ? { id } : { id, shopId },
+      include: {
+        category: true,
+        petType: true,
+        shop: { select: { id: true, name: true } },
+        variants: { orderBy: { createdAt: "asc" } },
+        tags: true,
+        _count: { select: { marketingAssets: true } },
+      },
+    }),
+    prisma.orderItem.aggregate({
+      where: {
+        productId: id,
+        order: {
+          ...(isAdmin ? {} : { shopId }),
+          status: { not: "CANCELLED" },
+        },
+      },
+      _sum: { quantity: true },
+    }),
+  ]);
 
   if (!product) {
     return NextResponse.json(
@@ -31,7 +44,8 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({ success: true, data: product });
+  const soldCount = soldResult._sum.quantity ?? 0;
+  return NextResponse.json({ success: true, data: { ...product, soldCount } });
 }
 
 export async function PUT(
@@ -65,6 +79,7 @@ export async function PUT(
     deliveryDays,
     warehouseCountry,
     fulfillmentMethod,
+    validationStatus,
     variants,
     tagIds,
     shopId: newShopId,
@@ -129,6 +144,7 @@ export async function PUT(
       ...(deliveryDays !== undefined && { deliveryDays: parseInt(deliveryDays) }),
       ...(warehouseCountry !== undefined && { warehouseCountry: warehouseCountry || null }),
       ...(fulfillmentMethod !== undefined && { fulfillmentMethod: fulfillmentMethod as FulfillmentMethod }),
+      ...(validationStatus !== undefined && Object.values(ProductValidationStatus).includes(validationStatus as ProductValidationStatus) && { validationStatus: validationStatus as ProductValidationStatus }),
       ...(tagIds !== undefined && { tags: { set: (tagIds as string[]).map((tid) => ({ id: tid })) } }),
       ...(isAdmin && newShopId !== undefined && { shopId: newShopId }),
     },
@@ -150,9 +166,18 @@ export async function DELETE(
   const { id } = await params;
 
   // Platform ADMIN can delete any product; shop members only their own shop's products
-  const existingProduct = await prisma.product.findFirst({ where: isAdmin ? { id } : { id, shopId } });
+  const existingProduct = await prisma.product.findFirst({
+    where: isAdmin ? { id } : { id, shopId },
+    include: { _count: { select: { marketingAssets: true } } },
+  });
   if (!existingProduct) {
     return NextResponse.json({ success: false, error: "ไม่พบสินค้า" }, { status: 404 });
+  }
+  if (existingProduct._count.marketingAssets > 0) {
+    return NextResponse.json(
+      { success: false, error: "ไม่สามารถลบได้ เนื่องจากมี Marketing Asset เชื่อมโยงอยู่ กรุณาลบหรือย้าย Marketing Asset ออกก่อน" },
+      { status: 400 }
+    );
   }
 
   await prisma.cartItem.deleteMany({ where: { productId: id } });

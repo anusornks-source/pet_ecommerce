@@ -1,4 +1,4 @@
-﻿-- CreateEnum
+-- CreateEnum
 CREATE TYPE "MarketingAssetType" AS ENUM ('IMAGE', 'VIDEO', 'PDF');
 
 -- AlterTable

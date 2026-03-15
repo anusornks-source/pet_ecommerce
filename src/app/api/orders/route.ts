@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { ProductValidationStatus } from "@/generated/prisma/client";
 import { sendOrderNotification, sendCustomerOrderConfirmation } from "@/lib/email";
 import { logApi } from "@/lib/apiLogger";
 import { calculateCartShipping } from "@/lib/shipping";
@@ -53,8 +54,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Check stock (use variant stock if applicable)
+  // Check each item: must be Approved and have stock
   for (const item of cart.items) {
+    if (item.product.validationStatus !== ProductValidationStatus.Approved) {
+      return NextResponse.json(
+        { success: false, error: `สินค้า "${item.product.name}" ยังไม่เปิดขาย` },
+        { status: 400 }
+      );
+    }
     const availableStock = item.variant ? item.variant.stock : item.product.stock;
     if (availableStock < item.quantity) {
       return NextResponse.json(

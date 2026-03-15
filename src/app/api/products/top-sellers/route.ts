@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ProductValidationStatus } from "@/generated/prisma/client";
 
 /** GET ?shopSlug=xxx&limit=8 - Top selling products for a shop */
 export async function GET(request: NextRequest) {
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
   }
 
   const products = await prisma.product.findMany({
-    where: { id: { in: productIds }, active: true },
+    where: { id: { in: productIds }, active: true, validationStatus: ProductValidationStatus.Approved },
     include: {
       category: true,
       petType: true,

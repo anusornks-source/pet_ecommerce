@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
+import { SUPPLIER_SEARCH_PAGE_SIZE } from "@/lib/constants";
 
 export interface SupplierOption {
   id: string;
@@ -71,8 +72,8 @@ export function SupplierSelect({
     setLoading(true);
     try {
       const url = q.trim()
-        ? `/api/admin/suppliers?search=${encodeURIComponent(q)}&limit=50&minimal=true`
-        : `/api/admin/suppliers?limit=50&minimal=true`;
+        ? `/api/admin/suppliers?search=${encodeURIComponent(q)}&limit=${SUPPLIER_SEARCH_PAGE_SIZE}&minimal=true`
+        : `/api/admin/suppliers?limit=${SUPPLIER_SEARCH_PAGE_SIZE}&minimal=true`;
       const res = await fetch(url);
       const data = await res.json();
       setOptions(data.data ?? []);

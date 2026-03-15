@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireShopAdmin, isShopAuthResponse } from "@/lib/shopAuth";
 import { syncProductImagesToMarketingAssets } from "@/lib/marketingAssets";
+import { ProductValidationStatus } from "@/generated/prisma/client";
 
 export async function GET(request: NextRequest) {
   const auth = await requireShopAdmin(request);
@@ -16,9 +17,19 @@ export async function GET(request: NextRequest) {
   const categoryId = searchParams.get("categoryId") || "";
   const petType = searchParams.get("petType") || "";     // slug e.g. "dog"
   const tagId = searchParams.get("tagId") || "";
+  const validationStatusParam = searchParams.get("validationStatus") || ""; // "" = default Approved, "all" = no filter
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = shopId === "all" ? {} : { shopId };
+  const validStatuses = Object.values(ProductValidationStatus);
+  if (validationStatusParam === "all") {
+    // no filter by validationStatus
+  } else {
+    const status = validationStatusParam && validStatuses.includes(validationStatusParam as ProductValidationStatus)
+      ? (validationStatusParam as ProductValidationStatus)
+      : ProductValidationStatus.Approved;
+    where.validationStatus = status;
+  }
 
   const nameOnly = searchParams.get("nameOnly") === "true";
   if (search) {
@@ -130,8 +141,15 @@ export async function POST(request: NextRequest) {
     categoryId,
     petTypeId,
     featured,
+    validationStatus,
     variants = [],
   } = body;
+
+  const validStatuses = Object.values(ProductValidationStatus);
+  const status: ProductValidationStatus =
+    validationStatus && validStatuses.includes(validationStatus as ProductValidationStatus)
+      ? (validationStatus as ProductValidationStatus)
+      : ProductValidationStatus.Approved;
 
   if (!name || !description || price == null || stock == null || !categoryId) {
     return NextResponse.json(
@@ -157,6 +175,7 @@ export async function POST(request: NextRequest) {
       categoryId,
       petTypeId: petTypeId || null,
       featured: !!featured,
+      validationStatus: status,
       ...(variants.length > 0 && {
         variants: {
           create: variants.map((v: VariantInput) => ({

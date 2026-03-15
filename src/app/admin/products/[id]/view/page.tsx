@@ -21,6 +21,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { ProductValidationStatus } from "@/generated/prisma/enums";
 
 interface ProductVariant {
   id: string;
@@ -104,12 +105,14 @@ interface ProductDetail {
   mediaOrder?: string[];
   active: boolean;
   featured: boolean;
+  validationStatus?: string;
   deliveryDays: number;
   fulfillmentMethod: string;
   category: Category;
   petType: PetType;
   variants: ProductVariant[];
   _count?: { marketingAssets: number };
+  soldCount?: number;
 }
 
 interface SupplierLink {
@@ -133,6 +136,14 @@ interface PackSummary {
   createdAt: string;
 }
 
+interface AdDesignSummary {
+  id: string;
+  name: string;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function ProductViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { t } = useLocale();
@@ -140,12 +151,15 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
   const [supplierLinks, setSupplierLinks] = useState<SupplierLink[]>([]);
   const [packs, setPacks] = useState<PackSummary[]>([]);
   const [packsLoading, setPacksLoading] = useState(true);
+  const [adDesigns, setAdDesigns] = useState<AdDesignSummary[]>([]);
+  const [adDesignsLoading, setAdDesignsLoading] = useState(true);
   const [addingAll, setAddingAll] = useState(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
   const [marketingAssetsRefreshKey, setMarketingAssetsRefreshKey] = useState(0);
   const [editingPriceLinkId, setEditingPriceLinkId] = useState<string | null>(null);
   const [editPriceValue, setEditPriceValue] = useState("");
   const [hiddenSections, setHiddenSections] = useState<Set<string>>(new Set());
+  const [updatingValidation, setUpdatingValidation] = useState(false);
 
   const toggleSection = (sectionId: string) => {
     setHiddenSections((prev) => {
@@ -214,6 +228,13 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
   }, [id]);
 
   useEffect(() => {
+    fetch(`/api/admin/products/${id}/ad-designs`)
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setAdDesigns(d.data); })
+      .finally(() => setAdDesignsLoading(false));
+  }, [id]);
+
+  useEffect(() => {
     setSelectedMediaIndex(0);
   }, [product?.id]);
 
@@ -261,6 +282,28 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
       }
     } finally {
       setAddingAll(false);
+    }
+  };
+
+  const handleChangeValidationStatus = async (newStatus: string) => {
+    setUpdatingValidation(true);
+    try {
+      const res = await fetch(`/api/admin/products/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ validationStatus: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setProduct((p) => p ? { ...p, validationStatus: newStatus } : null);
+        toast.success("เปลี่ยนสถานะแล้ว");
+      } else {
+        toast.error(data.error ?? "บันทึกไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("บันทึกไม่สำเร็จ");
+    } finally {
+      setUpdatingValidation(false);
     }
   };
 
@@ -398,6 +441,7 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
           <div className="flex-1 min-w-0">
             <h2 className="text-xl font-bold text-stone-800">{product.name_th ?? product.name}</h2>
             <p className="text-stone-500 text-sm mt-0.5">{product.name}</p>
+            <p className="text-stone-400 text-xs mt-1 font-mono">ID: {product.id}</p>
             <div className="flex flex-wrap gap-2 mt-3">
               <span className="text-xs px-2 py-1 rounded-full bg-stone-100 text-stone-600">
                 {product.category.name_th ?? product.category.name}
@@ -418,26 +462,75 @@ export default function ProductViewPage({ params }: { params: Promise<{ id: stri
               )}
             </div>
             <p className="text-sm text-stone-600 mt-2">
-              สต็อกรวม: {product.stock} · จัดส่งภายใน {product.deliveryDays} วัน
-              {product._count?.marketingAssets != null && (
-                <>
-                  {" · "}
-                  <a href="#marketing-assets" className="text-orange-500 hover:text-orange-600 hover:underline">
-                    {product._count.marketingAssets} marketing assets
-                  </a>
-                </>
-              )}
+              สต็อกรวม: {product.stock}
+              {product.soldCount != null && <> · ขายแล้ว: {(product.soldCount ?? 0).toLocaleString("th-TH")} ชิ้น</>}
+              {" · "}จัดส่งภายใน {product.deliveryDays} วัน
             </p>
             {product.shortDescription && (
               <p className="text-sm text-stone-600 mt-3 line-clamp-3">{product.shortDescription}</p>
             )}
-            <div className="mt-4">
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center gap-2 py-3 border-y border-stone-200">
+                <span className="text-sm text-stone-500">สถานะการอนุมัติ:</span>
+                <select
+                  value={product.validationStatus ?? ProductValidationStatus.Approved}
+                  disabled={updatingValidation}
+                  onChange={(e) => {
+                    const newStatus = e.target.value;
+                    if (product.validationStatus === ProductValidationStatus.Approved && newStatus !== ProductValidationStatus.Approved) {
+                      if (!confirm("ยืนยันการย้ายออกจาก Approved? สินค้าจะไม่แสดงในหน้าร้าน")) return;
+                    }
+                    handleChangeValidationStatus(newStatus);
+                  }}
+                  className={`text-sm px-3 py-1.5 rounded-lg border font-medium ${
+                    product.validationStatus === ProductValidationStatus.Approved ? "bg-green-100 text-green-700 border-green-200" :
+                    product.validationStatus === ProductValidationStatus.Rejected ? "bg-red-100 text-red-700 border-red-200" :
+                    product.validationStatus === ProductValidationStatus.Qualified ? "bg-amber-100 text-amber-700 border-amber-200" :
+                    "bg-stone-100 text-stone-700 border-stone-200"
+                  }`}
+                >
+                  <option value={ProductValidationStatus.Lead}>Lead</option>
+                  <option value={ProductValidationStatus.Qualified}>Qualified</option>
+                  <option value={ProductValidationStatus.Approved}>Approved</option>
+                  <option value={ProductValidationStatus.Rejected}>Rejected</option>
+                </select>
+              </div>
+              {product._count?.marketingAssets != null && (
+                <p className="text-sm text-stone-600">
+                  Marketing Assets:{" "}
+                  <a href="#marketing-assets" className="text-orange-500 hover:text-orange-600 hover:underline font-medium">
+                    {(product._count.marketingAssets ?? 0).toLocaleString("th-TH")} ชิ้น
+                  </a>
+                </p>
+              )}
               <Link
                 href={`/admin/ad-designer?productId=${id}&returnUrl=${encodeURIComponent(`/admin/products/${id}/view`)}`}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 shadow-sm transition-colors"
               >
                 🎨 Ads Creator
               </Link>
+              {adDesignsLoading ? (
+                <p className="text-xs text-stone-400">กำลังโหลด Ad Designs...</p>
+              ) : adDesigns.length > 0 ? (
+                <div className="pt-2 border-t border-stone-200">
+                  <p className="text-xs font-medium text-stone-500 mb-2">Ad Designs ที่ทำไว้</p>
+                  <div className="flex flex-wrap gap-2">
+                    {adDesigns.map((ad) => (
+                      <Link
+                        key={ad.id}
+                        href={`/admin/ad-designer?adDesignId=${ad.id}&returnUrl=${encodeURIComponent(`/admin/products/${id}/view`)}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-200 bg-white text-sm text-stone-700 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700 transition-colors"
+                      >
+                        <span className="text-orange-500">🎨</span>
+                        {ad.name}
+                        <span className="text-stone-300 text-xs">
+                          {new Date(ad.updatedAt).toLocaleDateString("th-TH", { day: "2-digit", month: "2-digit", year: "2-digit" })}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

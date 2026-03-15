@@ -28,6 +28,7 @@ export default function AdDesignerPage() {
     (productIdParam ? `/admin/products/${productIdParam}/view` : "/admin/automation/ad-designs");
 
   const [product, setProduct] = useState<AdImageDesignerProduct | null>(null);
+  const [shopName, setShopName] = useState<string | null>(null);
   const [productId, setProductId] = useState<string | null>(productIdParam);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,6 +83,7 @@ export default function AdDesignerPage() {
             images,
             shopLogoUrl: null,
           });
+          setShopName(p.shop?.name ?? null);
           if (adDesignsRes.success && Array.isArray(adDesignsRes.data)) {
             setAdDesigns(adDesignsRes.data as AdDesignSummary[]);
           }
@@ -257,13 +259,40 @@ export default function AdDesignerPage() {
   if (showTemplatePicker) {
     return (
       <div className="p-4 md:p-6 max-w-[90rem] w-full mx-auto">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-stone-800">เลือกเทมเพลต Ads</h1>
-          <Link href={returnUrl} className="text-sm text-stone-500 hover:text-stone-700">
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl font-semibold text-stone-800">เลือกเทมเพลต Ads</h1>
+            {product && (
+              <>
+                <p className="text-sm text-stone-500 mt-1">
+                  {[shopName, product.name_th || product.name].filter(Boolean).join(" : ")}
+                </p>
+                <div className="mt-3 flex flex-wrap items-start gap-3">
+                  {product.images?.[0] && (
+                    <img
+                      src={product.images[0]}
+                      alt=""
+                      className="w-16 h-16 rounded-lg object-cover border border-stone-200 shrink-0"
+                    />
+                  )}
+                  <div className="min-w-0 text-sm">
+                    <p className="text-stone-400 font-mono text-xs">
+                      ID: {product.id}
+                    </p>
+                    {(product.shortDescription_th ?? product.shortDescription) && (
+                      <p className="text-stone-600 mt-1 line-clamp-2">
+                        {product.shortDescription_th ?? product.shortDescription}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          <Link href={returnUrl} className="text-sm text-stone-500 hover:text-stone-700 shrink-0">
             ← กลับ
           </Link>
         </div>
-        <p className="text-sm text-stone-500 mb-6">เลือกเทมเพลตหรือโหลด Ad Design ที่บันทึกไว้</p>
 
         <section className="mb-8">
           <h3 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-3">เทมเพลต (Preset)</h3>

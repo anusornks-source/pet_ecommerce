@@ -645,6 +645,7 @@ export default function EditProductPage({
             petTypeId: product.petTypeId || "",
             active: product.active,
             featured: product.featured,
+            validationStatus: (product as { validationStatus?: string }).validationStatus ?? "Approved",
             deliveryDays: product.deliveryDays.toString(),
             warehouseCountry: product.warehouseCountry ?? "",
             fulfillmentMethod: product.fulfillmentMethod ?? "SELF",

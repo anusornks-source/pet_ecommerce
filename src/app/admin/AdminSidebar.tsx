@@ -26,6 +26,7 @@ const navEntries: NavEntry[] = [
     minRole: "MANAGER",
     items: [
       { href: "/admin/products", labelKey: "allProducts", icon: "📦" },
+      { href: "/admin/product-validation", labelKey: "productValidation", icon: "✅" },
       { href: "/admin/variants", labelKey: "variants", icon: "🔀" },
       { href: "/admin/shelves", labelKey: "shelves", icon: "🗂️" },
       { href: "/admin/categories", labelKey: "categories", icon: "🏷️", adminOnly: true },

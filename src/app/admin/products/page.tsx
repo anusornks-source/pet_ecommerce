@@ -135,6 +135,7 @@ export default function AdminProductsPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [filterTag, setFilterTag] = useState("");
+  const [filterValidationStatus, setFilterValidationStatus] = useState("Approved");
   const [sort, setSort] = useState("newest");
   const [editingCell, setEditingCell] = useState<{ productId: string; field: "category" | "petType" | "tags" | "shop" } | null>(null);
   const [savingCell, setSavingCell] = useState<string | null>(null);
@@ -250,6 +251,7 @@ export default function AdminProductsPage() {
     if (filterCategory) params.set("categoryId", filterCategory);
     if (filterPetType) params.set("petType", filterPetType);
     if (filterTag) params.set("tagId", filterTag);
+    if (filterValidationStatus) params.set("validationStatus", filterValidationStatus);
     if (shopFilter) {
       params.set("shopId", shopFilter);
     } else if (urlShopId) {
@@ -260,7 +262,7 @@ export default function AdminProductsPage() {
     const data = await res.json();
     if (data.success) { setProducts(data.data); setTotal(data.total); }
     setLoading(false);
-  }, [search, filterSource, filterActive, filterCategory, filterPetType, filterTag, shopFilter, urlShopId, sort]);
+  }, [search, filterSource, filterActive, filterCategory, filterPetType, filterTag, filterValidationStatus, shopFilter, urlShopId, sort]);
 
   const activeFilterCount = [filterSource, filterActive, filterCategory, filterPetType, filterTag].filter(Boolean).length;
 
@@ -435,6 +437,17 @@ export default function AdminProductsPage() {
             ))}
           </select>
           <select
+            value={filterValidationStatus}
+            onChange={(e) => setFilterValidationStatus(e.target.value)}
+            className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
+          >
+            <option value="Approved">อนุมัติ: Approved</option>
+            <option value="all">อนุมัติ: ทั้งหมด</option>
+            <option value="Lead">Lead</option>
+            <option value="Qualified">Qualified</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+          <select
             value={sort}
             onChange={(e) => { setSort(e.target.value); setPage(1); }}
             className="border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-600 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white"
@@ -469,7 +482,7 @@ export default function AdminProductsPage() {
           )}
           {activeFilterCount > 0 && (
             <button
-              onClick={() => { setFilterSource(""); setFilterActive(""); setFilterCategory(""); setFilterPetType(""); setFilterTag(""); }}
+              onClick={() => { setFilterSource(""); setFilterActive(""); setFilterCategory(""); setFilterPetType(""); setFilterTag(""); setFilterValidationStatus("Approved"); }}
               className="flex items-center gap-1.5 border border-stone-200 rounded-xl px-3 py-2 text-sm text-stone-500 hover:bg-stone-50 transition-colors"
             >
               ล้าง
@@ -754,25 +767,33 @@ export default function AdminProductsPage() {
                     </Link>
                   </td>
                   <td className="px-2 py-3">
-                    <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-1">
                       <Link
                         href={`/admin/products/${product.id}/view`}
-                        className="inline-flex items-center justify-center text-[10px] px-2 py-0.5 rounded border border-stone-200 text-stone-600 hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 transition-colors w-full"
+                        className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-stone-200 text-stone-600 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all duration-150 hover:scale-110 hover:ring-2 hover:ring-inset hover:ring-red-200"
+                        title="ดู"
                       >
-                        View
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                       </Link>
                       <Link
                         href={`/admin/products/${product.id}`}
-                        className="inline-flex items-center justify-center text-[10px] px-2 py-0.5 rounded border border-stone-200 text-stone-600 hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 transition-colors w-full"
+                        className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-stone-200 text-stone-600 hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 transition-all duration-150 hover:scale-110 hover:ring-2 hover:ring-inset hover:ring-orange-200"
+                        title="แก้ไข"
                       >
-                        แก้ไข
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                       </Link>
                       <button
+                        type="button"
                         onClick={() => handleDelete(product.id, product.name)}
                         disabled={deleting === product.id}
-                        className="inline-flex items-center justify-center text-[10px] px-2 py-0.5 rounded border border-red-100 text-red-500 hover:bg-red-100 hover:border-red-200 transition-colors w-full disabled:opacity-50"
+                        className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all duration-150 hover:scale-110 hover:ring-2 hover:ring-inset hover:ring-red-200 disabled:opacity-50 disabled:hover:scale-100 disabled:hover:ring-0"
+                        title="ลบ"
                       >
-                        ลบ
+                        {deleting === product.id ? (
+                          <span className="text-xs">...</span>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        )}
                       </button>
                     </div>
                   </td>

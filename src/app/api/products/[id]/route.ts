@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ProductValidationStatus } from "@/generated/prisma/client";
 
 export async function GET(
   _request: NextRequest,
@@ -7,7 +8,7 @@ export async function GET(
 ) {
   const { id } = await params;
   const product = await prisma.product.findUnique({
-    where: { id, active: true },
+    where: { id, active: true, validationStatus: ProductValidationStatus.Approved },
     include: {
       category: true,
       petType: true,

@@ -298,6 +298,7 @@ model Product {
   sourceData          Json?
   deliveryDays        Int       @default(2)
   warehouseCountry    String?
+  validationStatus   ProductValidationStatus @default(Approved)
   createdAt       DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -331,6 +332,7 @@ model Product {
   @@index([shopId, active, name])
   @@index([active, createdAt])
   @@index([active, featured])
+  @@index([active, validationStatus])
   @@map("products")
 }
 

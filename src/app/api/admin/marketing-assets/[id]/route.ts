@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { del } from "@vercel/blob";
 import { requireAdmin, isNextResponse } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
+import { isBlobUrlInUse } from "@/lib/blobUsage";
 
 export async function PATCH(
   request: NextRequest,
@@ -44,26 +45,14 @@ export async function DELETE(
     return NextResponse.json({ success: false, error: "Asset not found" }, { status: 404 });
   }
 
-  // ลบจาก blob เฉพาะเมื่อไม่มี product อื่นหรือ marketing asset อื่นใช้ URL นี้
+  // ลบจาก blob เฉพาะเมื่อไม่มี Product/ProductVariant/MarketingAsset/SupplierProduct อื่นใช้ URL นี้
   try {
     if (asset.url && asset.url.includes("blob.vercel-storage.com")) {
-      const otherProductUsingUrl = await prisma.product.findFirst({
-        where: {
-          ...(asset.productId && { id: { not: asset.productId } }),
-          OR: [
-            { images: { has: asset.url } },
-            { videos: { has: asset.url } },
-          ],
-        },
-        select: { id: true },
+      const inUse = await isBlobUrlInUse(asset.url, {
+        marketingAssetId: id,
+        productId: asset.productId ?? undefined,
       });
-      const otherAssetCount = await prisma.marketingAsset.count({
-        where: {
-          id: { not: id },
-          url: asset.url,
-        },
-      });
-      if (!otherProductUsingUrl && otherAssetCount === 0) {
+      if (!inUse) {
         await del(asset.url);
       }
     }
